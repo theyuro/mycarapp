@@ -63,3 +63,6 @@ GoogleService-Info.plist
 firestore-debug.log
 firebase-debug.log
 ui-debug.log
+
+# Configuração local de ferramentas de IA (não é parte do projeto)
+.claude/

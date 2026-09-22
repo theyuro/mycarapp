@@ -23,12 +23,18 @@ service cloud.firestore {
     // Regra 1 da trilha de implementação: nuvem exige Premium. Espelha a
     // mesma checagem usada em `storage.rules` para o arquivo do backup —
     // mantenha as duas em sincronia se o critério mudar.
-    function isPremium(uid) {
-      let entActive = exists(/databases/$(database)/documents/entitlements/$(uid)) &&
+    function entitlementActive(uid) {
+      return exists(/databases/$(database)/documents/entitlements/$(uid)) &&
         get(/databases/$(database)/documents/entitlements/$(uid)).data.active == true;
-      let betaUntil = exists(/databases/$(database)/documents/appConfig/public) &&
+    }
+
+    function betaPremiumActive() {
+      return exists(/databases/$(database)/documents/appConfig/public) &&
         get(/databases/$(database)/documents/appConfig/public).data.premiumFreeUntil > request.time;
-      return entActive || betaUntil;
+    }
+
+    function isPremium(uid) {
+      return entitlementActive(uid) || betaPremiumActive();
     }
 
     // Metadados do backup em nuvem (Fase 6 da trilha de implementação). O
