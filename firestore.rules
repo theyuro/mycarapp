@@ -1,0 +1,57 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function owns(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    match /users/{uid} {
+      allow read: if owns(uid);
+      allow write: if false;
+    }
+
+    match /entitlements/{uid} {
+      allow read: if owns(uid);
+      allow write: if false;
+    }
+
+    // Regra 1 da trilha de implementação: nuvem exige Premium. Espelha a
+    // mesma checagem usada em `storage.rules` para o arquivo do backup —
+    // mantenha as duas em sincronia se o critério mudar.
+    function isPremium(uid) {
+      let entActive = exists(/databases/$(database)/documents/entitlements/$(uid)) &&
+        get(/databases/$(database)/documents/entitlements/$(uid)).data.active == true;
+      let betaUntil = exists(/databases/$(database)/documents/appConfig/public) &&
+        get(/databases/$(database)/documents/appConfig/public).data.premiumFreeUntil > request.time;
+      return entActive || betaUntil;
+    }
+
+    // Metadados do backup em nuvem (Fase 6 da trilha de implementação). O
+    // arquivo em si fica no Storage; aqui só ficam data, contagens e
+    // tamanho, para listar sem precisar baixar cada backup.
+    match /users/{uid}/backups/{backupId} {
+      allow read, delete: if owns(uid);
+      allow create, update: if owns(uid) && isPremium(uid);
+    }
+
+    match /referrals/{referredUid} {
+      allow read: if owns(referredUid) ||
+        (signedIn() && resource.data.referrerUid == request.auth.uid);
+      allow write: if false;
+    }
+
+    match /promotionClaims/{uid} {
+      allow read: if owns(uid);
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

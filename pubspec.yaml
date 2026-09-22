@@ -1,0 +1,36 @@
+name: my_car_app
+description: Aplicativo de gestao veicular da Giles Desenvolvimento de Softwares.
+publish_to: "none"
+version: 1.2.0+6
+environment:
+  sdk: ">=3.9.0 <4.0.0"
+dependencies:
+  flutter:
+    sdk: flutter
+  image_picker: 1.2.3
+  google_mlkit_text_recognition: 0.16.0
+  in_app_purchase: 3.3.0
+  in_app_purchase_android: 0.5.2
+  path_provider: 2.1.6
+  file_picker: 12.0.0-beta.7
+  open_filex: 4.7.0
+  excel: 4.0.6
+  share_plus: 13.3.0
+  firebase_core: ^4.13.0
+  firebase_auth: ^6.5.7
+  cloud_firestore: ^6.8.0
+  cloud_functions: ^6.3.6
+  firebase_storage: ^13.0.5
+  firebase_analytics: ^12.4.6
+  firebase_crashlytics: ^5.2.7
+  firebase_app_check: ^0.4.6
+  google_sign_in: ^7.2.0
+  google_mobile_ads: ^9.1.0
+  url_launcher: ^6.3.1
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/mycarapp_icon.png

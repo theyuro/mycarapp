@@ -1,0 +1,19 @@
+{
+  "name": "mycarapp-functions",
+  "private": true,
+  "main": "index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "check": "node --check index.js",
+    "test": "node --test subscription_logic.test.js",
+    "serve": "firebase emulators:start --only auth,functions,firestore",
+    "deploy": "firebase deploy --only functions,firestore:rules"
+  },
+  "dependencies": {
+    "firebase-admin": "latest",
+    "firebase-functions": "latest",
+    "google-auth-library": "latest"
+  }
+}

@@ -1,0 +1,37 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function owns(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // Regra 1 da trilha de implementação: tudo que for nuvem exige Premium.
+    // Espelha a mesma checagem usada em `firestore.rules` para os metadados
+    // de backup — mantenha as duas em sincronia se o critério mudar.
+    function isPremium(uid) {
+      let entitlementPath = /databases/(default)/documents/entitlements/$(uid);
+      let entActive = firestore.exists(entitlementPath) &&
+        firestore.get(entitlementPath).data.active == true;
+      let configPath = /databases/(default)/documents/appConfig/public;
+      let betaUntil = firestore.exists(configPath) &&
+        firestore.get(configPath).data.premiumFreeUntil > request.time;
+      return entActive || betaUntil;
+    }
+
+    match /users/{uid}/backups/{fileName} {
+      allow read, delete: if owns(uid);
+      allow write: if owns(uid) && isPremium(uid) &&
+        request.resource.size < 20 * 1024 * 1024 &&
+        request.resource.contentType == 'application/json';
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
