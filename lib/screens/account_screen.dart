@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../models/promotion_eligibility.dart';
 import '../services/account_cloud_service.dart';
@@ -269,6 +270,22 @@ class _AccountScreenState extends State<AccountScreen> {
                                       if (mounted) message('Código copiado.');
                                     },
                               icon: const Icon(Icons.copy_rounded),
+                            ),
+                            IconButton(
+                              tooltip: 'Convidar um amigo',
+                              onPressed: ownCode == null
+                                  ? null
+                                  : () => SharePlus.instance.share(
+                                      ShareParams(
+                                        subject: 'MyCarApp',
+                                        text:
+                                            'Uso o MyCarApp pra controlar os gastos do carro. '
+                                            'Baixa com meu código de indicação $ownCode e '
+                                            'ganha desconto na assinatura: '
+                                            'https://play.google.com/store/apps/details?id=com.gilesdesenvolvimento.mycarapp',
+                                      ),
+                                    ),
+                              icon: const Icon(Icons.share_outlined),
                             ),
                           ],
                         ),

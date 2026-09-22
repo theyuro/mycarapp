@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:in_app_review/in_app_review.dart';
 
 import '../models/vehicle.dart';
 import '../models/fueling_record.dart';
@@ -15,6 +16,7 @@ import '../services/fueling_storage_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/vehicle_type_icon.dart';
 import '../widgets/free_user_banner_ad.dart';
+import '../widgets/recommendation_banner.dart';
 import 'fueling_history_screen.dart';
 import 'fueling_form_screen.dart';
 import 'documents_screen.dart';
@@ -348,6 +350,14 @@ class _HomeScreenState extends State<HomeScreen> {
             title: 'Exportar informações',
             onTap: () => _closeAndOpen(sheetContext, openDataTransfer),
           ),
+          _MoreMenuTile(
+            icon: Icons.star_outline_rounded,
+            title: 'Avaliar o app',
+            onTap: () {
+              Navigator.pop(sheetContext);
+              rateApp();
+            },
+          ),
           if (AdsService.instance.privacyOptionsRequired)
             _MoreMenuTile(
               icon: Icons.privacy_tip_outlined,
@@ -384,6 +394,19 @@ class _HomeScreenState extends State<HomeScreen> {
       MaterialPageRoute<void>(builder: (_) => const DataTransferScreen()),
     );
     if (mounted) await loadActiveVehicle();
+  }
+
+  Future<void> rateApp() async {
+    try {
+      final review = InAppReview.instance;
+      if (await review.isAvailable()) {
+        await review.requestReview();
+      } else {
+        await review.openStoreListing();
+      }
+    } on Object {
+      // API da loja indisponível: não bloquear o usuário por isso.
+    }
   }
 
   Future<void> openSubscription() async {
@@ -479,7 +502,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 14),
+        const RecommendationBanner(),
       ],
     ),
     bottomNavigationBar: Column(

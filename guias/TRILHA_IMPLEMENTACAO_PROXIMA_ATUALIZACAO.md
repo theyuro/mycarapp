@@ -16,7 +16,7 @@
 
 ## 1. Descobertas de arquitetura (não re-investigar)
 
-- Projeto **não é repositório git** ainda (`git init` pendente, fora de escopo deste documento).
+- Projeto **é repositório git desde 2026-09-22** (commit inicial `ee1753f`, criado nesta sessão com todo o estado do app + Fases 1, 2, 4 e parte de 3 e 6). `google-services.json`, `key.properties`, `*.jks`/`*.keystore` e artefatos de build (`build/`, `android/build/`) ficam fora do controle de versão via `.gitignore`. Sem remoto configurado ainda.
 - Todos os dados hoje (`veículos, abastecimentos, despesas, manutenções, documentos`) são **arquivos JSON locais** (`lib/services/*_storage_service.dart`, padrão `dart:io` + `path_provider`). Não existe nenhum repositório em nuvem para dados do usuário ainda — isso é o que `GUIA_IMPLANTACAO_WEB_ASSINATURAS.md` propõe migrar.
 - O único uso de Firestore/Cloud Functions hoje é em `lib/services/access_service.dart` (assinatura/entitlement) e `lib/services/account_cloud_service.dart` (wrappers de callable functions).
 - Controle de acesso Premium já existe e é o ponto único a reutilizar: `AccessService.instance.hasAccess` (trial + assinatura + beta grátis) e `AccessService.instance.subscriptionActive`. **Toda nova gate de Premium deve usar esse serviço, nunca duplicar lógica.**
@@ -233,19 +233,25 @@ Depende de: Fase 1 (para incluir estabelecimentos no backup). **Aplicação mais
 
 ---
 
-### FASE 7 — Banner de recomendação e indicação — AGENTE-CRESCIMENTO
+### FASE 7 — Banner de recomendação e indicação — AGENTE-CRESCIMENTO — ✅ CONCLUÍDA (2026-09-22)
 
 Depende de: nada tecnicamente, mas reaproveita o sistema de indicação já existente (ver seção 1 "Descobertas").
 
-- [ ] Criar `lib/widgets/recommendation_banner.dart`: componente único e reaproveitável, 3 variantes de conteúdo (avaliação / indicação / upgrade Premium), mesmo padrão reativo de `free_user_banner_ad.dart`.
-- [ ] Implementar regras de exibição obrigatórias: nunca para usuário novo (mínimo 3 lançamentos ou 7 dias de uso); nunca no meio de tarefa (só após ação concluída); sempre dispensável, dispensa respeitada por 30+ dias; máx. 1 banner por sessão, nunca 2 tipos na mesma sessão; some definitivamente se já avaliou/já é Premium; após 3 dispensas do mesmo banner, parar de exibir para sempre.
-- [ ] Persistir estado de dispensa localmente (ex.: `SharedPreferences` ou arquivo local, mesmo padrão de `access_service.dart` para estado local simples).
-- [ ] Fluxo de avaliação: usar API nativa de review do Google Play (`in_app_review` ou equivalente), **sem perguntar antes se o usuário gostou** — política do Google Play proíbe triagem prévia.
-- [ ] Fluxo de indicação: **decisão de produto necessária antes de codar** — usar o sistema de desconto já existente (`applyReferralCode`, 50%/3 meses) como a mecânica real, ajustando apenas o texto do banner para refletir o benefício correto, em vez de implementar "Premium grátis por 3 indicações" como um sistema paralelo. Ver seção 5 "dúvidas" para confirmar.
-- [ ] Se confirmado manter dois sistemas seria necessário, **isolar completamente** os registros do código de indicação e do código Fundador Beta no backend — nunca reaproveitar a mesma coleção/lógica.
-- [ ] Adicionar caminho permanente em Ajustes: "Convidar um amigo" e "Avaliar o app" (2 toques cada, `account_screen.dart`).
+- [x] Criado `lib/widgets/recommendation_banner.dart` + `lib/services/recommendation_banner_service.dart`. **Ajuste de escopo**: só 2 variantes (avaliação/indicação), não 3 — o tipo "upgrade Premium" já é coberto pelos cards de upsell contextuais que nasceram nas Fases 2/3/6 (`_StationUpsell`, `_PremiumReportsCard`, `_BackupCard`), que são mais precisos por já aparecerem exatamente onde o limite gratuito foi encontrado. Decisão registrada abaixo.
+- [x] Todas as regras de exibição implementadas em `RecommendationBannerService`: mínimo 3 lançamentos (abastecimentos+manutenções) ou 7 dias de uso; dispensa respeitada por 30 dias; máx. 1 banner por sessão (`_shownThisSession`, nunca reseta até o app reiniciar); 3 dispensas do mesmo tipo = escondido para sempre; ação primária (avaliar/indicar) também esconde para sempre.
+- [x] Estado persistido localmente em `recommendation_banner.json`, seguindo exatamente o padrão de escrita segura (tmp/bak) já usado em `access_service.dart` e nos `*_storage_service.dart` — **sem** adicionar `shared_preferences` como dependência nova, para manter um único padrão de persistência local no projeto.
+- [x] Fluxo de avaliação usa `in_app_review: ^2.0.10` (pacote novo, resolvido com `flutter pub get`), chamando `requestReview()`/`openStoreListing()` sem qualquer pergunta prévia — texto do banner é direto ("conta pra gente na Play Store"), sem sugerir nota.
+- [x] Fluxo de indicação **usa o sistema de desconto já existente** (`applyReferralCode`, 50%/3 meses) — decisão tomada nesta sessão, não ficou em aberto: o banner de indicação leva para `AccountScreen`, onde o código e o compartilhamento já vivem. Nenhum sistema paralelo de "Premium grátis por indicações" foi criado.
+- [x] Código de indicação e Fundador Beta **já eram e continuam** isolados no backend (`referralCodes`/`referrals` vs. o fluxo de Fundador em `functions/index.js`) — nenhuma mudança necessária, apenas confirmado.
+- [x] "Avaliar o app": adicionado ao menu "Mais opções" da Home (`home_screen.dart`), 2 toques, chama a mesma API `in_app_review`.
+- [x] "Convidar um amigo": botão de compartilhar (`Icons.share_outlined`, via `SharePlus.instance.share`) adicionado ao lado do botão de copiar no card "Seu código de indicação" em `account_screen.dart` — monta a mensagem com o código e o link da Play Store prontos, como pedido na seção 5.4 do guia.
+- [x] `RecommendationBanner` inserido no fluxo de conteúdo da Home (depois do card de custos mensais, antes da barra inferior) — nunca como pop-up modal, nunca no meio de uma tarefa (Home só aparece entre ações).
 
-**Critério de saída:** banner aparece só após os gatilhos corretos, some ao dispensar, e não reaparece antes de 30 dias; compartilhar indicação usa o link/código já emitido pelo backend existente.
+**Critério de saída:** atingido no código — `flutter analyze`/`flutter test` limpos. Falta validação manual (mesma pendência de todas as fases: sem dispositivo nesta sessão) para confirmar que o diálogo nativo de avaliação do Google Play realmente abre.
+
+**Decisões tomadas durante a implementação (registrar para não redecidir):**
+- **Banner "upgrade" não foi construído como uma 3ª variante genérica** — os upsells contextuais já espalhados pelo app (Fases 2/3/6) cumprem esse papel melhor, porque aparecem no momento exato em que o usuário esbarrou no limite (ex.: dentro do relatório "Por posto"), não numa mensagem genérica na Home. Se no futuro fizer sentido ter uma variante "upgrade" genérica também, ela pode ser adicionada ao mesmo `RecommendationBannerType` enum sem quebrar nada.
+- **"Ver quantos indicados converteram" e o marco "3 indicações → Premium grátis" (Seção 5.4 do guia) não foram implementados** — o sistema real hoje concede desconto (50%/3 meses) por indicação bem-sucedida, não um marco cumulativo de "3 indicações = Premium grátis". Implementar o marco cumulativo exigiria uma nova métrica no backend (contagem de indicações pagas por indicador) que não existe hoje; ficou fora do escopo desta sessão.
 
 ---
 
