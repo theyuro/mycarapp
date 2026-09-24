@@ -51,6 +51,9 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")
+            // O Flutter Gradle Plugin já ativa o R8 no release; explícito aqui para
+            // deixar claro que as regras abaixo são aplicadas.
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -67,4 +70,11 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // Força a versão do WorkManager, que chega transitivamente como 2.7.0 via
+    // google_mobile_ads (play-services-ads-api). Versões novas trazem Room e
+    // regras de consumer ProGuard atualizadas, compatíveis com o R8 do AGP 9.
+    implementation("androidx.work:work-runtime:2.10.1")
 }

@@ -1,0 +1,89 @@
+# Configuração de build do Codemagic (https://docs.codemagic.io/yaml-basic-configuration/yaml-getting-started/)
+#
+# Variáveis de ambiente esperadas (Codemagic > App settings > Environment variables),
+# no grupo "firebase":
+#   GOOGLE_SERVICE_INFO_PLIST  -> conteúdo do GoogleService-Info.plist codificado em base64
+#                                 (PowerShell: [Convert]::ToBase64String([IO.File]::ReadAllBytes("GoogleService-Info.plist")))
+
+definitions:
+  scripts:
+    - &firebase_config
+      name: Gerar GoogleService-Info.plist
+      script: |
+        if [ -n "$GOOGLE_SERVICE_INFO_PLIST" ]; then
+          echo "$GOOGLE_SERVICE_INFO_PLIST" | base64 --decode > "$CM_BUILD_DIR/ios/Runner/GoogleService-Info.plist"
+        else
+          echo "AVISO: GOOGLE_SERVICE_INFO_PLIST não definida; usando plist vazio (compila, mas o Firebase não inicializa)."
+          cat > "$CM_BUILD_DIR/ios/Runner/GoogleService-Info.plist" <<'PLIST'
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0"><dict/></plist>
+        PLIST
+        fi
+    - &pub_get
+      name: Instalar dependências
+      script: |
+        flutter pub get
+        cd ios && pod install --repo-update
+
+workflows:
+  # Apenas verifica se o app compila para iOS (não exige conta Apple Developer).
+  ios-build-unsigned:
+    name: iOS - build sem assinatura
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      groups:
+        - firebase
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+    scripts:
+      - *firebase_config
+      - *pub_get
+      - name: Build iOS (sem codesign)
+        script: flutter build ios --release --no-codesign
+    artifacts:
+      - build/ios/iphoneos/Runner.app
+      - flutter_drive.log
+
+  # Gera .ipa assinado e envia ao TestFlight.
+  # Requer: conta Apple Developer + integração App Store Connect configurada no Codemagic
+  # (Team settings > Integrations > Developer Portal) com o nome abaixo.
+  ios-testflight:
+    name: iOS - TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 90
+    integrations:
+      app_store_connect: codemagic
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      groups:
+        - firebase
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.gilesdesenvolvimento.mycarapp
+    scripts:
+      - *firebase_config
+      - *pub_get
+      - name: Aplicar perfis de assinatura
+        script: xcode-project use-profiles
+      - name: Build IPA
+        script: |
+          BUILD_NUMBER=$(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0) + 1))
+          flutter build ipa --release --build-number=$BUILD_NUMBER \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
