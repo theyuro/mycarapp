@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
-import '../services/access_service.dart';
 import '../services/authentication_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/institutional_footer.dart';
-import 'home_screen.dart';
+import 'first_use_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,10 +18,12 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool signingIn = false;
 
-  void _start(BuildContext context) {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(builder: (_) => const HomeScreen()),
-    );
+  Future<void> _start(BuildContext context) async {
+    final next = await startScreenAfterLogin();
+    if (!context.mounted) return;
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute<void>(builder: (_) => next));
   }
 
   Future<void> _signInWithGoogle() async {
@@ -30,7 +31,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => signingIn = true);
     try {
       await AuthenticationService.instance.signInWithGoogle();
-      if (mounted) _start(context);
+      if (mounted) await _start(context);
     } on Object catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -134,17 +135,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 10),
-            TextButton(
-              onPressed: signingIn ? null : () => _start(context),
-              style: TextButton.styleFrom(foregroundColor: Colors.white70),
-              child: const Text('CONTINUAR SEM CONTA'),
-            ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 12),
             const Text(
-              AccessService.freeModeEnabled
-                  ? 'A conta será necessária para backup em nuvem e suporte.'
-                  : 'A conta será necessária para indicações, descontos e recursos Premium.',
+              'Entre com sua conta Google para usar o MyCarApp.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.white54, fontSize: 11),
             ),
