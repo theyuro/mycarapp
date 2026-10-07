@@ -8,6 +8,7 @@ import '../models/establishment.dart';
 import '../models/fueling_record.dart';
 import '../models/record_attachment.dart';
 import '../models/vehicle.dart';
+import '../services/ads_service.dart';
 import '../services/establishment_storage_service.dart';
 import '../services/fueling_storage_service.dart';
 import '../services/notification_service.dart';
@@ -185,6 +186,7 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
           category: 'overfill',
         );
       }
+      if (widget.record == null) AdsService.instance.registerMainActivity();
       if (mounted) Navigator.of(context).pop(true);
     } catch (_) {
       if (!mounted) return;

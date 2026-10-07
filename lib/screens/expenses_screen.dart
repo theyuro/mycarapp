@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../models/vehicle.dart';
 import '../models/vehicle_expense.dart';
+import '../services/ads_service.dart';
 import '../services/expense_storage_service.dart';
 import '../services/vehicle_storage_service.dart';
 import '../theme/app_colors.dart';
@@ -81,6 +82,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     await storage.saveExpense(saved);
     await load();
     if (mounted) message('Despesa salva.');
+    if (expense == null) AdsService.instance.registerMainActivity();
   }
 
   Future<void> delete(VehicleExpense expense) async {

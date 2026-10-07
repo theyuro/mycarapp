@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../models/fueling_record.dart';
 import '../models/vehicle.dart';
+import '../services/ads_service.dart';
 import '../services/fueling_storage_service.dart';
 import '../services/vehicle_storage_service.dart';
 import '../services/notification_service.dart';
@@ -108,6 +109,7 @@ class _QuickFuelingCardState extends State<QuickFuelingCard> {
       litersController.clear();
       priceController.clear();
       showMessage('Abastecimento rápido incluído');
+      AdsService.instance.registerMainActivity();
     } catch (_) {
       if (mounted) showMessage('Não foi possível salvar o abastecimento.');
     } finally {

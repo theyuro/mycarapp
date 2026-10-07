@@ -7,6 +7,7 @@ import '../models/establishment.dart';
 import '../models/maintenance_record.dart';
 import '../models/record_attachment.dart';
 import '../models/vehicle.dart';
+import '../services/ads_service.dart';
 import '../services/establishment_storage_service.dart';
 import '../services/maintenance_storage_service.dart';
 import '../services/calendar_service.dart';
@@ -229,6 +230,7 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
         debugPrint('Erro ao abrir agenda: $error\n$stackTrace');
       }
     }
+    if (widget.record == null) AdsService.instance.registerMainActivity();
     if (!mounted) return;
     if (reminderWarning) {
       ScaffoldMessenger.of(context).showSnackBar(
