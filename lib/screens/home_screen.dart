@@ -100,6 +100,15 @@ class _HomeScreenState extends State<HomeScreen> {
           'Documentos em PDF, próximas manutenções e integração com a agenda já estão disponíveis.',
       showSystemNotification: false,
     );
+    await notificationService.addUnique(
+      key: 'update-2026-10-v1-3-3',
+      title: 'Nova versão do MyCarApp',
+      message:
+          'Guia de primeiro uso para cadastrar seu veículo passo a passo, '
+          'login mais simples e seguro com sua conta Google, '
+          'além de ajustes e melhorias de desempenho no sistema.',
+      showSystemNotification: false,
+    );
     if (active != null) {
       final records = await maintenanceStorage.loadMaintenances();
       final now = DateTime.now();

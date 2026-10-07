@@ -37,6 +37,10 @@ class AdsService extends ChangeNotifier {
 
   bool _initialized = false;
   InterstitialAd? _interstitial;
+  DateTime? _interstitialLoadedAt;
+  // O AdMob invalida um intersticial carregado após 1 hora; acima disto ele
+  // é descartado e recarregado em vez de falhar na exibição.
+  static const _interstitialMaxAge = Duration(minutes: 55);
   bool _loadingInterstitial = false;
   // Persistido em disco: o app é de pouco uso, então o contador precisa
   // sobreviver ao fechamento para o intersticial chegar a aparecer.
@@ -92,6 +96,13 @@ class AdsService extends ChangeNotifier {
     if (_activitiesSinceInterstitial < activitiesPerInterstitial) {
       _loadInterstitial();
       return;
+    }
+    final loadedAt = _interstitialLoadedAt;
+    if (_interstitial != null &&
+        loadedAt != null &&
+        DateTime.now().difference(loadedAt) > _interstitialMaxAge) {
+      _interstitial!.dispose();
+      _interstitial = null;
     }
     final ad = _interstitial;
     if (ad == null) {
@@ -162,6 +173,7 @@ class AdsService extends ChangeNotifier {
         onAdLoaded: (ad) {
           _loadingInterstitial = false;
           _interstitial = ad;
+          _interstitialLoadedAt = DateTime.now();
         },
         onAdFailedToLoad: (error) {
           _loadingInterstitial = false;

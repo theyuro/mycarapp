@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../services/authentication_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_logo.dart';
+import 'first_use_screen.dart';
 import 'login_screen.dart';
 
 class PresentationScreen extends StatefulWidget {
@@ -18,12 +20,21 @@ class _PresentationScreenState extends State<PresentationScreen> {
     _timer = Timer(const Duration(seconds: 3), _openLogin);
   }
 
-  void _openLogin() {
+  // O app exige conta: quem já entrou vai direto para a Home; os demais
+  // passam obrigatoriamente pelo login.
+  bool _opening = false;
+
+  Future<void> _openLogin() async {
+    if (!mounted || _opening) return;
+    _opening = true;
+    _timer?.cancel();
+    final signedIn = AuthenticationService.instance.currentUser != null;
+    final next = signedIn ? await startScreenAfterLogin() : const LoginScreen();
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder<void>(
         pageBuilder: (_, animation, _) =>
-            FadeTransition(opacity: animation, child: const LoginScreen()),
+            FadeTransition(opacity: animation, child: next),
         transitionDuration: const Duration(milliseconds: 650),
       ),
     );
