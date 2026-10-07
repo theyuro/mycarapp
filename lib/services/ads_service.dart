@@ -31,6 +31,11 @@ class AdsService extends ChangeNotifier {
   static const _androidProductionInterstitialId =
       'ca-app-pub-3009025921589541/5946207574';
 
+  /// Branch `testes-anuncios`: força os blocos de TESTE do Google mesmo em
+  /// release, para testar em aparelho real sem gerar tráfego inválido no
+  /// AdMob. Nunca publicar na Play Store um build desta branch.
+  static const forceTestAds = true;
+
   /// Quantas atividades principais (abastecimento, manutenção ou despesa
   /// novos) o usuário registra entre um intersticial e outro.
   static const activitiesPerInterstitial = 2;
@@ -59,7 +64,9 @@ class AdsService extends ChangeNotifier {
 
   String get bannerAdUnitId {
     if (_configuredBannerId.isNotEmpty) return _configuredBannerId;
-    if (kReleaseMode && defaultTargetPlatform == TargetPlatform.android) {
+    if (!forceTestAds &&
+        kReleaseMode &&
+        defaultTargetPlatform == TargetPlatform.android) {
       return _androidProductionBannerId;
     }
     return defaultTargetPlatform == TargetPlatform.iOS
@@ -68,7 +75,9 @@ class AdsService extends ChangeNotifier {
   }
 
   String get interstitialAdUnitId {
-    if (kReleaseMode && defaultTargetPlatform == TargetPlatform.android) {
+    if (!forceTestAds &&
+        kReleaseMode &&
+        defaultTargetPlatform == TargetPlatform.android) {
       return _androidProductionInterstitialId;
     }
     return defaultTargetPlatform == TargetPlatform.iOS
