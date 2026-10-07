@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:path_provider/path_provider.dart';
@@ -107,7 +108,10 @@ class AdsService extends ChangeNotifier {
         _loadInterstitial();
       },
       onAdFailedToShowFullScreenContent: (ad, error) {
-        debugPrint('Falha ao exibir intersticial: ${error.message}');
+        reportAdIssue(
+          'interstitial_show',
+          'code=${error.code} domain=${error.domain} ${error.message}',
+        );
         ad.dispose();
         _loadInterstitial();
       },
@@ -161,7 +165,10 @@ class AdsService extends ChangeNotifier {
         },
         onAdFailedToLoad: (error) {
           _loadingInterstitial = false;
-          debugPrint('Falha ao carregar intersticial: ${error.message}');
+          reportAdIssue(
+            'interstitial_load',
+            'code=${error.code} domain=${error.domain} ${error.message}',
+          );
         },
       ),
     );
@@ -176,12 +183,22 @@ class AdsService extends ChangeNotifier {
     ConsentInformation.instance.requestConsentInfoUpdate(
       ConsentRequestParameters(),
       () {
-        ConsentForm.loadAndShowConsentFormIfRequired((_) async {
+        ConsentForm.loadAndShowConsentFormIfRequired((error) async {
+          if (error != null) {
+            reportAdIssue(
+              'consent_form',
+              'code=${error.errorCode} ${error.message}',
+            );
+          }
           await _refreshConsentState();
           if (!completion.isCompleted) completion.complete();
         });
       },
-      (_) async {
+      (error) async {
+        reportAdIssue(
+          'consent_update',
+          'code=${error.errorCode} ${error.message}',
+        );
         await _refreshConsentState();
         if (!completion.isCompleted) completion.complete();
       },
@@ -189,8 +206,31 @@ class AdsService extends ChangeNotifier {
 
     await completion.future.timeout(
       const Duration(seconds: 12),
-      onTimeout: _refreshConsentState,
+      onTimeout: () async {
+        reportAdIssue('consent_timeout', 'sem resposta do UMP em 12s');
+        await _refreshConsentState();
+      },
     );
+    if (!_canRequestAds) {
+      reportAdIssue('consent_blocked', 'canRequestAds=false após o UMP');
+    }
+  }
+
+  /// Registra no Crashlytics (não fatal) uma falha do fluxo de anúncios, para
+  /// diagnosticar em produção por que um anúncio não foi pedido ou exibido.
+  void reportAdIssue(String stage, String details) {
+    debugPrint('Anúncios [$stage]: $details');
+    try {
+      unawaited(
+        FirebaseCrashlytics.instance.recordError(
+          'AdMob $stage: $details',
+          null,
+          reason: 'ads_$stage',
+        ),
+      );
+    } on Object {
+      // Firebase indisponível: o log acima já basta.
+    }
   }
 
   Future<void> _refreshConsentState() async {
@@ -205,6 +245,16 @@ class AdsService extends ChangeNotifier {
     }
     _canRequestAds = canRequest;
     _privacyOptionsRequired = privacyRequired;
+    try {
+      unawaited(
+        FirebaseCrashlytics.instance.setCustomKey(
+          'ads_can_request',
+          canRequest,
+        ),
+      );
+    } on Object {
+      // Firebase indisponível.
+    }
     notifyListeners();
     _loadInterstitial();
   }

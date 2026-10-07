@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
@@ -32,7 +34,12 @@ class _LoadedBannerAd extends StatefulWidget {
 }
 
 class _LoadedBannerAdState extends State<_LoadedBannerAd> {
+  // Após uma falha, tenta de novo depois deste intervalo em vez de desistir
+  // até a tela ser recriada.
+  static const _retryDelay = Duration(seconds: 60);
+
   BannerAd? _banner;
+  Timer? _retry;
 
   @override
   void initState() {
@@ -53,7 +60,18 @@ class _LoadedBannerAdState extends State<_LoadedBannerAd> {
           }
           setState(() => _banner = ad as BannerAd);
         },
-        onAdFailedToLoad: (ad, _) => ad.dispose(),
+        onAdFailedToLoad: (ad, error) {
+          ad.dispose();
+          AdsService.instance.reportAdIssue(
+            'banner_load',
+            'code=${error.code} domain=${error.domain} ${error.message}',
+          );
+          if (!mounted) return;
+          _retry?.cancel();
+          _retry = Timer(_retryDelay, () {
+            if (mounted) _load();
+          });
+        },
       ),
     );
     banner.load();
@@ -61,6 +79,7 @@ class _LoadedBannerAdState extends State<_LoadedBannerAd> {
 
   @override
   void dispose() {
+    _retry?.cancel();
     _banner?.dispose();
     super.dispose();
   }
