@@ -1,6 +1,8 @@
 analyzer:
   exclude:
     - build/**
+    - android/**
+    - ios/**
   errors:
     unused_import: warning
     dead_code: warning

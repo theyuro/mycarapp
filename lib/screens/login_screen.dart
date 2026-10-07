@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../services/access_service.dart';
 import '../services/authentication_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_logo.dart';
@@ -141,7 +142,9 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 4),
             const Text(
-              'A conta será necessária para indicações, descontos e recursos Premium.',
+              AccessService.freeModeEnabled
+                  ? 'A conta será necessária para backup em nuvem e suporte.'
+                  : 'A conta será necessária para indicações, descontos e recursos Premium.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.white54, fontSize: 11),
             ),

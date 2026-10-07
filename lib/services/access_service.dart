@@ -50,6 +50,12 @@ class AccessService extends ChangeNotifier {
   static const subscriptionProductId = 'mycarapp_subscription';
   static const trialDuration = Duration(days: 14);
 
+  /// Modo gratuito: quando `true`, o app é 100% gratuito, com todos os
+  /// recursos liberados e monetização apenas por anúncios (AdMob). A cobrança
+  /// (Google Play, ofertas, restauração de compras) fica desligada, mas o
+  /// código permanece aqui, dormente, para ser reativado trocando para `false`.
+  static const freeModeEnabled = true;
+
   final InAppPurchase _store = InAppPurchase.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -103,7 +109,8 @@ class AccessService extends ChangeNotifier {
   }
 
   bool get trialActive => trialRemaining > Duration.zero;
-  bool get hasAccess => subscriptionActive || trialActive;
+  bool get hasAccess =>
+      freeModeEnabled || subscriptionActive || trialActive;
 
   Future<void> initialize() async {
     if (_initialized) return;
@@ -126,6 +133,7 @@ class AccessService extends ChangeNotifier {
       (user) => unawaited(_bindUser(user)),
     );
     await _bindUser(_auth.currentUser);
+    if (freeModeEnabled) return;
     unawaited(_loadRemoteAccess());
     unawaited(_connectStore());
   }
@@ -158,6 +166,7 @@ class AccessService extends ChangeNotifier {
             debugPrint('Não foi possível acompanhar a assinatura: $error');
           },
         );
+    if (freeModeEnabled) return;
     await _loadPromotionEligibility();
     if (storeAvailable) await _store.restorePurchases();
   }

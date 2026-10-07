@@ -13,7 +13,8 @@ class FreeUserBannerAd extends StatelessWidget {
     builder: (context, _) => AnimatedBuilder(
       animation: AccessService.instance,
       builder: (context, _) {
-        if (AccessService.instance.hasAccess ||
+        if ((!AccessService.freeModeEnabled &&
+                AccessService.instance.hasAccess) ||
             !AdsService.instance.canRequestAds) {
           return const SizedBox.shrink();
         }
@@ -70,17 +71,22 @@ class _LoadedBannerAdState extends State<_LoadedBannerAd> {
     if (banner == null) return const SizedBox.shrink();
     return ColoredBox(
       color: Theme.of(context).scaffoldBackgroundColor,
-      child: SafeArea(
-        top: false,
-        bottom: false,
-        child: SizedBox(
-          width: double.infinity,
-          height: banner.size.height.toDouble(),
-          child: Center(
-            child: SizedBox(
-              width: banner.size.width.toDouble(),
-              height: banner.size.height.toDouble(),
-              child: AdWidget(ad: banner),
+      // Margem vertical para afastar o anúncio de botões vizinhos (barra
+      // inferior, FAB) e evitar cliques acidentais.
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: SafeArea(
+          top: false,
+          bottom: false,
+          child: SizedBox(
+            width: double.infinity,
+            height: banner.size.height.toDouble(),
+            child: Center(
+              child: SizedBox(
+                width: banner.size.width.toDouble(),
+                height: banner.size.height.toDouble(),
+                child: AdWidget(ad: banner),
+              ),
             ),
           ),
         ),

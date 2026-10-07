@@ -154,7 +154,9 @@ class _AccountScreenState extends State<AccountScreen> {
                       ),
                       const SizedBox(height: 16),
                       const Text(
-                        'Entre para usar indicações e descontos',
+                        AccessService.freeModeEnabled
+                            ? 'Entre para usar backup em nuvem e suporte'
+                            : 'Entre para usar indicações e descontos',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 20,
@@ -214,7 +216,9 @@ class _AccountScreenState extends State<AccountScreen> {
                       ),
                       const SizedBox(height: 12),
                       _BackupCard(
-                        isPremium: AccessService.instance.subscriptionActive,
+                        isPremium:
+                            AccessService.freeModeEnabled ||
+                            AccessService.instance.subscriptionActive,
                         lastBackup: backups.isEmpty ? null : backups.first,
                         onTap: openBackup,
                       ),
@@ -244,89 +248,93 @@ class _AccountScreenState extends State<AccountScreen> {
                           ),
                         ),
                       ],
-                      const SizedBox(height: 18),
-                      _AccountCard(
-                        title: 'Seu código de indicação',
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                ownCode ?? '—',
-                                style: const TextStyle(
-                                  fontSize: 23,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 2,
-                                ),
-                              ),
-                            ),
-                            IconButton(
-                              tooltip: 'Copiar código',
-                              onPressed: ownCode == null
-                                  ? null
-                                  : () async {
-                                      await Clipboard.setData(
-                                        ClipboardData(text: ownCode!),
-                                      );
-                                      if (mounted) message('Código copiado.');
-                                    },
-                              icon: const Icon(Icons.copy_rounded),
-                            ),
-                            IconButton(
-                              tooltip: 'Convidar um amigo',
-                              onPressed: ownCode == null
-                                  ? null
-                                  : () => SharePlus.instance.share(
-                                      ShareParams(
-                                        subject: 'MyCarApp',
-                                        text:
-                                            'Uso o MyCarApp pra controlar os gastos do carro. '
-                                            'Baixa com meu código de indicação $ownCode e '
-                                            'ganha desconto na assinatura: '
-                                            'https://play.google.com/store/apps/details?id=com.gilesdesenvolvimento.mycarapp',
-                                      ),
-                                    ),
-                              icon: const Icon(Icons.share_outlined),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _AccountCard(
-                        title: 'Recebeu um código?',
-                        child: Column(
-                          children: [
-                            TextField(
-                              controller: referralController,
-                              textCapitalization: TextCapitalization.characters,
-                              decoration: const InputDecoration(
-                                labelText: 'Código de indicação',
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              width: double.infinity,
-                              child: FilledButton(
-                                onPressed: applying ? null : applyCode,
-                                child: Text(
-                                  applying ? 'APLICANDO...' : 'APLICAR CÓDIGO',
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (eligibility?.bestOfferTag != null) ...[
-                        const SizedBox(height: 12),
+                      // Indicações e ofertas só dão desconto na assinatura:
+                      // ficam ocultas no modo gratuito.
+                      if (!AccessService.freeModeEnabled) ...[
+                        const SizedBox(height: 18),
                         _AccountCard(
-                          title: 'Melhor oferta disponível',
-                          child: Text(
-                            _offerName(eligibility!.bestOfferTag!),
-                            style: const TextStyle(
-                              color: AppColors.blue,
-                              fontWeight: FontWeight.w800,
-                            ),
+                          title: 'Seu código de indicação',
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  ownCode ?? '—',
+                                  style: const TextStyle(
+                                    fontSize: 23,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 2,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: 'Copiar código',
+                                onPressed: ownCode == null
+                                    ? null
+                                    : () async {
+                                        await Clipboard.setData(
+                                          ClipboardData(text: ownCode!),
+                                        );
+                                        if (mounted) message('Código copiado.');
+                                      },
+                                icon: const Icon(Icons.copy_rounded),
+                              ),
+                              IconButton(
+                                tooltip: 'Convidar um amigo',
+                                onPressed: ownCode == null
+                                    ? null
+                                    : () => SharePlus.instance.share(
+                                        ShareParams(
+                                          subject: 'MyCarApp',
+                                          text:
+                                              'Uso o MyCarApp pra controlar os gastos do carro. '
+                                              'Baixa com meu código de indicação $ownCode e '
+                                              'ganha desconto na assinatura: '
+                                              'https://play.google.com/store/apps/details?id=com.gilesdesenvolvimento.mycarapp',
+                                        ),
+                                      ),
+                                icon: const Icon(Icons.share_outlined),
+                              ),
+                            ],
                           ),
                         ),
+                        const SizedBox(height: 12),
+                        _AccountCard(
+                          title: 'Recebeu um código?',
+                          child: Column(
+                            children: [
+                              TextField(
+                                controller: referralController,
+                                textCapitalization: TextCapitalization.characters,
+                                decoration: const InputDecoration(
+                                  labelText: 'Código de indicação',
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: FilledButton(
+                                  onPressed: applying ? null : applyCode,
+                                  child: Text(
+                                    applying ? 'APLICANDO...' : 'APLICAR CÓDIGO',
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (eligibility?.bestOfferTag != null) ...[
+                          const SizedBox(height: 12),
+                          _AccountCard(
+                            title: 'Melhor oferta disponível',
+                            child: Text(
+                              _offerName(eligibility!.bestOfferTag!),
+                              style: const TextStyle(
+                                color: AppColors.blue,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                       const SizedBox(height: 22),
                       OutlinedButton.icon(

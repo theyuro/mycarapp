@@ -10,6 +10,10 @@ class AdsService extends ChangeNotifier {
 
   static const _androidTestBannerId = 'ca-app-pub-3940256099942544/6300978111';
   static const _iosTestBannerId = 'ca-app-pub-3940256099942544/2934735716';
+  // Bloco de banner de produção (Android). Usado só em release: em debug
+  // seguem os IDs de teste, para não gerar tráfego inválido no AdMob.
+  static const _androidProductionBannerId =
+      'ca-app-pub-3009025921589541/3136303292';
   static const _configuredBannerId = String.fromEnvironment(
     'ADMOB_BANNER_AD_UNIT_ID',
   );
@@ -25,11 +29,16 @@ class AdsService extends ChangeNotifier {
   bool get canRequestAds =>
       supported &&
       _canRequestAds &&
-      (!kReleaseMode || _configuredBannerId.isNotEmpty);
+      (!kReleaseMode ||
+          _configuredBannerId.isNotEmpty ||
+          defaultTargetPlatform == TargetPlatform.android);
   bool get privacyOptionsRequired => supported && _privacyOptionsRequired;
 
   String get bannerAdUnitId {
     if (_configuredBannerId.isNotEmpty) return _configuredBannerId;
+    if (kReleaseMode && defaultTargetPlatform == TargetPlatform.android) {
+      return _androidProductionBannerId;
+    }
     return defaultTargetPlatform == TargetPlatform.iOS
         ? _iosTestBannerId
         : _androidTestBannerId;

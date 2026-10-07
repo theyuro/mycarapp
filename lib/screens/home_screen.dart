@@ -8,6 +8,7 @@ import '../models/fueling_record.dart';
 import '../models/maintenance_record.dart';
 import '../models/vehicle_expense.dart';
 import '../services/expense_storage_service.dart';
+import '../services/access_service.dart';
 import '../services/ads_service.dart';
 import '../services/vehicle_storage_service.dart';
 import '../services/maintenance_storage_service.dart';
@@ -431,11 +432,12 @@ class _HomeScreenState extends State<HomeScreen> {
         style: TextStyle(fontWeight: FontWeight.w700),
       ),
       actions: [
-        IconButton(
-          tooltip: 'MyCarApp Premium',
-          onPressed: openSubscription,
-          icon: const Icon(Icons.workspace_premium_outlined),
-        ),
+        if (!AccessService.freeModeEnabled)
+          IconButton(
+            tooltip: 'MyCarApp Premium',
+            onPressed: openSubscription,
+            icon: const Icon(Icons.workspace_premium_outlined),
+          ),
         IconButton(
           tooltip: 'Minha conta',
           onPressed: openAccount,

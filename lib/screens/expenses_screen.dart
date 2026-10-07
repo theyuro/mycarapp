@@ -6,6 +6,7 @@ import '../models/vehicle_expense.dart';
 import '../services/expense_storage_service.dart';
 import '../services/vehicle_storage_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/free_user_banner_ad.dart';
 
 class ExpensesScreen extends StatefulWidget {
   const ExpensesScreen({super.key, this.initialCategory});
@@ -125,6 +126,11 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         backgroundColor: AppColors.navy,
         foregroundColor: Colors.white,
         title: const Text('Despesas'),
+      ),
+      // Anúncio no rodapé; o FAB flutua acima dele, com folga.
+      bottomNavigationBar: const SafeArea(
+        top: false,
+        child: FreeUserBannerAd(),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: vehicle == null ? null : openForm,

@@ -239,7 +239,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                if (AccessService.instance.subscriptionActive) ...[
+                if (_premiumUnlocked) ...[
                   _ConsumptionReport(
                     vehicle: vehicle,
                     results: results,
@@ -264,10 +264,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   period: stationPeriod,
                   onPeriodChanged: (value) =>
                       setState(() => stationPeriod = value),
-                  isPremium: AccessService.instance.subscriptionActive,
+                  isPremium: _premiumUnlocked,
                   onUpgrade: _openPremium,
                 ),
-                if (AccessService.instance.subscriptionActive) ...[
+                if (_premiumUnlocked) ...[
                   const SizedBox(height: 16),
                   _WorkshopReportCard(
                     maintenances: maintenances,
@@ -291,12 +291,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
     ValueChanged<_ReportPeriod> select,
   ) async {
     if (value == _ReportPeriod.oneMonth ||
-        AccessService.instance.subscriptionActive) {
+        _premiumUnlocked) {
       select(value);
       return;
     }
     await _openPremium();
   }
+
+  /// No modo gratuito todos os relatórios ficam liberados.
+  bool get _premiumUnlocked =>
+      AccessService.freeModeEnabled ||
+      AccessService.instance.subscriptionActive;
 
   Future<void> _openPremium() => Navigator.of(context).push<void>(
     MaterialPageRoute<void>(builder: (_) => const SubscriptionScreen()),

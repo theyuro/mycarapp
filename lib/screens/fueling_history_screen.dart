@@ -5,6 +5,7 @@ import '../models/vehicle.dart';
 import '../services/fueling_storage_service.dart';
 import '../services/vehicle_storage_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/free_user_banner_ad.dart';
 import '../widgets/vehicle_type_icon.dart';
 import 'fueling_form_screen.dart';
 
@@ -150,6 +151,11 @@ class _FuelingHistoryScreenState extends State<FuelingHistoryScreen> {
       backgroundColor: AppColors.navy,
       foregroundColor: Colors.white,
       title: const Text('Histórico de abastecimentos'),
+    ),
+    // Anúncio no rodapé; o FAB flutua acima dele, com folga.
+    bottomNavigationBar: const SafeArea(
+      top: false,
+      child: FreeUserBannerAd(),
     ),
     floatingActionButton: FloatingActionButton.extended(
       onPressed: vehicle == null ? null : () => openForm(),

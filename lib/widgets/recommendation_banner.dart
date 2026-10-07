@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:in_app_review/in_app_review.dart';
 
 import '../screens/account_screen.dart';
+import '../services/access_service.dart';
 import '../services/recommendation_banner_service.dart';
 import '../theme/app_colors.dart';
 
@@ -35,7 +36,10 @@ class _RecommendationBannerState extends State<RecommendationBanner> {
     RecommendationBannerType? chosen;
     if (await service.canShow(RecommendationBannerType.rating)) {
       chosen = RecommendationBannerType.rating;
-    } else if (await service.canShow(RecommendationBannerType.referral)) {
+    } else if (!AccessService.freeModeEnabled &&
+        // A indicação promete desconto na assinatura: sem sentido no modo
+        // gratuito.
+        await service.canShow(RecommendationBannerType.referral)) {
       chosen = RecommendationBannerType.referral;
     }
 

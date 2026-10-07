@@ -5,6 +5,7 @@ import '../models/vehicle.dart';
 import '../services/maintenance_storage_service.dart';
 import '../services/vehicle_storage_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/free_user_banner_ad.dart';
 import '../widgets/vehicle_type_icon.dart';
 import 'maintenance_form_screen.dart';
 
@@ -179,6 +180,11 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
               Tab(text: 'PRÓXIMAS'),
             ],
           ),
+        ),
+        // Anúncio no rodapé; o FAB flutua acima dele, com folga.
+        bottomNavigationBar: const SafeArea(
+          top: false,
+          child: FreeUserBannerAd(),
         ),
         floatingActionButton: FloatingActionButton.extended(
           onPressed: vehicle == null ? null : chooseMaintenanceType,

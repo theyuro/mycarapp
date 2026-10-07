@@ -100,7 +100,9 @@ class _DataTransferScreenState extends State<DataTransferScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final unlocked = AccessService.instance.subscriptionActive;
+    final unlocked =
+        AccessService.freeModeEnabled ||
+        AccessService.instance.subscriptionActive;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AppColors.navy,

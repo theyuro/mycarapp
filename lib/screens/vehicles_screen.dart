@@ -6,6 +6,7 @@ import '../models/vehicle.dart';
 import '../services/access_service.dart';
 import '../services/vehicle_storage_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/free_user_banner_ad.dart';
 import '../widgets/vehicle_type_icon.dart';
 import 'vehicle_registration_screen.dart';
 import 'lifetime_purchase_screen.dart';
@@ -49,6 +50,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
   Future<void> openForm([Vehicle? vehicle]) async {
     if (vehicle == null &&
         vehicles.isNotEmpty &&
+        !AccessService.freeModeEnabled &&
         !AccessService.instance.subscriptionActive) {
       await Navigator.of(context).push<void>(
         MaterialPageRoute<void>(builder: (_) => const SubscriptionScreen()),
@@ -126,13 +128,20 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
       foregroundColor: Colors.white,
       title: const Text('Meus veículos'),
     ),
+    // Anúncio no rodapé; o FAB flutua acima dele, com folga.
+    bottomNavigationBar: const SafeArea(
+      top: false,
+      child: FreeUserBannerAd(),
+    ),
     floatingActionButton: FloatingActionButton.extended(
       onPressed: () => openForm(),
       backgroundColor: AppColors.gold,
       foregroundColor: AppColors.navy,
       icon: const Icon(Icons.add),
       label: Text(
-        vehicles.isNotEmpty && !AccessService.instance.subscriptionActive
+        vehicles.isNotEmpty &&
+                !AccessService.freeModeEnabled &&
+                !AccessService.instance.subscriptionActive
             ? 'MAIS VEÍCULOS · PREMIUM'
             : 'NOVO VEÍCULO',
       ),
