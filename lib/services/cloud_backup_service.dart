@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -15,6 +14,7 @@ import 'expense_storage_service.dart';
 import 'fueling_storage_service.dart';
 import 'maintenance_storage_service.dart';
 import 'vehicle_storage_service.dart';
+import '../l10n/l10n.dart';
 
 /// Resumo de um backup, sem precisar baixar o arquivo inteiro do Storage —
 /// vem dos metadados gravados em `users/{uid}/backups/{id}` no Firestore.
@@ -44,20 +44,11 @@ class RestoreImpact {
   int get total => added + updated;
 }
 
-/// Backup Premium em nuvem (Seção 4.2 do guia de planejamento; Fase 6 da
-/// trilha de implementação).
-///
-/// Cobre apenas dados estruturados — veículos, abastecimentos, despesas,
-/// manutenções e locais cadastrados. Fotos e documentos anexados **não**
-/// fazem parte desta versão (ver decisão registrada na trilha): são
-/// arquivos, não registros JSON, e restaurá-los exigiria também
-/// upload/download dos binários, escopo maior que o desta primeira entrega.
-///
-/// O acesso é sempre verificado no servidor: o cliente só consegue gravar
-/// em `users/{uid}/backups/...` (Storage e Firestore) se `isPremium` for
-/// verdadeiro nas regras — ver `storage.rules` e `firestore.rules`. Este
-/// serviço nunca decide por si só se o usuário pode fazer backup; ele só
-/// tenta, e a regra do servidor aceita ou nega.
+/// Cópias manuais do backup em nuvem, feitas por versões anteriores do app
+/// (um JSON por cópia no Storage, com metadados no Firestore). Hoje o
+/// backup é automático ([AutoBackupService]); este serviço só lista e
+/// restaura essas cópias antigas, o que continua liberado para o dono da
+/// conta mesmo sem assinatura.
 class CloudBackupService {
   CloudBackupService({
     FirebaseAuth? auth,
@@ -77,82 +68,16 @@ class CloudBackupService {
   final _maintenanceStorage = MaintenanceStorageService();
   final _establishmentStorage = EstablishmentStorageService();
 
-  /// Mantém apenas os backups mais recentes. Simplificação da janela
-  /// 7 diárias / 4 semanais / 3 mensais do guia (que exigiria classificar
-  /// backups por idade, algo mais natural de fazer num job agendado no
-  /// servidor do que no cliente) — ver decisão registrada na trilha.
-  static const _keepCount = 10;
-
   String get _uid {
     final uid = _auth.currentUser?.uid;
     if (uid == null) {
-      throw StateError('Entre com sua conta para usar o backup em nuvem.');
+      throw StateError(tr.backupSignInRequired);
     }
     return uid;
   }
 
   CollectionReference<Map<String, dynamic>> _backupsCollection(String uid) =>
       _firestore.collection('users').doc(uid).collection('backups');
-
-  Future<Map<String, dynamic>> _buildPayloadData() async {
-    final vehicles = (await _vehicleStorage.loadVehicles())
-        .map((item) => item.copyWith(photos: const []))
-        .toList();
-    final fuelings = (await _fuelingStorage.loadFuelings())
-        .map((item) => item.copyWith(attachments: const []))
-        .toList();
-    final expenses = await _expenseStorage.loadExpenses();
-    final maintenances = (await _maintenanceStorage.loadMaintenances())
-        .map((item) => item.copyWith(attachments: const []))
-        .toList();
-    final establishments = await _establishmentStorage.loadEstablishments();
-
-    return {
-      'vehicles': vehicles.map((item) => item.toJson()).toList(),
-      'fuelings': fuelings.map((item) => item.toJson()).toList(),
-      'expenses': expenses.map((item) => item.toJson()).toList(),
-      'maintenances': maintenances.map((item) => item.toJson()).toList(),
-      'establishments': establishments.map((item) => item.toJson()).toList(),
-    };
-  }
-
-  /// Gera um novo backup a partir dos dados locais e envia para o Storage.
-  /// Falha com [StateError] (sem conta) ou com o erro do Firebase se a
-  /// regra do servidor negar (ex.: usuário não é Premium).
-  Future<BackupSummary> createBackup() async {
-    final uid = _uid;
-    final data = await _buildPayloadData();
-    final counts = data.map(
-      (key, value) => MapEntry(key, (value as List<dynamic>).length),
-    );
-    final createdAt = DateTime.now();
-    final id = createdAt.millisecondsSinceEpoch.toString();
-    final payload = jsonEncode({
-      'schemaVersion': 1,
-      'createdAt': createdAt.toIso8601String(),
-      'counts': counts,
-      'data': data,
-    });
-    final bytes = Uint8List.fromList(utf8.encode(payload));
-
-    final ref = _storage.ref('users/$uid/backups/$id.json');
-    await ref.putData(bytes, SettableMetadata(contentType: 'application/json'));
-
-    await _backupsCollection(uid).doc(id).set({
-      'counts': counts,
-      'sizeBytes': bytes.length,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-
-    await _pruneOldBackups(uid);
-
-    return BackupSummary(
-      id: id,
-      createdAt: createdAt,
-      counts: counts,
-      sizeBytes: bytes.length,
-    );
-  }
 
   Future<List<BackupSummary>> listBackups() async {
     final uid = _uid;
@@ -193,26 +118,12 @@ class CloudBackupService {
     );
   }
 
-  Future<void> _pruneOldBackups(String uid) async {
-    final backups = await listBackups();
-    if (backups.length <= _keepCount) return;
-    for (final backup in backups.skip(_keepCount)) {
-      try {
-        await _storage.ref('users/$uid/backups/${backup.id}.json').delete();
-      } on Object {
-        // Se o arquivo já não existir no Storage, seguimos removendo o
-        // metadado mesmo assim — não deixar lixo de metadado órfão.
-      }
-      await _backupsCollection(uid).doc(backup.id).delete();
-    }
-  }
-
   Future<Map<String, dynamic>> _downloadPayload(String backupId) async {
     final uid = _uid;
     final ref = _storage.ref('users/$uid/backups/$backupId.json');
     final bytes = await ref.getData(20 * 1024 * 1024);
     if (bytes == null) {
-      throw StateError('Backup não encontrado no Storage.');
+      throw StateError(tr.backupNotFound);
     }
     return jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
   }
@@ -258,16 +169,8 @@ class CloudBackupService {
   }
 
   /// Mescla o backup com os dados locais: cria o que não existe e
-  /// atualiza o que já existe pelo mesmo id. **Nunca apaga** nada — é o
-  /// único modo de restauração desta versão (a opção "substituir tudo" do
-  /// guia fica para uma próxima iteração, ver decisão na trilha).
-  ///
-  /// Antes de aplicar qualquer alteração, cria automaticamente um novo
-  /// backup do estado atual, para permitir desfazer manualmente se algo
-  /// sair errado (mesma exigência do guia para a restauração).
+  /// atualiza o que já existe pelo mesmo id. **Nunca apaga** nada.
   Future<void> restoreMerge(String backupId) async {
-    await createBackup();
-
     final payload = await _downloadPayload(backupId);
     final data = payload['data'] as Map<String, dynamic>? ?? {};
 

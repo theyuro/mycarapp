@@ -1,21 +1,31 @@
-enum VehicleExpenseCategory {
-  insurance('Seguro'),
-  cooperative('Cooperativa'),
-  financing('Financiamento'),
-  consortium('Consórcio'),
-  other('Outra despesa');
+import '../l10n/l10n.dart';
 
-  const VehicleExpenseCategory(this.label);
-  final String label;
+enum VehicleExpenseCategory {
+  insurance,
+  cooperative,
+  financing,
+  consortium,
+  other;
+
+  String get label => switch (this) {
+    insurance => tr.expenseInsurance,
+    cooperative => tr.expenseCooperative,
+    financing => tr.expenseFinancing,
+    consortium => tr.expenseConsortium,
+    other => tr.expenseOther,
+  };
 }
 
 enum ExpenseFrequency {
-  monthly('Mensal'),
-  yearly('Anual'),
-  once('Pagamento único');
+  monthly,
+  yearly,
+  once;
 
-  const ExpenseFrequency(this.label);
-  final String label;
+  String get label => switch (this) {
+    monthly => tr.frequencyMonthly,
+    yearly => tr.frequencyYearly,
+    once => tr.frequencyOnce,
+  };
 }
 
 class VehicleExpense {

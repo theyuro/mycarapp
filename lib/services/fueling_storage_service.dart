@@ -5,6 +5,8 @@ import 'package:path_provider/path_provider.dart';
 
 import '../models/fueling_record.dart';
 import 'attachment_storage_service.dart';
+import 'auto_backup_service.dart';
+import '../l10n/l10n.dart';
 
 class FuelingStorageService {
   static Future<void> _writeQueue = Future.value();
@@ -35,9 +37,7 @@ class FuelingStorageService {
           .map((item) => FuelingRecord.fromJson(item as Map<String, dynamic>))
           .toList();
     } on Object {
-      throw const FileSystemException(
-        'O arquivo local de abastecimentos está corrompido.',
-      );
+      throw FileSystemException(tr.storageFuelingsCorrupted);
     }
   }
 
@@ -81,6 +81,7 @@ class FuelingStorageService {
   }
 
   Future<void> _writeRecords(List<FuelingRecord> records) async {
+    AutoBackupService.instance.markDirty();
     final file = await _dataFile();
     await _writeJsonSafely(file, records.map((item) => item.toJson()).toList());
   }

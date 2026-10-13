@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'account_cloud_service.dart';
+import '../l10n/l10n.dart';
 
 class AuthenticationService {
   AuthenticationService._();
@@ -29,7 +30,7 @@ class AuthenticationService {
     final result = await _auth.signInWithCredential(credential);
     final user = result.user;
     if (user == null) {
-      throw StateError('Não foi possível acessar sua conta Google.');
+      throw StateError(tr.authAccountError);
     }
     await AccountCloudService().ensureProfile();
     return user;

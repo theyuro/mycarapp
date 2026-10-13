@@ -1,13 +1,21 @@
-enum EstablishmentType {
-  posto('Posto de combustível'),
-  oficina('Oficina'),
-  concessionaria('Concessionária'),
-  lavaJato('Lava-jato'),
-  seguradora('Seguradora'),
-  outro('Outro');
+import '../l10n/l10n.dart';
 
-  const EstablishmentType(this.label);
-  final String label;
+enum EstablishmentType {
+  posto,
+  oficina,
+  concessionaria,
+  lavaJato,
+  seguradora,
+  outro;
+
+  String get label => switch (this) {
+    posto => tr.placeTypeStation,
+    oficina => tr.placeTypeShop,
+    concessionaria => tr.placeTypeDealer,
+    lavaJato => tr.placeTypeCarWash,
+    seguradora => tr.placeTypeInsurer,
+    outro => tr.other,
+  };
 }
 
 class Establishment {

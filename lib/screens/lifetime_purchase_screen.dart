@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/access_service.dart';
 import '../theme/app_colors.dart';
 import 'login_screen.dart';
+import '../l10n/l10n.dart';
 
 class AccessGate extends StatelessWidget {
   const AccessGate({super.key, required this.child});
@@ -17,9 +18,43 @@ class AccessGate extends StatelessWidget {
   );
 }
 
+/// Recurso Premium que levou o usuário à tela de assinatura; define o
+/// título exibido no topo.
+enum PremiumFeature {
+  noAds(Icons.block_rounded),
+  backup(Icons.cloud_upload_outlined),
+  reports(Icons.bar_chart_rounded),
+  updates(Icons.auto_awesome_rounded);
+
+  const PremiumFeature(this.icon);
+  final IconData icon;
+
+  String get title => switch (this) {
+    noAds => tr.featureNoAdsTitle,
+    backup => tr.featureBackupTitle,
+    reports => tr.featureReportsTitle,
+    updates => tr.featureUpdatesTitle,
+  };
+
+  String get description => switch (this) {
+    noAds => tr.featureNoAdsText,
+    backup => tr.featureBackupText,
+    reports => tr.featureReportsText,
+    updates => tr.featureUpdatesText,
+  };
+}
+
+Future<void> openPremium(BuildContext context, [PremiumFeature? feature]) =>
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => SubscriptionScreen(feature: feature),
+      ),
+    );
+
 class SubscriptionScreen extends StatelessWidget {
-  const SubscriptionScreen({super.key, this.blocking = false});
+  const SubscriptionScreen({super.key, this.blocking = false, this.feature});
   final bool blocking;
+  final PremiumFeature? feature;
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
@@ -49,8 +84,10 @@ class SubscriptionScreen extends StatelessWidget {
                     color: AppColors.goldLight,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.workspace_premium_rounded,
+                  child: Icon(
+                    access.subscriptionActive
+                        ? Icons.workspace_premium_rounded
+                        : feature?.icon ?? Icons.workspace_premium_rounded,
                     size: 45,
                     color: AppColors.navy,
                   ),
@@ -58,8 +95,8 @@ class SubscriptionScreen extends StatelessWidget {
                 const SizedBox(height: 20),
                 Text(
                   access.subscriptionActive
-                      ? 'Você é Premium'
-                      : 'Você está no plano gratuito',
+                      ? tr.premiumYouArePremium
+                      : feature?.title ?? tr.premiumFreePlan,
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: AppColors.text,
@@ -70,8 +107,8 @@ class SubscriptionScreen extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   access.subscriptionActive
-                      ? 'Sua assinatura do MyCarApp está ativa.'
-                      : 'Continue cuidando de 1 veículo gratuitamente ou libere todos os recursos.',
+                      ? tr.premiumActive
+                      : feature?.description ?? tr.premiumFreeIntro,
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: AppColors.muted, height: 1.4),
                 ),
@@ -102,8 +139,8 @@ class SubscriptionScreen extends StatelessWidget {
                         Text(
                           access.selectedSubscription?.price ??
                               (access.loadingStore
-                                  ? 'Carregando...'
-                                  : 'Preço a definir'),
+                                  ? tr.loading
+                                  : tr.premiumPrices),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 28,
@@ -136,7 +173,7 @@ class SubscriptionScreen extends StatelessWidget {
                                     backgroundColor: Colors.white,
                                     label: Text(
                                       option.isPromotional
-                                          ? '${option.title} · oferta'
+                                          ? tr.premiumOptionOffer(option.title)
                                           : option.title,
                                       style: const TextStyle(
                                         color: AppColors.navy,
@@ -176,10 +213,10 @@ class SubscriptionScreen extends StatelessWidget {
                                 : const Icon(Icons.shopping_bag_outlined),
                             label: Text(
                               access.purchasePending
-                                  ? 'AGUARDANDO GOOGLE PLAY...'
+                                  ? tr.premiumWaitingPlay
                                   : access.signedIn
-                                  ? 'ASSINAR'
-                                  : 'ENTRAR PARA ASSINAR',
+                                  ? tr.upsellSubscribe
+                                  : tr.premiumSignInToSubscribe,
                             ),
                           ),
                         ),
@@ -194,7 +231,7 @@ class SubscriptionScreen extends StatelessWidget {
                         ? access.restorePurchases
                         : () => _openLogin(context),
                     icon: const Icon(Icons.restore_rounded),
-                    label: const Text('RESTAURAR ASSINATURA'),
+                    label: Text(tr.premiumRestore),
                   ),
                 ],
                 if (access.storeMessage != null) ...[
@@ -209,16 +246,16 @@ class SubscriptionScreen extends StatelessWidget {
                   ),
                 ],
                 const SizedBox(height: 16),
-                const Text(
-                  'Pagamento processado pela Google Play. A assinatura tem renovação automática e pode ser cancelada pela Play Store.',
+                Text(
+                  tr.premiumBillingNote,
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.muted, fontSize: 11),
+                  style: const TextStyle(color: AppColors.muted, fontSize: 11),
                 ),
                 if (access.subscriptionActive && !blocking) ...[
                   const SizedBox(height: 20),
                   FilledButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('VOLTAR AO APP'),
+                    child: Text(tr.premiumBackToApp),
                   ),
                 ],
               ],
@@ -248,27 +285,14 @@ class _BenefitsCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(17),
       border: Border.all(color: const Color(0xFFE1E7EE)),
     ),
-    child: const Column(
+    child: Column(
       children: [
+        _Benefit(icon: Icons.block_rounded, text: tr.benefitNoAds),
+        _Benefit(icon: Icons.cloud_upload_outlined, text: tr.benefitBackup),
+        _Benefit(icon: Icons.bar_chart_rounded, text: tr.featureReportsTitle),
         _Benefit(
-          icon: Icons.garage_outlined,
-          text: 'Cadastre e gerencie vários veículos',
-        ),
-        _Benefit(
-          icon: Icons.local_gas_station_outlined,
-          text: 'Experiência sem anúncios',
-        ),
-        _Benefit(
-          icon: Icons.build_circle_outlined,
-          text: 'Relatórios, históricos e projeções avançadas',
-        ),
-        _Benefit(
-          icon: Icons.bar_chart_rounded,
-          text: 'Rankings e comparativos',
-        ),
-        _Benefit(
-          icon: Icons.import_export_rounded,
-          text: 'Exportação e backup das informações',
+          icon: Icons.auto_awesome_rounded,
+          text: tr.featureUpdatesTitle,
         ),
       ],
     ),

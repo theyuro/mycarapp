@@ -15,8 +15,7 @@ class FreeUserBannerAd extends StatelessWidget {
     builder: (context, _) => AnimatedBuilder(
       animation: AccessService.instance,
       builder: (context, _) {
-        if ((!AccessService.freeModeEnabled &&
-                AccessService.instance.hasAccess) ||
+        if (!AccessService.instance.showsAds ||
             !AdsService.instance.canRequestAds) {
           return const SizedBox.shrink();
         }

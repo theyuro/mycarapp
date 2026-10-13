@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/vehicle_expense.dart';
+import 'auto_backup_service.dart';
+import '../l10n/l10n.dart';
 
 class ExpenseStorageService {
   static Future<void> _writeQueue = Future.value();
@@ -33,9 +35,7 @@ class ExpenseStorageService {
           .map((item) => VehicleExpense.fromJson(item as Map<String, dynamic>))
           .toList();
     } on Object {
-      throw const FileSystemException(
-        'O arquivo local de despesas está corrompido.',
-      );
+      throw FileSystemException(tr.storageExpensesCorrupted);
     }
   }
 
@@ -57,6 +57,7 @@ class ExpenseStorageService {
   });
 
   Future<void> _write(List<VehicleExpense> expenses) async {
+    AutoBackupService.instance.markDirty();
     final file = await _dataFile();
     final temporary = File('${file.path}.tmp');
     final backup = File('${file.path}.bak');

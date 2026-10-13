@@ -1,0 +1,1057 @@
+{
+  "@@locale": "pt",
+  "loginErrorConfig": "Não foi possível validar o acesso com Google. Tente novamente em alguns instantes.",
+  "loginErrorInterrupted": "A entrada com Google foi interrompida. Tente novamente.",
+  "loginErrorCanceledMaybe": "Entrada com Google interrompida. Se você escolheu uma conta, tente novamente em instantes.",
+  "loginErrorGeneric": "Não foi possível entrar com Google. Tente novamente.",
+  "errorCheckConnection": "Verifique sua conexão e tente novamente.",
+  "loginErrorOtherProvider": "Esta conta já usa outra forma de entrada.",
+  "loginErrorCanceled": "Entrada com Google cancelada.",
+  "appTagline": "GESTÃO VEICULAR INTELIGENTE",
+  "loginSigningIn": "ENTRANDO...",
+  "loginWithGoogle": "ENTRAR COM GOOGLE",
+  "loginHint": "Entre com sua conta Google para usar o MyCarApp.",
+  "presentationSlogan": "Tecnologia que acompanha o seu caminho.",
+  "footerDevelopedBy": "Desenvolvido por Giles Desenvolvimento de Softwares",
+  "upsellSubscribe": "ASSINAR",
+  "dismiss": "Dispensar",
+  "upsellNoAdsTitle": "Chega de anúncios",
+  "upsellNoAdsText": "Assine o Premium e use o MyCarApp sem interrupções.",
+  "upsellBackupTitle": "Seu histórico protegido",
+  "upsellBackupText": "Backup automático na nuvem, com fotos e documentos.",
+  "upsellReportsTitle": "Novos relatórios",
+  "upsellReportsText": "Assinantes Premium recebem os novos relatórios do app.",
+  "upsellUpdatesTitle": "Atualizações exclusivas",
+  "upsellUpdatesText": "Novidades lançadas primeiro para quem é Premium.",
+  "upsellVehiclesTitle": "Fotos e dados do veículo seguros",
+  "upsellVehiclesText": "Com o Premium, tudo vai para a nuvem automaticamente.",
+  "upsellAdsTitle": "Use sem anúncios",
+  "upsellAdsText": "Assine o Premium e tire os anúncios do app.",
+  "upsellFuelingTitle": "Não perca seus abastecimentos",
+  "upsellFuelingText": "Backup automático na nuvem, inclusive dos comprovantes.",
+  "upsellMaintenanceTitle": "Guarde o histórico de manutenção",
+  "upsellMaintenanceText": "Com o backup automático, ele não se perde se o celular quebrar.",
+  "upsellExpensesTitle": "Novos relatórios no Premium",
+  "upsellExpensesText": "Assine e receba os novos relatórios e atualizações exclusivas.",
+  "afterAdTitle": "Cansou dos anúncios?",
+  "afterAdSubtitle": "Assine o MyCarApp Premium",
+  "premiumPrices": "R$ 15/mês ou R$ 100/ano",
+  "afterAdSubscribe": "ASSINAR O PREMIUM",
+  "notNow": "Agora não",
+  "recoRatingText": "Gostando de acompanhar seus gastos? Conta pra gente na Play Store.",
+  "recoReferralText": "Curtiu o MyCarApp? Indique um amigo e ganhe desconto na assinatura.",
+  "recoRate": "AVALIAR",
+  "recoRefer": "INDICAR",
+  "attachmentNotFound": "O anexo não foi encontrado.",
+  "attachmentOpenError": "Não foi possível abrir este anexo.",
+  "attachmentRemove": "Remover anexo",
+  "attachmentTakePhoto": "TIRAR FOTO",
+  "attachmentAttach": "ANEXAR",
+  "attachmentReading": "LENDO NOTA...",
+  "attachmentReadReceipt": "LER NOTA E PREENCHER DADOS",
+  "attachmentHint": "Imagens e arquivos PDF são aceitos.",
+  "establishmentCreate": "Criar \"{name}\"",
+  "@establishmentCreate": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "fuelingNeedVehicle": "Cadastre um veículo antes do primeiro abastecimento.",
+  "fuelingNeedLitersAndPrice": "Informe os litros e o valor pago.",
+  "fuelingOverfillTitle": "Abastecimento inadequado",
+  "fuelingOverfillMessage": "{liters} L informados para um tanque de {capacity} L.",
+  "@fuelingOverfillMessage": {
+    "placeholders": {
+      "liters": {
+        "type": "String"
+      },
+      "capacity": {
+        "type": "String"
+      }
+    }
+  },
+  "quickFuelingAdded": "Abastecimento rápido incluído",
+  "fuelingSaveError": "Não foi possível salvar o abastecimento.",
+  "fuelingAdded": "Abastecimento incluído",
+  "quickFuelingTitle": "Abastecimento rápido",
+  "liters": "Litros",
+  "amountPaid": "Valor pago",
+  "fullFueling": "ABASTECIMENTO COMPLETO",
+  "featureNoAdsTitle": "Use sem anúncios",
+  "featureNoAdsText": "Assinantes Premium usam o MyCarApp sem nenhum anúncio.",
+  "featureBackupTitle": "Backup automático na nuvem",
+  "featureBackupText": "Tudo é salvo na sua conta automaticamente, inclusive fotos e documentos. Troque de celular sem perder nada.",
+  "featureReportsTitle": "Novos relatórios",
+  "featureReportsText": "Assinantes recebem os novos relatórios do MyCarApp.",
+  "featureUpdatesTitle": "Atualizações exclusivas",
+  "featureUpdatesText": "Novidades lançadas primeiro, ou só, para assinantes Premium.",
+  "premiumYouArePremium": "Você é Premium",
+  "premiumFreePlan": "Você está no plano gratuito",
+  "premiumActive": "Sua assinatura do MyCarApp está ativa.",
+  "premiumFreeIntro": "Todos os recursos do app são gratuitos, com anúncios. Assine para usar sem anúncios e ter backup automático.",
+  "loading": "Carregando...",
+  "premiumOptionOffer": "{plan} · oferta",
+  "@premiumOptionOffer": {
+    "placeholders": {
+      "plan": {
+        "type": "Object"
+      }
+    }
+  },
+  "premiumWaitingPlay": "AGUARDANDO GOOGLE PLAY...",
+  "premiumSignInToSubscribe": "ENTRAR PARA ASSINAR",
+  "premiumRestore": "RESTAURAR ASSINATURA",
+  "premiumBillingNote": "Pagamento processado pela Google Play. A assinatura tem renovação automática e pode ser cancelada pela Play Store.",
+  "premiumBackToApp": "VOLTAR AO APP",
+  "benefitNoAds": "Sem anúncios",
+  "benefitBackup": "Backup automático na nuvem, com fotos e documentos",
+  "planAnnual": "Plano anual",
+  "planMonthly": "Plano mensal",
+  "perYear": "{price}/ano",
+  "@perYear": {
+    "placeholders": {
+      "price": {
+        "type": "Object"
+      }
+    }
+  },
+  "perMonth": "{price}/mês",
+  "@perMonth": {
+    "placeholders": {
+      "price": {
+        "type": "Object"
+      }
+    }
+  },
+  "priceOfferThen": "{price} na oferta; depois {renewal}",
+  "@priceOfferThen": {
+    "placeholders": {
+      "price": {
+        "type": "Object"
+      },
+      "renewal": {
+        "type": "Object"
+      }
+    }
+  },
+  "storeCommError": "Não foi possível concluir a comunicação com a loja.",
+  "storeUnavailable": "Google Play não está disponível neste aparelho.",
+  "storeProductNotFound": "Produto não encontrado. Confirme o ID no Google Play Console.",
+  "storeNoPlans": "Nenhum plano disponível para esta conta.",
+  "storeAccessError": "Não foi possível acessar a Google Play.",
+  "storeSignInToSubscribe": "Entre com sua conta Google para assinar.",
+  "storePurchaseNotStarted": "A compra não pôde ser iniciada.",
+  "storePurchaseStartError": "Não foi possível iniciar a compra.",
+  "storeSignInToRestore": "Entre com sua conta Google para restaurar a assinatura.",
+  "storeSearching": "Procurando compras anteriores...",
+  "storeRestored": "Assinatura restaurada.",
+  "storeValidatingRestore": "Compras consultadas. Validando com a Google Play...",
+  "storeRestoreError": "Não foi possível restaurar as compras.",
+  "storePending": "Pagamento pendente na Google Play.",
+  "storeNotCompleted": "A compra não foi concluída.",
+  "storeCanceled": "Compra cancelada.",
+  "storeSameAccount": "Entre na mesma conta usada para iniciar a assinatura.",
+  "storeNoVerificationData": "A Google Play não forneceu os dados para validação.",
+  "storeValidating": "Validando assinatura com a Google Play...",
+  "storeActive": "Assinatura MyCarApp ativa.",
+  "storeNotActive": "A assinatura não está ativa na Google Play.",
+  "storeValidationError": "Não foi possível validar a assinatura. Tente restaurar novamente.",
+  "backupDone": "Backup concluído.",
+  "backupRestoreCloudTitle": "Restaurar da nuvem",
+  "backupRestoreCloudConfirm": "Isto traz os {count} registro(s) salvos na nuvem, com fotos e documentos, para este celular. Registros com o mesmo id são atualizados; nada deste celular é apagado.",
+  "@backupRestoreCloudConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "backupRestoredCount": "{count} registro(s) restaurado(s).",
+  "@backupRestoredCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "backupRestoreError": "Não foi possível restaurar. Verifique sua conexão.",
+  "backupReadError": "Não foi possível ler este backup.",
+  "backupRestoreLegacyTitle": "Restaurar cópia antiga",
+  "backupLegacyNothingNew": "Esta cópia não tem nada além do que você já tem neste celular.",
+  "backupLegacyImpact": "Isto vai adicionar {added} registro(s) novo(s) e atualizar {updated} já existente(s). Nada é apagado.",
+  "@backupLegacyImpact": {
+    "placeholders": {
+      "added": {
+        "type": "Object"
+      },
+      "updated": {
+        "type": "Object"
+      }
+    }
+  },
+  "backupLegacyRestored": "Cópia restaurada.",
+  "backupLegacyRestoreError": "Não foi possível restaurar esta cópia.",
+  "cancel": "CANCELAR",
+  "restore": "RESTAURAR",
+  "backupTitle": "Backup e restauração",
+  "backupRestoring": "RESTAURANDO...",
+  "backupRestoreCloudButton": "RESTAURAR DA NUVEM ({count})",
+  "@backupRestoreCloudButton": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "backupLegacyHeader": "CÓPIAS ANTIGAS",
+  "backupLegacyHint": "Feitas manualmente em versões anteriores do app. Não incluem fotos e documentos.",
+  "backupAutoActive": "Backup automático ativo",
+  "backupSending": "Enviando alterações...",
+  "backupFirstSoon": "O primeiro backup começa em instantes.",
+  "backupLastAt": "Último backup em {date}.",
+  "@backupLastAt": {
+    "placeholders": {
+      "date": {
+        "type": "Object"
+      }
+    }
+  },
+  "backupWhatIsSaved": "Veículos, abastecimentos, manutenções, despesas, locais, fotos, comprovantes e documentos são salvos na sua conta sempre que você faz uma alteração.",
+  "backupUploading": "ENVIANDO...",
+  "backupNow": "FAZER BACKUP AGORA",
+  "backupIsPremium": "Backup automático é Premium",
+  "backupFreeExplain": "No plano gratuito seus dados ficam só neste celular. Com o Premium, tudo é salvo na nuvem automaticamente, inclusive fotos e documentos, e volta com você ao trocar de aparelho.",
+  "learnAboutPremium": "CONHECER O PREMIUM",
+  "backupLegacyTileInfo": "{count} registro(s) • {size}",
+  "@backupLegacyTileInfo": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      },
+      "size": {
+        "type": "Object"
+      }
+    }
+  },
+  "dateAtTime": "{date} às {time}",
+  "@dateAtTime": {
+    "placeholders": {
+      "date": {
+        "type": "Object"
+      },
+      "time": {
+        "type": "Object"
+      }
+    }
+  },
+  "backupFailed": "Não foi possível concluir o backup. Verifique sua conexão.",
+  "backupSignInToRestore": "Entre com sua conta para restaurar o backup.",
+  "backupSignInRequired": "Entre com sua conta para usar o backup em nuvem.",
+  "backupNotFound": "Backup não encontrado no Storage.",
+  "signInRequired": "Entre na sua conta para usar este recurso.",
+  "referralApplied": "Código aplicado! O benefício será ativado após o primeiro pagamento.",
+  "referralApplyError": "Não foi possível aplicar esse código. Verifique e tente novamente.",
+  "adminPremiumUpdated": "Acesso Premium gratuito atualizado.",
+  "adminPremiumUpdateError": "Não foi possível atualizar o período.",
+  "accountTitle": "Minha conta",
+  "accountSignInBackup": "Entre para usar backup em nuvem e suporte",
+  "accountSignInReferral": "Entre para usar indicações e descontos",
+  "accountUser": "Usuário",
+  "supportTitle": "Ajuda, feedback e bugs",
+  "supportSubtitle": "Envie e acompanhe seus chamados",
+  "adminTitle": "Administração do teste",
+  "adminPremiumUntil": "Premium gratuito até {date}",
+  "@adminPremiumUntil": {
+    "placeholders": {
+      "date": {
+        "type": "Object"
+      }
+    }
+  },
+  "adminChangeDate": "ALTERAR DATA",
+  "referralYourCode": "Seu código de indicação",
+  "referralCopy": "Copiar código",
+  "referralCopied": "Código copiado.",
+  "referralInvite": "Convidar um amigo",
+  "referralShareText": "Uso o MyCarApp pra controlar os gastos do carro. Baixa com meu código de indicação {code} e ganha 30% de desconto no primeiro ano do Premium anual: {url}",
+  "@referralShareText": {
+    "placeholders": {
+      "code": {
+        "type": "Object"
+      },
+      "url": {
+        "type": "Object"
+      }
+    }
+  },
+  "referralReceived": "Recebeu um código?",
+  "referralCodeLabel": "Código de indicação",
+  "referralApplying": "APLICANDO...",
+  "referralApply": "APLICAR CÓDIGO",
+  "bestOffer": "Melhor oferta disponível",
+  "signOut": "SAIR DA CONTA",
+  "accountBackupPitch": "Salve tudo na nuvem, com fotos e documentos, e não perca nada ao trocar de celular.",
+  "backupDaysAgo": "Último backup há {days} dia(s)",
+  "@backupDaysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "Object"
+      }
+    }
+  },
+  "backupLastOn": "Último backup em {date}",
+  "@backupLastOn": {
+    "placeholders": {
+      "date": {
+        "type": "Object"
+      }
+    }
+  },
+  "offerClosedTest3m": "70% de desconto por 3 meses",
+  "offerClosedTestYear": "70% de desconto no primeiro ano",
+  "offerFounders": "50% de desconto no primeiro ano",
+  "offerReferral": "30% de desconto no primeiro ano",
+  "offerReferralOld": "50% de desconto por 3 meses",
+  "offerSpecial": "Oferta especial MyCarApp",
+  "notSet": "não definida",
+  "exportSubject": "Exportação MyCarApp",
+  "exportText": "Dados do veículo exportados pelo MyCarApp.",
+  "exportError": "Não foi possível exportar.",
+  "importConfirmTitle": "Importar informações?",
+  "importConfirmText": "Um novo veículo será criado com os abastecimentos e manutenções do arquivo. Os dados atuais não serão sobrescritos.",
+  "importAction": "IMPORTAR",
+  "importDone": "Importação concluída",
+  "importSummary": "{vehicle}\n{fuelings} abastecimento(s)\n{maintenances} manutenção(ões)",
+  "@importSummary": {
+    "placeholders": {
+      "vehicle": {
+        "type": "Object"
+      },
+      "fuelings": {
+        "type": "Object"
+      },
+      "maintenances": {
+        "type": "Object"
+      }
+    }
+  },
+  "importError": "Não foi possível importar.",
+  "exportTitle": "Exportar informações",
+  "exportCsv": "Exportar CSV",
+  "exportCsvHint": "Formato leve, compatível com planilhas e com o MyCarApp.",
+  "exportExcel": "Exportar Excel",
+  "exportExcelHint": "Planilha XLSX pronta para compartilhar ou arquivar.",
+  "importOtherDevice": "Importar em outro aparelho",
+  "importOtherDeviceHint": "Leia um CSV ou Excel criado pelo MyCarApp.",
+  "exportInfo": "A exportação utiliza o veículo ativo e inclui cadastro, abastecimentos e manutenções. Fotos e notas fiscais permanecem somente no aparelho por segurança.",
+  "vehiclesLoadError": "Não foi possível carregar os veículos.",
+  "vehicleAdded": "Veículo incluído",
+  "vehicleNowActive": "{name} é o veículo ativo.",
+  "@vehicleNowActive": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "vehicleDeleteTitle": "Excluir veículo?",
+  "vehicleDeleteText": "O cadastro e as fotos de {name} serão apagados do aparelho. Os abastecimentos já registrados serão preservados.",
+  "@vehicleDeleteText": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "deleteAction": "EXCLUIR",
+  "vehicleDeleted": "Veículo excluído.",
+  "vehicleDeleteError": "Não foi possível excluir o veículo.",
+  "vehiclesTitle": "Meus veículos",
+  "newVehicle": "NOVO VEÍCULO",
+  "useThis": "USAR ESTE",
+  "edit": "Editar",
+  "delete": "Excluir",
+  "vehiclesEmptyTitle": "Nenhum veículo cadastrado",
+  "vehiclesEmptyText": "Cadastre seu primeiro carro ou moto para começar a registrar abastecimentos.",
+  "addVehicle": "CADASTRAR VEÍCULO",
+  "placeArchived": "{name} arquivado.",
+  "@placeArchived": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "placesNothingToOrganize": "Nenhum local pendente de organização.",
+  "placesOrganized": "{count} local(is) organizado(s).",
+  "@placesOrganized": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "placesTitle": "Meus locais",
+  "placesOrganize": "Organizar meus locais",
+  "archive": "Arquivar",
+  "placesEmptyTitle": "Nenhum local cadastrado ainda.",
+  "placesEmptyText": "Cadastre postos e oficinas ao lançar um abastecimento ou manutenção, ou organize os locais já digitados como texto.",
+  "placesOrganizeButton": "ORGANIZAR MEUS LOCAIS",
+  "placeNew": "Novo local",
+  "placeEdit": "Editar local",
+  "name": "Nome",
+  "nameRequired": "Informe um nome",
+  "type": "Tipo",
+  "placeBrand": "Bandeira (opcional)",
+  "placeAddress": "Endereço (opcional)",
+  "placeNeighborhood": "Bairro (opcional)",
+  "favorite": "Favorito",
+  "placeFavoriteHint": "Fica no topo das sugestões rápidas",
+  "saving": "SALVANDO...",
+  "save": "SALVAR",
+  "placesOrganizeIntro": "Encontramos estes nomes digitados em lançamentos antigos. Selecione os que devem virar um local estruturado.",
+  "placesGroupInfo": "{type} · {count} lançamento(s)",
+  "@placesGroupInfo": {
+    "placeholders": {
+      "type": {
+        "type": "Object"
+      },
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "organizing": "ORGANIZANDO...",
+  "placesUnify": "UNIFICAR {count} SELECIONADO(S)",
+  "@placesUnify": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "notifCustomize": "Personalizar notificações",
+  "notifCustomizeIntro": "Escolha quais alertas deseja receber neste aparelho.",
+  "notifAll": "Todas as notificações",
+  "notifAllOn": "Todas ativadas",
+  "notifSomeOn": "Algumas ativadas",
+  "notifAllOff": "Todas desativadas",
+  "notifDisableAll": "DESATIVAR TODAS",
+  "notifEnableAll": "ATIVAR TODAS",
+  "notifNews": "Novidades e atualizações",
+  "notifMaintenance": "Próximas manutenções",
+  "notifFuelLow": "Combustível próximo de 20%",
+  "notifTitle": "Notificações",
+  "notifClear": "Limpar notificações",
+  "notifEmpty": "Nenhuma notificação",
+  "docsLoadError": "Não foi possível carregar os documentos.",
+  "fileUnavailable": "Arquivo indisponível.",
+  "docAttached": "Documento anexado.",
+  "docAttachError": "Não foi possível anexar o PDF.",
+  "docFileMissing": "O arquivo não foi encontrado. Anexe o documento novamente.",
+  "docNoPdfReader": "Não há um leitor de PDF disponível no aparelho.",
+  "docDeleteTitle": "Excluir documento?",
+  "docDeleteText": "A cópia armazenada no MyCarApp será removida.",
+  "docDeleted": "Documento excluído.",
+  "docsTitle": "Documentos",
+  "docDriverLicense": "CNH-e",
+  "docDriverLicenseHint": "Carteira Nacional de Habilitação em PDF",
+  "docVehicle": "Documento do veículo",
+  "docSelectVehicle": "Selecione um veículo para anexar o CRLV-e",
+  "docVehicleOf": "CRLV-e de {name}",
+  "@docVehicleOf": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "docAttachPdf": "ANEXAR PDF",
+  "docOpenPdf": "ABRIR PDF",
+  "docReplacePdf": "Substituir PDF",
+  "docsStorageNote": "Os PDFs são copiados para o armazenamento interno do MyCarApp e permanecem somente neste aparelho.",
+  "supportLoadError": "Não foi possível carregar os chamados.",
+  "supportAdminTitle": "Central de chamados · Admin",
+  "supportScreenTitle": "Ajuda e feedback",
+  "supportNew": "NOVO CHAMADO",
+  "supportEmpty": "Nenhum chamado aberto ainda.",
+  "supportSent": "Chamado #{number} enviado.",
+  "@supportSent": {
+    "placeholders": {
+      "number": {
+        "type": "Object"
+      }
+    }
+  },
+  "supportSendError": "Não foi possível enviar o chamado.",
+  "supportNewTitle": "Novo chamado",
+  "supportFeedback": "Feedback",
+  "supportBug": "Bug",
+  "supportSubject": "Assunto",
+  "supportSubjectRequired": "Informe o assunto",
+  "supportDetails": "Conte o que aconteceu",
+  "supportDetailsHint": "Se for um bug, descreva os passos até o problema.",
+  "supportDetailsRequired": "Descreva com mais detalhes",
+  "backupUploadingSend": "ENVIANDO...",
+  "supportSend": "ENVIAR CHAMADO",
+  "supportReply": "Resposta do suporte",
+  "status": "Status",
+  "statusOpen": "Aberto",
+  "statusInProgress": "Em andamento",
+  "statusResolved": "Resolvido",
+  "supportReplyToUser": "Resposta ao usuário",
+  "supportSaveReply": "SALVAR RESPOSTA",
+  "supportSignIn": "Entre na sua conta para enviar e acompanhar chamados.",
+  "expenseNeedVehicle": "Cadastre e selecione um veículo primeiro.",
+  "expenseSaved": "Despesa salva.",
+  "expenseDeleteTitle": "Excluir despesa?",
+  "expenseDeleteText": "{title} será removida do histórico.",
+  "@expenseDeleteText": {
+    "placeholders": {
+      "title": {
+        "type": "Object"
+      }
+    }
+  },
+  "expensesTitle": "Despesas",
+  "expenseAdd": "ADICIONAR DESPESA",
+  "expenseNeedVehicleFirst": "Cadastre um veículo antes de adicionar despesas.",
+  "expensesEmpty": "Cadastre seguro, cooperativa, financiamento, consórcio ou outra despesa.",
+  "expensesMonthlyRecurring": "Recorrentes no mês",
+  "expensesNextDue": "Próximo vencimento",
+  "expensesDueDay": "Dia {day}",
+  "@expensesDueDay": {
+    "placeholders": {
+      "day": {
+        "type": "Object"
+      }
+    }
+  },
+  "expenseNew": "Nova despesa",
+  "expenseEdit": "Editar despesa",
+  "category": "Categoria",
+  "description": "Descrição",
+  "descriptionRequired": "Informe uma descrição",
+  "amount": "Valor",
+  "invalidValue": "Informe um valor válido",
+  "frequency": "Frequência",
+  "expenseInstallments": "Quantidade de parcelas",
+  "expenseInstallmentsHint": "Deixe vazio para uma cobrança sem prazo definido",
+  "expenseFirstDue": "Primeiro vencimento",
+  "notes": "Observações",
+  "expenseSave": "SALVAR DESPESA",
+  "installmentOf": "{current} de {total}",
+  "@installmentOf": {
+    "placeholders": {
+      "current": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      }
+    }
+  },
+  "maintLoadError": "Não foi possível carregar as manutenções.",
+  "maintDoneAdded": "Manutenção realizada incluída",
+  "maintNextAdded": "Próxima manutenção incluída",
+  "maintDeleteTitle": "Excluir manutenção?",
+  "maintDeleteText": "{service} será removida permanentemente.",
+  "@maintDeleteText": {
+    "placeholders": {
+      "service": {
+        "type": "Object"
+      }
+    }
+  },
+  "maintDeleted": "Manutenção excluída.",
+  "maintDeleteError": "Não foi possível excluir a manutenção.",
+  "maintDone": "Manutenção realizada",
+  "maintDoneHint": "Registrar serviço, oficina e custos",
+  "maintNext": "Próxima manutenção",
+  "maintNextHint": "Planejar mesmo sem possuir histórico",
+  "maintTitle": "Manutenções",
+  "maintTabDone": "REALIZADAS",
+  "maintTabNext": "PRÓXIMAS",
+  "maintNew": "NOVA MANUTENÇÃO",
+  "maintEmptyDone": "Nenhuma manutenção realizada",
+  "maintEmptyNext": "Nenhuma próxima manutenção planejada",
+  "thisMonth": "Este mês",
+  "total": "Total",
+  "alerts": "Alertas",
+  "maintNeedVehicle": "Cadastre e selecione um veículo para acessar as manutenções.",
+  "maintOverdue": "Vencida",
+  "maintUpcoming": "Próxima",
+  "maintPlanned": "Prevista",
+  "historyLoadError": "Não foi possível carregar o histórico.",
+  "fuelingDeleteTitle": "Excluir abastecimento?",
+  "fuelingDeleteText": "O registro de {date} será removido permanentemente.",
+  "@fuelingDeleteText": {
+    "placeholders": {
+      "date": {
+        "type": "Object"
+      }
+    }
+  },
+  "fuelingDeleted": "Abastecimento excluído.",
+  "fuelingDeleteError": "Não foi possível excluir o abastecimento.",
+  "historyTitle": "Histórico de abastecimentos",
+  "fuelUp": "ABASTECER",
+  "historySpentMonth": "Gasto no mês",
+  "averagePrice": "Preço médio",
+  "historyTotalLiters": "Total abastecido",
+  "historyRecords": "Registros",
+  "fuel": "Combustível",
+  "fullTank": "Tanque cheio",
+  "historyEmptyTitle": "Nenhum abastecimento de {name}",
+  "@historyEmptyTitle": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "historyEmptyText": "Registre litros, valor, quilometragem e tanque cheio para acompanhar gastos e consumo.",
+  "newFueling": "NOVO ABASTECIMENTO",
+  "historyNeedVehicle": "Cadastre e selecione um veículo para visualizar o histórico.",
+  "placeTypeStation": "Posto de combustível",
+  "placeTypeShop": "Oficina",
+  "placeTypeDealer": "Concessionária",
+  "placeTypeCarWash": "Lava-jato",
+  "placeTypeInsurer": "Seguradora",
+  "other": "Outro",
+  "expenseInsurance": "Seguro",
+  "expenseCooperative": "Cooperativa",
+  "expenseFinancing": "Financiamento",
+  "expenseConsortium": "Consórcio",
+  "expenseOther": "Outra despesa",
+  "frequencyMonthly": "Mensal",
+  "frequencyYearly": "Anual",
+  "frequencyOnce": "Pagamento único",
+  "vehicleMotorcycle": "Moto",
+  "vehicleCar": "Carro",
+  "fuelGasoline": "Gasolina",
+  "fuelEthanol": "Etanol",
+  "fuelDiesel": "Diesel",
+  "fuelNaturalGas": "GNV",
+  "fuelElectric": "Elétrico",
+  "fuelFlex": "Flex",
+  "fuelHybrid": "Híbrido",
+  "transmissionManual": "Manual",
+  "transmissionAutomatic": "Automático",
+  "maintOilFilters": "Óleo e filtros",
+  "maintEngine": "Motor",
+  "maintBrakes": "Freios",
+  "maintSuspension": "Suspensão",
+  "maintTires": "Pneus",
+  "maintTransmission": "Câmbio",
+  "maintAirConditioning": "Ar-condicionado",
+  "maintElectrical": "Elétrica",
+  "maintSteering": "Direção",
+  "maintBelts": "Correias",
+  "maintService": "Revisão",
+  "maintOthers": "Outros",
+  "photoCarFront": "Frente do veículo",
+  "photoCarRear": "Traseira do veículo",
+  "photoLeftSide": "Lateral esquerda",
+  "photoRightSide": "Lateral direita",
+  "photoDashboard": "Painel",
+  "photoSteeringWheel": "Volante",
+  "photoFrontLeftTire": "Pneu dianteiro esquerdo",
+  "photoFrontRightTire": "Pneu dianteiro direito",
+  "photoRearLeftTire": "Pneu traseiro esquerdo",
+  "photoRearRightTire": "Pneu traseiro direito",
+  "photoMotoFront": "Frente da moto",
+  "photoMotoRear": "Traseira da moto",
+  "photoHandlebar": "Guidão",
+  "photoFrontTire": "Pneu dianteiro",
+  "photoRearTire": "Pneu traseiro",
+  "photoExhaust": "Escapamento",
+  "otherBrand": "Outra marca",
+  "otherModel": "Outro modelo",
+  "ocrReadError": "Não foi possível ler a nota. Tente outra foto.",
+  "ocrReviewTitle": "Conferir dados reconhecidos",
+  "ocrStation": "Posto",
+  "ocrFueling": "Abastecimento",
+  "ocrTotalPrice": "Preço total",
+  "date": "Data",
+  "ocrReviewHint": "Revise os campos antes de salvar.",
+  "ocrNothing": "Nenhum dado foi reconhecido. Tente fotografar novamente com boa luz e a nota inteira visível.",
+  "ocrFill": "PREENCHER",
+  "fuelingNew": "Novo abastecimento",
+  "fuelingEdit": "Editar abastecimento",
+  "fuelingData": "Dados do abastecimento",
+  "totalValue": "Valor total",
+  "mileage": "Quilometragem",
+  "fuelingMileageRequired": "Obrigatória para o cálculo",
+  "fuelingMileageInvalid": "Informe uma quilometragem válida",
+  "fuelingFullTankHint": "Necessário para calcular o consumo com precisão",
+  "tankCapacity": "Capacidade total do tanque",
+  "tankCapacityHint": "Consulte o manual do veículo",
+  "tankCapacityRequired": "Informe a capacidade do tanque",
+  "fuelingGaugeFull": "O marcador indicou tanque cheio?",
+  "fuelingGaugeFullHint": "Somente confirmações reais entram no consumo estimado",
+  "optionalInfo": "Informações opcionais",
+  "receiptsSection": "Nota fiscal e comprovantes",
+  "fuelingSave": "SALVAR ABASTECIMENTO",
+  "notIdentified": "Não identificado",
+  "invalidValueShort": "Valor inválido",
+  "maintSaveError": "Não foi possível salvar a manutenção.",
+  "maintSavedCalendarError": "Manutenção salva. Não foi possível concluir o lembrete na agenda.",
+  "maintEdit": "Editar manutenção",
+  "maintDoneShort": "Realizada",
+  "maintServiceDone": "Serviço realizado",
+  "maintServicePlanned": "Serviço previsto",
+  "maintServiceDescription": "Descrição do serviço",
+  "maintServiceExample": "Ex.: Troca de óleo e filtro",
+  "maintServiceRequired": "Informe o serviço",
+  "maintDateDone": "Data realizada",
+  "maintDatePlanned": "Data prevista",
+  "maintKmPlanned": "Km prevista",
+  "maintKmRequired": "Informe a km",
+  "maintKmGreater": "Maior que a atual",
+  "maintShop": "Oficina ou profissional (opcional)",
+  "maintCosts": "Custos",
+  "maintLabor": "Mão de obra",
+  "maintParts": "Peças",
+  "maintNextKm": "Próxima quilometragem",
+  "maintNextDate": "Próxima data (opcional)",
+  "maintCalendar": "Agenda do telefone",
+  "maintAddToCalendar": "Adicionar à minha agenda",
+  "maintCalendarHint": "Evento de dia inteiro: MyCarApp Manutenção",
+  "maintNotesHint": "Peças utilizadas, marcas, garantias...",
+  "maintSave": "SALVAR MANUTENÇÃO",
+  "maintSaveNext": "SALVAR PRÓXIMA MANUTENÇÃO",
+  "notSetFem": "Não definida",
+  "calendarEventTitle": "MyCarApp Manutenção",
+  "transferNoActiveVehicle": "Nenhum veículo ativo.",
+  "transferExcelError": "Falha ao gerar Excel.",
+  "transferUnknownFile": "Arquivo não reconhecido pelo MyCarApp.",
+  "transferMissingVehicle": "Veículo ausente.",
+  "transferInvalidCsv": "Linha CSV inválida.",
+  "transferEmptySheet": "Planilha vazia.",
+  "storageVehiclesCorrupted": "O arquivo local de veículos está corrompido.",
+  "storagePhotoNotFound": "Foto não encontrada",
+  "storageFuelingsCorrupted": "O arquivo local de abastecimentos está corrompido.",
+  "storageMaintenanceCorrupted": "O arquivo local de manutenções está corrompido.",
+  "storageExpensesCorrupted": "O arquivo local de despesas está corrompido.",
+  "storagePlacesCorrupted": "O arquivo local de estabelecimentos está corrompido.",
+  "docInvalidPdf": "O arquivo selecionado não é um PDF válido.",
+  "authAccountError": "Não foi possível acessar sua conta Google.",
+  "fieldRequired": "Campo obrigatório",
+  "vehicleSaveError": "Não foi possível salvar o veículo. Tente novamente.",
+  "addVehicleTitle": "Cadastrar veículo",
+  "editVehicleTitle": "Editar veículo",
+  "vehicleIdentification": "Identificação",
+  "vehicleNickname": "Apelido do veículo",
+  "vehicleNicknameMoto": "Ex.: Minha moto",
+  "vehicleNicknameCar": "Ex.: Meu carro",
+  "brand": "Marca",
+  "brandName": "Nome da marca",
+  "brandHint": "Digite a marca do veículo",
+  "model": "Modelo",
+  "modelName": "Nome do modelo",
+  "modelHint": "Digite o modelo do veículo",
+  "vehicleYear": "Ano do veículo",
+  "selectYear": "Selecione o ano",
+  "vehicleFeatures": "Características",
+  "transmission": "Câmbio",
+  "currentMileage": "Quilometragem atual",
+  "documentsByYear": "Documentação por ano",
+  "vehiclePhotos": "Fotos do veículo",
+  "photoWhat": "O que aparece na foto?",
+  "photoSelect": "SELECIONAR FOTO",
+  "vehicleSave": "SALVAR VEÍCULO",
+  "year": "Ano",
+  "docTaxPaid": "IPVA pago",
+  "docLicensingPaid": "Licenciamento pago",
+  "vehicleSaveErrorDetail": "Não foi possível salvar: {message}",
+  "@vehicleSaveErrorDetail": {
+    "placeholders": {
+      "message": {
+        "type": "Object"
+      }
+    }
+  },
+  "photoCount": "{count} foto(s)",
+  "@photoCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportsTitle": "Relatórios",
+  "reportFuelTitle": "Gastos com combustível",
+  "reportFuelSubtitle": "Total gasto e preço médio por litro",
+  "reportMaintTitle": "Gastos com manutenções",
+  "reportMaintSubtitle": "Somente manutenções realizadas",
+  "period1Month": "1 mês",
+  "period3Months": "3 meses",
+  "period6Months": "6 meses",
+  "period1Year": "1 ano",
+  "period12Months": "12 meses",
+  "periodAll": "Tudo",
+  "totalSpent": "Total gasto",
+  "reportNoFuelings": "Nenhum abastecimento neste período.",
+  "monthlyBreakdown": "DETALHAMENTO POR MÊS",
+  "averageCost": "Custo médio",
+  "reportNoMaint": "Nenhuma manutenção realizada neste período.",
+  "reportMaintDoneOne": "{count} manutenção realizada",
+  "@reportMaintDoneOne": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportMaintDoneMany": "{count} manutenções realizadas",
+  "@reportMaintDoneMany": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportAverage": "Média {value}",
+  "@reportAverage": {
+    "placeholders": {
+      "value": {
+        "type": "Object"
+      }
+    }
+  },
+  "fuelingCountOne": "{count} abastecimento",
+  "@fuelingCountOne": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "fuelingCountMany": "{count} abastecimentos",
+  "@fuelingCountMany": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportConsumptionTitle": "Consumo estimado",
+  "reportConsumptionSubtitle": "Cálculo estrito por tanque cheio",
+  "reportNeedVehicle": "Cadastre e selecione um veículo para gerar o relatório.",
+  "reportLastConsumption": "Último consumo calculado",
+  "reportOverallAverage": "Média geral",
+  "reportConfirmedTanks": "Tanques confirmados",
+  "reportConsumptionHow": "Só calculamos entre dois abastecimentos com quilometragem, capacidade informada, tanque cheio e marcador confirmado. Abastecimentos parciais no intervalo também entram na soma de litros.",
+  "reportConsumptionNeedTwo": "São necessários pelo menos dois tanques cheios confirmados para calcular o consumo.",
+  "reportDiffPerFueling": "DIFERENÇA POR ABASTECIMENTO",
+  "reportLitersUsed": "{distance} km • {liters} L consumidos",
+  "@reportLitersUsed": {
+    "placeholders": {
+      "distance": {
+        "type": "Object"
+      },
+      "liters": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportBaseline": "Base de comparação",
+  "reportCapacityUsage": "Capacidade: {capacity} L • Uso equivalente: {tanks} tanque(s)",
+  "@reportCapacityUsage": {
+    "placeholders": {
+      "capacity": {
+        "type": "Object"
+      },
+      "tanks": {
+        "type": "Object"
+      }
+    }
+  },
+  "sortCostPerKm": "Custo por km",
+  "sortConsumption": "Consumo",
+  "sortSpent": "Valor gasto",
+  "reportByStation": "Por posto",
+  "reportByStationSubtitle": "Onde seu carro rende mais",
+  "reportStationRule": "Um resultado só é atribuído a um posto quando todos os abastecimentos daquele intervalo foram feitos no mesmo local e com o mesmo combustível.",
+  "reportStationEmpty": "Ainda não há intervalos completos com posto informado para formar este relatório.",
+  "reportBestStation": "Seu melhor custo por km: {name}",
+  "@reportBestStation": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportSmallSample": "{name} (amostra pequena)",
+  "@reportSmallSample": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportBestDetail": "{cost}/km • {consumption} km/L • baseado em {count} abastecimento(s)",
+  "@reportBestDetail": {
+    "placeholders": {
+      "cost": {
+        "type": "Object"
+      },
+      "consumption": {
+        "type": "Object"
+      },
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportSecondPlace": "2º colocado: {name}",
+  "@reportSecondPlace": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportVsAverage": "{value}% vs. média",
+  "@reportVsAverage": {
+    "placeholders": {
+      "value": {
+        "type": "Object"
+      }
+    }
+  },
+  "smallSample": "Amostra pequena",
+  "reportTotalCostPerKm": "Custo total por km",
+  "reportTotalCostSubtitle": "Combustível, manutenções e despesas somados",
+  "reportCostNeedTwo": "São necessários ao menos dois abastecimentos com quilometragem no período para calcular este relatório.",
+  "reportAnnualProjection": "Projeção anual",
+  "reportCostBreakdown": "{distance} km rodados • {total} no total (combustível {fuel} • manutenção {maintenance} • despesas {expenses})",
+  "@reportCostBreakdown": {
+    "placeholders": {
+      "distance": {
+        "type": "Object"
+      },
+      "total": {
+        "type": "Object"
+      },
+      "fuel": {
+        "type": "Object"
+      },
+      "maintenance": {
+        "type": "Object"
+      },
+      "expenses": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportProjectionNote": "A projeção anual estende a média mensal do período selecionado — não considera sazonalidade nem manutenções pontuais fora do padrão.",
+  "reportWorkshopUnknown": "Oficina não informada",
+  "reportByWorkshop": "Por oficina",
+  "reportByWorkshopSubtitle": "Onde seu dinheiro de manutenção vai",
+  "reportCostPer1000": "Custo de manutenção por 1.000 km",
+  "reportNoWorkshop": "Nenhuma manutenção com oficina informada neste período.",
+  "reportByWorkshopHeader": "POR OFICINA",
+  "reportCompositionHeader": "COMPOSIÇÃO POR TIPO DE SERVIÇO",
+  "reportSameServiceHeader": "MESMO SERVIÇO, OFICINAS DIFERENTES",
+  "reportVisitsOne": "{count} visita",
+  "@reportVisitsOne": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportVisitsMany": "{count} visitas",
+  "@reportVisitsMany": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportAvgTicket": "ticket médio {value}",
+  "@reportAvgTicket": {
+    "placeholders": {
+      "value": {
+        "type": "Object"
+      }
+    }
+  },
+  "reportRework": "Possível retrabalho: duas visitas do mesmo tipo em até 30 dias",
+  "homeCloudFoundTitle": "Seus dados estão na nuvem",
+  "homeCloudFoundText": "Encontramos {count} registro(s) no backup da sua conta, com fotos e documentos. Quer trazê-los para este celular?",
+  "@homeCloudFoundText": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "notNowUpper": "AGORA NÃO",
+  "homeRestoring": "Restaurando seus dados...",
+  "homeRestoreLater": "Não foi possível restaurar agora. Tente em Conta › Backup.",
+  "newsDocsTitle": "MyCarApp atualizado",
+  "newsDocsText": "Documentos em PDF, próximas manutenções e integração com a agenda já estão disponíveis.",
+  "news134Title": "MyCarApp mais completo e gratuito",
+  "news134Text": "Vários veículos, todos os postos, relatórios completos e exportação agora são gratuitos. O Premium remove os anúncios e faz backup automático na nuvem, inclusive de fotos e documentos.",
+  "news133Title": "Nova versão do MyCarApp",
+  "news133Text": "Login mais simples e seguro com sua conta Google, além de ajustes e melhorias de desempenho no sistema.",
+  "maintOverdueTitle": "Manutenção vencida",
+  "fuelLowTitle": "Hora de abastecer",
+  "fuelLowText": "{name} atingiu aproximadamente 20% da capacidade estimada do tanque.",
+  "@fuelLowText": {
+    "placeholders": {
+      "name": {
+        "type": "Object"
+      }
+    }
+  },
+  "homeNeedVehicle": "Cadastre um veículo primeiro.",
+  "moreOptions": "Mais opções",
+  "rateApp": "Avaliar o app",
+  "adsPrivacy": "Privacidade de anúncios",
+  "activeVehicle": "VEÍCULO ATIVO",
+  "selectVehicle": "Selecione seu veículo",
+  "homeSpentMonth": "Saída neste mês",
+  "homeLastConsumption": "Último consumo",
+  "homeAveragePriceStations": "Preço médio · ver por posto",
+  "previousMonth": "Mês anterior",
+  "homeMonthSpending": "Gastos do mês",
+  "nextMonth": "Próximo mês",
+  "homeMonthTotal": "Total do mês",
+  "maintenance": "Manutenção",
+  "homeInsurance": "Seguro e cooperativa",
+  "homeFinancing": "Financiamento e consórcio",
+  "homeOtherExpenses": "Outras despesas",
+  "homeSwipeMonths": "Arraste para ver outros meses",
+  "homeNewEntry": "Novo lançamento",
+  "homeWhatToRecord": "O que você deseja registrar?",
+  "homeVehicleUse": "USO DO VEÍCULO",
+  "homeFuelingHint": "Litros, valor, posto e quilometragem",
+  "homeMaintHint": "Serviço realizado ou próxima manutenção",
+  "homeVehicleExpenses": "DESPESAS DO VEÍCULO",
+  "homeInsuranceEntry": "Seguro ou cooperativa",
+  "homeInsuranceHint": "Proteção veicular e parcelas do seguro",
+  "homeFinancingEntry": "Financiamento ou consórcio",
+  "homeFinancingHint": "Parcelas, vencimentos e andamento",
+  "homeOtherHint": "Estacionamento, pedágio, lavagem e outros",
+  "daysCount": "{count} dias",
+  "@daysCount": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "navHome": "Início",
+  "navFuelings": "Abastecimentos",
+  "navNew": "Novo",
+  "navMore": "Mais",
+  "forceUpdateTitle": "Atualize o MyCarApp",
+  "forceUpdateText": "Esta versão não é mais compatível. Atualize para continuar usando o app; seus dados continuam salvos no celular.",
+  "forceUpdateButton": "ATUALIZAR AGORA"
+}

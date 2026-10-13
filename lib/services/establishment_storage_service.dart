@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/establishment.dart';
+import 'auto_backup_service.dart';
+import '../l10n/l10n.dart';
 
 /// Armazenamento local dos estabelecimentos (postos, oficinas etc.).
 ///
@@ -40,9 +42,7 @@ class EstablishmentStorageService {
           .map((item) => Establishment.fromJson(item as Map<String, dynamic>))
           .toList();
     } on Object {
-      throw const FileSystemException(
-        'O arquivo local de estabelecimentos está corrompido.',
-      );
+      throw FileSystemException(tr.storagePlacesCorrupted);
     }
   }
 
@@ -94,6 +94,7 @@ class EstablishmentStorageService {
   });
 
   Future<void> _write(List<Establishment> establishments) async {
+    AutoBackupService.instance.markDirty();
     final file = await _dataFile();
     final temporary = File('${file.path}.tmp');
     final backup = File('${file.path}.bak');

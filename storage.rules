@@ -30,6 +30,15 @@ service firebase.storage {
         request.resource.contentType == 'application/json';
     }
 
+    // Fotos, comprovantes e PDFs do backup automático do Premium.
+    match /users/{uid}/files/{filePath=**} {
+      allow read, delete: if owns(uid);
+      allow write: if owns(uid) && isPremium(uid) &&
+        request.resource.size < 20 * 1024 * 1024 &&
+        (request.resource.contentType.matches('image/.*') ||
+          request.resource.contentType == 'application/pdf');
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }

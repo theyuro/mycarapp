@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/app_notification.dart';
 import '../services/notification_service.dart';
 import '../theme/app_colors.dart';
+import '../l10n/l10n.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -61,28 +62,31 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Personalizar notificações',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                  Text(
+                    tr.notifCustomize,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                   const SizedBox(height: 6),
-                  const Text(
-                    'Escolha quais alertas deseja receber neste aparelho.',
-                    style: TextStyle(color: AppColors.muted),
+                  Text(
+                    tr.notifCustomizeIntro,
+                    style: const TextStyle(color: AppColors.muted),
                   ),
                   const SizedBox(height: 14),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text(
-                      'Todas as notificações',
-                      style: TextStyle(fontWeight: FontWeight.w800),
+                    title: Text(
+                      tr.notifAll,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
                     ),
                     subtitle: Text(
                       current.allEnabled
-                          ? 'Todas ativadas'
+                          ? tr.notifAllOn
                           : current.anyEnabled
-                          ? 'Algumas ativadas'
-                          : 'Todas desativadas',
+                          ? tr.notifSomeOn
+                          : tr.notifAllOff,
                     ),
                     value: current.allEnabled,
                     activeThumbColor: AppColors.blue,
@@ -107,7 +111,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               overfill: false,
                             ),
                           ),
-                          child: const Text('DESATIVAR TODAS'),
+                          child: Text(tr.notifDisableAll),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -115,35 +119,35 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         child: FilledButton(
                           onPressed: () =>
                               update(const NotificationPreferences()),
-                          child: const Text('ATIVAR TODAS'),
+                          child: Text(tr.notifEnableAll),
                         ),
                       ),
                     ],
                   ),
                   const Divider(),
                   _PreferenceSwitch(
-                    title: 'Novidades e atualizações',
+                    title: tr.notifNews,
                     icon: Icons.new_releases_outlined,
                     value: current.updates,
                     onChanged: (value) =>
                         update(current.copyWith(updates: value)),
                   ),
                   _PreferenceSwitch(
-                    title: 'Próximas manutenções',
+                    title: tr.notifMaintenance,
                     icon: Icons.build_circle_outlined,
                     value: current.maintenance,
                     onChanged: (value) =>
                         update(current.copyWith(maintenance: value)),
                   ),
                   _PreferenceSwitch(
-                    title: 'Combustível próximo de 20%',
+                    title: tr.notifFuelLow,
                     icon: Icons.local_gas_station_outlined,
                     value: current.fuelLow,
                     onChanged: (value) =>
                         update(current.copyWith(fuelLow: value)),
                   ),
                   _PreferenceSwitch(
-                    title: 'Abastecimento inadequado',
+                    title: tr.fuelingOverfillTitle,
                     icon: Icons.warning_amber_rounded,
                     value: current.overfill,
                     onChanged: (value) =>
@@ -168,16 +172,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     appBar: AppBar(
       backgroundColor: AppColors.navy,
       foregroundColor: Colors.white,
-      title: const Text('Notificações'),
+      title: Text(tr.notifTitle),
       actions: [
         IconButton(
-          tooltip: 'Personalizar notificações',
+          tooltip: tr.notifCustomize,
           onPressed: openPreferences,
           icon: const Icon(Icons.tune_rounded),
         ),
         if (notifications.isNotEmpty)
           IconButton(
-            tooltip: 'Limpar notificações',
+            tooltip: tr.notifClear,
             onPressed: clear,
             icon: const Icon(Icons.delete_sweep_outlined),
           ),
@@ -186,19 +190,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     body: loading
         ? const Center(child: CircularProgressIndicator())
         : notifications.isEmpty
-        ? const Center(
+        ? Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
+                const Icon(
                   Icons.notifications_none_rounded,
                   size: 66,
                   color: AppColors.muted,
                 ),
-                SizedBox(height: 14),
+                const SizedBox(height: 14),
                 Text(
-                  'Nenhuma notificação',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                  tr.notifEmpty,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ],
             ),
@@ -288,4 +295,4 @@ IconData _icon(String key) {
 }
 
 String _date(DateTime date) =>
-    '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year} às ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    tr.dateAtTime(formatDate(date), formatTime(date));

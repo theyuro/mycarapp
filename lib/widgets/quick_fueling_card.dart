@@ -9,6 +9,7 @@ import '../services/vehicle_storage_service.dart';
 import '../services/notification_service.dart';
 import '../theme/app_colors.dart';
 import '../screens/fueling_form_screen.dart';
+import '../l10n/l10n.dart';
 
 class QuickFuelingCard extends StatefulWidget {
   const QuickFuelingCard({super.key});
@@ -62,11 +63,11 @@ class _QuickFuelingCardState extends State<QuickFuelingCard> {
     final price = parseNumber(priceController.text);
 
     if (vehicle == null) {
-      showMessage('Cadastre um veículo antes do primeiro abastecimento.');
+      showMessage(tr.fuelingNeedVehicle);
       return;
     }
     if (liters == null || liters <= 0 || price == null || price <= 0) {
-      showMessage('Informe os litros e o valor pago.');
+      showMessage(tr.fuelingNeedLitersAndPrice);
       return;
     }
 
@@ -99,19 +100,21 @@ class _QuickFuelingCardState extends State<QuickFuelingCard> {
       if (capacity != null && liters > capacity) {
         await notificationService.addUnique(
           key: 'fuel-overfill-${record.id}',
-          title: 'Abastecimento inadequado',
-          message:
-              '${liters.toStringAsFixed(2).replaceAll('.', ',')} L informados para um tanque de ${capacity.toStringAsFixed(2).replaceAll('.', ',')} L.',
+          title: tr.fuelingOverfillTitle,
+          message: tr.fuelingOverfillMessage(
+            formatDecimal(liters),
+            formatDecimal(capacity),
+          ),
           category: 'overfill',
         );
       }
       if (!mounted) return;
       litersController.clear();
       priceController.clear();
-      showMessage('Abastecimento rápido incluído');
+      showMessage(tr.quickFuelingAdded);
       AdsService.instance.registerMainActivity();
     } catch (_) {
-      if (mounted) showMessage('Não foi possível salvar o abastecimento.');
+      if (mounted) showMessage(tr.fuelingSaveError);
     } finally {
       if (mounted) setState(() => saving = false);
     }
@@ -120,7 +123,7 @@ class _QuickFuelingCardState extends State<QuickFuelingCard> {
   Future<void> openCompleteFueling() async {
     final activeVehicle = vehicle;
     if (activeVehicle == null) {
-      showMessage('Cadastre um veículo antes do primeiro abastecimento.');
+      showMessage(tr.fuelingNeedVehicle);
       return;
     }
     final saved = await Navigator.of(context).push<bool>(
@@ -129,7 +132,7 @@ class _QuickFuelingCardState extends State<QuickFuelingCard> {
       ),
     );
     if (saved == true && mounted) {
-      showMessage('Abastecimento incluído');
+      showMessage(tr.fuelingAdded);
     }
   }
 
@@ -175,10 +178,10 @@ class _QuickFuelingCardState extends State<QuickFuelingCard> {
               ),
             ),
             const SizedBox(width: 11),
-            const Expanded(
+            Expanded(
               child: Text(
-                'Abastecimento rápido',
-                style: TextStyle(
+                tr.quickFuelingTitle,
+                style: const TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
                   color: AppColors.text,
@@ -214,8 +217,8 @@ class _QuickFuelingCardState extends State<QuickFuelingCard> {
                   FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
                 ],
                 textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: 'Litros',
+                decoration: InputDecoration(
+                  labelText: tr.liters,
                   hintText: '0,00',
                   suffixText: 'L',
                 ),
@@ -232,10 +235,10 @@ class _QuickFuelingCardState extends State<QuickFuelingCard> {
                   FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
                 ],
                 onSubmitted: (_) => addFueling(),
-                decoration: const InputDecoration(
-                  labelText: 'Valor pago',
+                decoration: InputDecoration(
+                  labelText: tr.amountPaid,
                   hintText: '0,00',
-                  prefixText: 'R\$ ',
+                  prefixText: '$currencySymbol ',
                 ),
               ),
             ),
@@ -270,7 +273,7 @@ class _QuickFuelingCardState extends State<QuickFuelingCard> {
           child: OutlinedButton.icon(
             onPressed: loadingVehicle ? null : openCompleteFueling,
             icon: const Icon(Icons.post_add_rounded),
-            label: const Text('ABASTECIMENTO COMPLETO'),
+            label: Text(tr.fullFueling),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.blue,
               side: BorderSide(color: AppColors.blue.withValues(alpha: .35)),

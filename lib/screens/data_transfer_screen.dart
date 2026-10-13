@@ -2,10 +2,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../services/access_service.dart';
 import '../services/data_transfer_service.dart';
 import '../theme/app_colors.dart';
-import 'lifetime_purchase_screen.dart';
+import '../l10n/l10n.dart';
 
 class DataTransferScreen extends StatefulWidget {
   const DataTransferScreen({super.key});
@@ -25,12 +24,12 @@ class _DataTransferScreenState extends State<DataTransferScreen> {
       await SharePlus.instance.share(
         ShareParams(
           files: [XFile(file.path)],
-          subject: 'Exportação MyCarApp',
-          text: 'Dados do veículo exportados pelo MyCarApp.',
+          subject: tr.exportSubject,
+          text: tr.exportText,
         ),
       );
     } catch (error) {
-      if (mounted) message(_friendlyError(error, 'Não foi possível exportar.'));
+      if (mounted) message(_friendlyError(error, tr.exportError));
     } finally {
       if (mounted) setState(() => working = false);
     }
@@ -45,18 +44,16 @@ class _DataTransferScreenState extends State<DataTransferScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Importar informações?'),
-        content: const Text(
-          'Um novo veículo será criado com os abastecimentos e manutenções do arquivo. Os dados atuais não serão sobrescritos.',
-        ),
+        title: Text(tr.importConfirmTitle),
+        content: Text(tr.importConfirmText),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('CANCELAR'),
+            child: Text(tr.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('IMPORTAR'),
+            child: Text(tr.importAction),
           ),
         ],
       ),
@@ -69,9 +66,13 @@ class _DataTransferScreenState extends State<DataTransferScreen> {
       await showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Importação concluída'),
+          title: Text(tr.importDone),
           content: Text(
-            '${summary.vehicleName}\n${summary.fuelings} abastecimento(s)\n${summary.maintenances} manutenção(ões)',
+            tr.importSummary(
+              summary.vehicleName,
+              summary.fuelings,
+              summary.maintenances,
+            ),
           ),
           actions: [
             FilledButton(
@@ -82,7 +83,7 @@ class _DataTransferScreenState extends State<DataTransferScreen> {
         ),
       );
     } catch (error) {
-      if (mounted) message(_friendlyError(error, 'Não foi possível importar.'));
+      if (mounted) message(_friendlyError(error, tr.importError));
     } finally {
       if (mounted) setState(() => working = false);
     }
@@ -99,56 +100,13 @@ class _DataTransferScreenState extends State<DataTransferScreen> {
   );
 
   @override
-  Widget build(BuildContext context) {
-    final unlocked =
-        AccessService.freeModeEnabled ||
-        AccessService.instance.subscriptionActive;
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.navy,
-        foregroundColor: Colors.white,
-        title: const Text('Exportar informações'),
-      ),
-      body: unlocked ? _content() : _locked(),
-    );
-  }
-
-  Widget _locked() => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(28),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.lock_outline_rounded,
-            size: 68,
-            color: AppColors.gold,
-          ),
-          const SizedBox(height: 18),
-          const Text(
-            'Recurso exclusivo da assinatura',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Exporte ou transfira o histórico completo do veículo entre aparelhos.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.muted),
-          ),
-          const SizedBox(height: 20),
-          FilledButton.icon(
-            onPressed: () => Navigator.of(context).push<void>(
-              MaterialPageRoute<void>(
-                builder: (_) => const SubscriptionScreen(),
-              ),
-            ),
-            icon: const Icon(Icons.workspace_premium_outlined),
-            label: const Text('CONHECER A ASSINATURA'),
-          ),
-        ],
-      ),
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      backgroundColor: AppColors.navy,
+      foregroundColor: Colors.white,
+      title: Text(tr.exportTitle),
     ),
+    body: _content(),
   );
 
   Widget _content() => ListView(
@@ -158,22 +116,22 @@ class _DataTransferScreenState extends State<DataTransferScreen> {
       const SizedBox(height: 14),
       _ActionCard(
         icon: Icons.table_view_outlined,
-        title: 'Exportar CSV',
-        subtitle: 'Formato leve, compatível com planilhas e com o MyCarApp.',
+        title: tr.exportCsv,
+        subtitle: tr.exportCsvHint,
         onTap: working ? null : () => export('csv'),
       ),
       const SizedBox(height: 10),
       _ActionCard(
         icon: Icons.grid_on_rounded,
-        title: 'Exportar Excel',
-        subtitle: 'Planilha XLSX pronta para compartilhar ou arquivar.',
+        title: tr.exportExcel,
+        subtitle: tr.exportExcelHint,
         onTap: working ? null : () => export('xlsx'),
       ),
       const SizedBox(height: 10),
       _ActionCard(
         icon: Icons.phone_android_rounded,
-        title: 'Importar em outro aparelho',
-        subtitle: 'Leia um CSV ou Excel criado pelo MyCarApp.',
+        title: tr.importOtherDevice,
+        subtitle: tr.importOtherDeviceHint,
         onTap: working ? null : import,
       ),
       if (working) ...[
@@ -193,9 +151,9 @@ class _InfoCard extends StatelessWidget {
       color: AppColors.goldLight,
       borderRadius: BorderRadius.circular(16),
     ),
-    child: const Text(
-      'A exportação utiliza o veículo ativo e inclui cadastro, abastecimentos e manutenções. Fotos e notas fiscais permanecem somente no aparelho por segurança.',
-      style: TextStyle(color: AppColors.text, height: 1.4),
+    child: Text(
+      tr.exportInfo,
+      style: const TextStyle(color: AppColors.text, height: 1.4),
     ),
   );
 }

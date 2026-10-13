@@ -5,9 +5,12 @@ import '../models/vehicle.dart';
 import '../models/vehicle_expense.dart';
 import '../services/ads_service.dart';
 import '../services/expense_storage_service.dart';
+import '../services/premium_upsell_service.dart';
 import '../services/vehicle_storage_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/free_user_banner_ad.dart';
+import '../widgets/premium_upsell_banner.dart';
+import '../l10n/l10n.dart';
 
 class ExpensesScreen extends StatefulWidget {
   const ExpensesScreen({super.key, this.initialCategory});
@@ -65,7 +68,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
   }) async {
     final active = vehicle;
     if (active == null) {
-      message('Cadastre e selecione um veículo primeiro.');
+      message(tr.expenseNeedVehicle);
       return;
     }
     final saved = await showModalBottomSheet<VehicleExpense>(
@@ -81,7 +84,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     if (saved == null) return;
     await storage.saveExpense(saved);
     await load();
-    if (mounted) message('Despesa salva.');
+    if (mounted) message(tr.expenseSaved);
     if (expense == null) AdsService.instance.registerMainActivity();
   }
 
@@ -89,17 +92,17 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Excluir despesa?'),
-        content: Text('${expense.title} será removida do histórico.'),
+        title: Text(tr.expenseDeleteTitle),
+        content: Text(tr.expenseDeleteText(expense.title)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('CANCELAR'),
+            child: Text(tr.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
-            child: const Text('EXCLUIR'),
+            child: Text(tr.deleteAction),
           ),
         ],
       ),
@@ -127,7 +130,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.navy,
         foregroundColor: Colors.white,
-        title: const Text('Despesas'),
+        title: Text(tr.expensesTitle),
       ),
       // Anúncio no rodapé; o FAB flutua acima dele, com folga.
       bottomNavigationBar: const SafeArea(
@@ -139,20 +142,19 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         backgroundColor: AppColors.gold,
         foregroundColor: AppColors.navy,
         icon: const Icon(Icons.add),
-        label: const Text('ADICIONAR DESPESA'),
+        label: Text(tr.expenseAdd),
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : vehicle == null
-          ? const _EmptyExpenseMessage(
+          ? _EmptyExpenseMessage(
               icon: Icons.garage_outlined,
-              text: 'Cadastre um veículo antes de adicionar despesas.',
+              text: tr.expenseNeedVehicleFirst,
             )
           : expenses.isEmpty
           ? _EmptyExpenseMessage(
               icon: Icons.account_balance_wallet_outlined,
-              text:
-                  'Cadastre seguro, cooperativa, financiamento, consórcio ou outra despesa.',
+              text: tr.expensesEmpty,
               onAdd: openForm,
             )
           : ListView(
@@ -162,20 +164,24 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                   children: [
                     Expanded(
                       child: _ExpenseSummary(
-                        label: 'Recorrentes no mês',
+                        label: tr.expensesMonthlyRecurring,
                         value: _money(total),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: _ExpenseSummary(
-                        label: 'Próximo vencimento',
+                        label: tr.expensesNextDue,
                         value: next == null
                             ? '--'
-                            : 'Dia ${next.firstDueDate.day}',
+                            : tr.expensesDueDay(next.firstDueDate.day),
                       ),
                     ),
                   ],
+                ),
+                const PremiumUpsellBanner(
+                  placement: UpsellPlacement.expenses,
+                  margin: EdgeInsets.only(top: 12),
                 ),
                 const SizedBox(height: 18),
                 Text(
@@ -313,7 +319,7 @@ class _ExpenseFormSheetState extends State<_ExpenseFormSheet> {
           ),
           const SizedBox(height: 16),
           Text(
-            widget.expense == null ? 'Nova despesa' : 'Editar despesa',
+            widget.expense == null ? tr.expenseNew : tr.expenseEdit,
             style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800),
           ),
           Text(
@@ -323,7 +329,7 @@ class _ExpenseFormSheetState extends State<_ExpenseFormSheet> {
           const SizedBox(height: 18),
           DropdownButtonFormField<VehicleExpenseCategory>(
             initialValue: category,
-            decoration: const InputDecoration(labelText: 'Categoria'),
+            decoration: InputDecoration(labelText: tr.category),
             items: VehicleExpenseCategory.values
                 .map(
                   (item) =>
@@ -342,9 +348,9 @@ class _ExpenseFormSheetState extends State<_ExpenseFormSheet> {
           const SizedBox(height: 12),
           TextFormField(
             controller: title,
-            decoration: const InputDecoration(labelText: 'Descrição'),
+            decoration: InputDecoration(labelText: tr.description),
             validator: (value) => value == null || value.trim().isEmpty
-                ? 'Informe uma descrição'
+                ? tr.descriptionRequired
                 : null,
           ),
           const SizedBox(height: 12),
@@ -354,23 +360,21 @@ class _ExpenseFormSheetState extends State<_ExpenseFormSheet> {
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
             ],
-            decoration: const InputDecoration(
-              labelText: 'Valor',
-              prefixText: 'R\$ ',
+            decoration: InputDecoration(
+              labelText: tr.amount,
+              prefixText: '$currencySymbol ',
             ),
             validator: (value) {
               final parsed = double.tryParse(
                 (value ?? '').replaceAll(',', '.'),
               );
-              return parsed == null || parsed <= 0
-                  ? 'Informe um valor válido'
-                  : null;
+              return parsed == null || parsed <= 0 ? tr.invalidValue : null;
             },
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<ExpenseFrequency>(
             initialValue: frequency,
-            decoration: const InputDecoration(labelText: 'Frequência'),
+            decoration: InputDecoration(labelText: tr.frequency),
             items: ExpenseFrequency.values
                 .map(
                   (item) =>
@@ -385,9 +389,9 @@ class _ExpenseFormSheetState extends State<_ExpenseFormSheet> {
               controller: installments,
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(
-                labelText: 'Quantidade de parcelas',
-                helperText: 'Deixe vazio para uma cobrança sem prazo definido',
+              decoration: InputDecoration(
+                labelText: tr.expenseInstallments,
+                helperText: tr.expenseInstallmentsHint,
               ),
             ),
           ],
@@ -395,9 +399,9 @@ class _ExpenseFormSheetState extends State<_ExpenseFormSheet> {
           InkWell(
             onTap: selectDate,
             child: InputDecorator(
-              decoration: const InputDecoration(
-                labelText: 'Primeiro vencimento',
-                suffixIcon: Icon(Icons.calendar_month_outlined),
+              decoration: InputDecoration(
+                labelText: tr.expenseFirstDue,
+                suffixIcon: const Icon(Icons.calendar_month_outlined),
               ),
               child: Text(_date(firstDueDate)),
             ),
@@ -407,7 +411,7 @@ class _ExpenseFormSheetState extends State<_ExpenseFormSheet> {
             controller: notes,
             minLines: 2,
             maxLines: 4,
-            decoration: const InputDecoration(labelText: 'Observações'),
+            decoration: InputDecoration(labelText: tr.notes),
           ),
           const SizedBox(height: 18),
           SizedBox(
@@ -415,7 +419,7 @@ class _ExpenseFormSheetState extends State<_ExpenseFormSheet> {
             child: FilledButton.icon(
               onPressed: save,
               icon: const Icon(Icons.save_outlined),
-              label: const Text('SALVAR DESPESA'),
+              label: Text(tr.expenseSave),
             ),
           ),
         ],
@@ -485,14 +489,14 @@ class _ExpenseTile extends StatelessWidget {
             expense.category.label,
             expense.frequency.label,
             if (installment != null && expense.totalInstallments != null)
-              '$installment de ${expense.totalInstallments}',
+              tr.installmentOf(installment, expense.totalInstallments!),
           ].join(' • '),
         ),
         trailing: PopupMenuButton<String>(
           onSelected: (value) => value == 'edit' ? onEdit() : onDelete(),
-          itemBuilder: (_) => const [
-            PopupMenuItem(value: 'edit', child: Text('Editar')),
-            PopupMenuItem(value: 'delete', child: Text('Excluir')),
+          itemBuilder: (_) => [
+            PopupMenuItem(value: 'edit', child: Text(tr.edit)),
+            PopupMenuItem(value: 'delete', child: Text(tr.delete)),
           ],
           icon: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -539,7 +543,7 @@ class _EmptyExpenseMessage extends StatelessWidget {
             FilledButton.icon(
               onPressed: onAdd,
               icon: const Icon(Icons.add),
-              label: const Text('ADICIONAR DESPESA'),
+              label: Text(tr.expenseAdd),
             ),
           ],
         ],
@@ -556,9 +560,6 @@ IconData _categoryIcon(VehicleExpenseCategory category) => switch (category) {
   VehicleExpenseCategory.other => Icons.receipt_long_outlined,
 };
 
-String _date(DateTime value) =>
-    '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}/${value.year}';
-String _money(double value) =>
-    'R\$ ${value.toStringAsFixed(2).replaceAll('.', ',')}';
-String _plainNumber(double value) =>
-    value.toStringAsFixed(2).replaceAll('.', ',');
+String _date(DateTime value) => formatDate(value);
+String _money(double value) => formatMoney(value);
+String _plainNumber(double value) => formatInput(value);

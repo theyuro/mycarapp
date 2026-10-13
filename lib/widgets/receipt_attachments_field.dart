@@ -6,7 +6,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:open_filex/open_filex.dart';
 
 import '../models/record_attachment.dart';
+import '../services/image_pick_service.dart';
 import '../theme/app_colors.dart';
+import '../l10n/l10n.dart';
 
 class ReceiptAttachmentsField extends StatelessWidget {
   const ReceiptAttachmentsField({
@@ -23,7 +25,7 @@ class ReceiptAttachmentsField extends StatelessWidget {
   final bool scanning;
 
   Future<void> _camera(BuildContext context) async {
-    final photo = await ImagePicker().pickImage(
+    final photo = await ImagePickService.pick(
       source: ImageSource.camera,
       imageQuality: 82,
       maxWidth: 2048,
@@ -57,12 +59,12 @@ class ReceiptAttachmentsField extends StatelessWidget {
 
   Future<void> _open(BuildContext context, RecordAttachment attachment) async {
     if (!await File(attachment.path).exists()) {
-      if (context.mounted) _message(context, 'O anexo não foi encontrado.');
+      if (context.mounted) _message(context, tr.attachmentNotFound);
       return;
     }
     final result = await OpenFilex.open(attachment.path);
     if (result.type != ResultType.done && context.mounted) {
-      _message(context, 'Não foi possível abrir este anexo.');
+      _message(context, tr.attachmentOpenError);
     }
   }
 
@@ -99,7 +101,7 @@ class ReceiptAttachmentsField extends StatelessWidget {
               ),
               onTap: () => _open(context, entry.value),
               trailing: IconButton(
-                tooltip: 'Remover anexo',
+                tooltip: tr.attachmentRemove,
                 icon: const Icon(Icons.close_rounded),
                 onPressed: () {
                   final updated = [...attachments]..removeAt(entry.key);
@@ -117,7 +119,7 @@ class ReceiptAttachmentsField extends StatelessWidget {
             child: OutlinedButton.icon(
               onPressed: () => _camera(context),
               icon: const Icon(Icons.photo_camera_outlined),
-              label: const Text('TIRAR FOTO'),
+              label: Text(tr.attachmentTakePhoto),
             ),
           ),
           const SizedBox(width: 9),
@@ -125,7 +127,7 @@ class ReceiptAttachmentsField extends StatelessWidget {
             child: OutlinedButton.icon(
               onPressed: () => _file(context),
               icon: const Icon(Icons.attach_file_rounded),
-              label: const Text('ANEXAR'),
+              label: Text(tr.attachmentAttach),
             ),
           ),
         ],
@@ -144,15 +146,15 @@ class ReceiptAttachmentsField extends StatelessWidget {
                   )
                 : const Icon(Icons.document_scanner_outlined),
             label: Text(
-              scanning ? 'LENDO NOTA...' : 'LER NOTA E PREENCHER DADOS',
+              scanning ? tr.attachmentReading : tr.attachmentReadReceipt,
             ),
           ),
         ),
       ],
       const SizedBox(height: 6),
-      const Text(
-        'Imagens e arquivos PDF são aceitos.',
-        style: TextStyle(color: AppColors.muted, fontSize: 11),
+      Text(
+        tr.attachmentHint,
+        style: const TextStyle(color: AppColors.muted, fontSize: 11),
       ),
     ],
   );

@@ -3,11 +3,15 @@ import 'package:flutter/material.dart';
 import '../models/fueling_record.dart';
 import '../models/vehicle.dart';
 import '../services/fueling_storage_service.dart';
+import '../services/premium_upsell_service.dart';
 import '../services/vehicle_storage_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/free_user_banner_ad.dart';
+import '../widgets/premium_upsell_banner.dart';
 import '../widgets/vehicle_type_icon.dart';
 import 'fueling_form_screen.dart';
+import '../l10n/l10n.dart';
+import '../l10n/labels.dart';
 
 class FuelingHistoryScreen extends StatefulWidget {
   const FuelingHistoryScreen({super.key});
@@ -51,7 +55,7 @@ class _FuelingHistoryScreenState extends State<FuelingHistoryScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() => loading = false);
-      showMessage('Não foi possível carregar o histórico.');
+      showMessage(tr.historyLoadError);
     }
   }
 
@@ -84,7 +88,7 @@ class _FuelingHistoryScreenState extends State<FuelingHistoryScreen> {
   Future<void> openForm([FuelingRecord? record]) async {
     final currentVehicle = vehicle;
     if (currentVehicle == null) {
-      showMessage('Cadastre e selecione um veículo primeiro.');
+      showMessage(tr.expenseNeedVehicle);
       return;
     }
     final changed = await Navigator.of(context).push<bool>(
@@ -96,7 +100,7 @@ class _FuelingHistoryScreenState extends State<FuelingHistoryScreen> {
     if (changed == true) {
       await loadHistory();
       if (mounted && record == null) {
-        showMessage('Abastecimento incluído', oneSecond: true);
+        showMessage(tr.fuelingAdded, oneSecond: true);
       }
     }
   }
@@ -105,19 +109,17 @@ class _FuelingHistoryScreenState extends State<FuelingHistoryScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Excluir abastecimento?'),
-        content: Text(
-          'O registro de ${_formatDate(record.date)} será removido permanentemente.',
-        ),
+        title: Text(tr.fuelingDeleteTitle),
+        content: Text(tr.fuelingDeleteText(_formatDate(record.date))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('CANCELAR'),
+            child: Text(tr.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
-            child: const Text('EXCLUIR'),
+            child: Text(tr.deleteAction),
           ),
         ],
       ),
@@ -126,9 +128,9 @@ class _FuelingHistoryScreenState extends State<FuelingHistoryScreen> {
     try {
       await fuelingStorage.deleteFueling(record.id);
       await loadHistory();
-      if (mounted) showMessage('Abastecimento excluído.');
+      if (mounted) showMessage(tr.fuelingDeleted);
     } catch (_) {
-      if (mounted) showMessage('Não foi possível excluir o abastecimento.');
+      if (mounted) showMessage(tr.fuelingDeleteError);
     }
   }
 
@@ -150,19 +152,16 @@ class _FuelingHistoryScreenState extends State<FuelingHistoryScreen> {
     appBar: AppBar(
       backgroundColor: AppColors.navy,
       foregroundColor: Colors.white,
-      title: const Text('Histórico de abastecimentos'),
+      title: Text(tr.historyTitle),
     ),
     // Anúncio no rodapé; o FAB flutua acima dele, com folga.
-    bottomNavigationBar: const SafeArea(
-      top: false,
-      child: FreeUserBannerAd(),
-    ),
+    bottomNavigationBar: const SafeArea(top: false, child: FreeUserBannerAd()),
     floatingActionButton: FloatingActionButton.extended(
       onPressed: vehicle == null ? null : () => openForm(),
       backgroundColor: AppColors.gold,
       foregroundColor: AppColors.navy,
       icon: const Icon(Icons.add),
-      label: const Text('ABASTECER'),
+      label: Text(tr.fuelUp),
     ),
     body: loading
         ? const Center(child: CircularProgressIndicator())
@@ -180,7 +179,15 @@ class _FuelingHistoryScreenState extends State<FuelingHistoryScreen> {
                         return _VehicleHeader(vehicle: vehicle!);
                       }
                       if (index == 1) {
-                        return _HistorySummary(records: records);
+                        return Column(
+                          children: [
+                            _HistorySummary(records: records),
+                            const PremiumUpsellBanner(
+                              placement: UpsellPlacement.fuelingHistory,
+                              margin: EdgeInsets.only(top: 12),
+                            ),
+                          ],
+                        );
                       }
                       final recordIndex = index - 2;
                       final record = records[recordIndex];
@@ -282,22 +289,22 @@ class _HistorySummary extends StatelessWidget {
       childAspectRatio: 1.8,
       children: [
         _SummaryTile(
-          label: 'Gasto no mês',
+          label: tr.historySpentMonth,
           value: _currency(monthTotal),
           icon: Icons.payments_outlined,
         ),
         _SummaryTile(
-          label: 'Preço médio',
+          label: tr.averagePrice,
           value: '${_currency(averagePrice)}/L',
           icon: Icons.show_chart_rounded,
         ),
         _SummaryTile(
-          label: 'Total abastecido',
+          label: tr.historyTotalLiters,
           value: '${_decimal(totalLiters)} L',
           icon: Icons.local_gas_station_outlined,
         ),
         _SummaryTile(
-          label: 'Registros',
+          label: tr.historyRecords,
           value: '${records.length}',
           icon: Icons.receipt_long_outlined,
         ),
@@ -364,7 +371,7 @@ class _MonthHeader extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.fromLTRB(2, 24, 2, 10),
     child: Text(
-      '${_monthName(date.month).toUpperCase()} ${date.year}',
+      formatMonthYear(date).toUpperCase(),
       style: const TextStyle(
         color: AppColors.muted,
         fontSize: 13,
@@ -420,7 +427,7 @@ class _FuelingCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        record.fuelType ?? 'Combustível',
+                        fuelLabel(record.fuelType) ?? tr.fuel,
                         style: const TextStyle(
                           fontWeight: FontWeight.w800,
                           fontSize: 16,
@@ -461,9 +468,9 @@ class _FuelingCard extends StatelessWidget {
                     runSpacing: 6,
                     children: [
                       if (record.fullTank)
-                        const _Tag(
+                        _Tag(
                           icon: Icons.water_drop_outlined,
-                          label: 'Tanque cheio',
+                          label: tr.fullTank,
                         ),
                       if (consumption != null)
                         _Tag(
@@ -493,9 +500,9 @@ class _FuelingCard extends StatelessWidget {
                 onDelete();
               }
             },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'edit', child: Text('Editar')),
-              PopupMenuItem(value: 'delete', child: Text('Excluir')),
+            itemBuilder: (_) => [
+              PopupMenuItem(value: 'edit', child: Text(tr.edit)),
+              PopupMenuItem(value: 'delete', child: Text(tr.delete)),
             ],
           ),
         ],
@@ -551,21 +558,21 @@ class _EmptyHistory extends StatelessWidget {
       ),
       const SizedBox(height: 18),
       Text(
-        'Nenhum abastecimento de ${vehicle.nickname}',
+        tr.historyEmptyTitle(vehicle.nickname),
         textAlign: TextAlign.center,
         style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
       ),
       const SizedBox(height: 8),
-      const Text(
-        'Registre litros, valor, quilometragem e tanque cheio para acompanhar gastos e consumo.',
+      Text(
+        tr.historyEmptyText,
         textAlign: TextAlign.center,
-        style: TextStyle(color: AppColors.muted),
+        style: const TextStyle(color: AppColors.muted),
       ),
       const SizedBox(height: 20),
       FilledButton.icon(
         onPressed: onAdd,
         icon: const Icon(Icons.add),
-        label: const Text('NOVO ABASTECIMENTO'),
+        label: Text(tr.newFueling),
       ),
     ],
   );
@@ -575,13 +582,13 @@ class _NoVehicle extends StatelessWidget {
   const _NoVehicle();
 
   @override
-  Widget build(BuildContext context) => const Center(
+  Widget build(BuildContext context) => Center(
     child: Padding(
-      padding: EdgeInsets.all(30),
+      padding: const EdgeInsets.all(30),
       child: Text(
-        'Cadastre e selecione um veículo para visualizar o histórico.',
+        tr.historyNeedVehicle,
         textAlign: TextAlign.center,
-        style: TextStyle(color: AppColors.muted, fontSize: 16),
+        style: const TextStyle(color: AppColors.muted, fontSize: 16),
       ),
     ),
   );
@@ -590,24 +597,8 @@ class _NoVehicle extends StatelessWidget {
 bool _sameMonth(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month;
 
-String _formatDate(DateTime date) =>
-    '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+String _formatDate(DateTime date) => formatDate(date);
 
-String _decimal(double value) => value.toStringAsFixed(2).replaceAll('.', ',');
+String _decimal(double value) => formatDecimal(value);
 
-String _currency(double value) => 'R\$ ${_decimal(value)}';
-
-String _monthName(int month) => const [
-  'janeiro',
-  'fevereiro',
-  'março',
-  'abril',
-  'maio',
-  'junho',
-  'julho',
-  'agosto',
-  'setembro',
-  'outubro',
-  'novembro',
-  'dezembro',
-][month - 1];
+String _currency(double value) => formatMoney(value);

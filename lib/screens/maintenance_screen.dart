@@ -3,11 +3,15 @@ import 'package:flutter/material.dart';
 import '../models/maintenance_record.dart';
 import '../models/vehicle.dart';
 import '../services/maintenance_storage_service.dart';
+import '../services/premium_upsell_service.dart';
 import '../services/vehicle_storage_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/free_user_banner_ad.dart';
+import '../widgets/premium_upsell_banner.dart';
 import '../widgets/vehicle_type_icon.dart';
 import 'maintenance_form_screen.dart';
+import '../l10n/l10n.dart';
+import '../l10n/labels.dart';
 
 class MaintenanceScreen extends StatefulWidget {
   const MaintenanceScreen({super.key});
@@ -46,7 +50,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() => loading = false);
-      message('Não foi possível carregar as manutenções.');
+      message(tr.maintLoadError);
     }
   }
 
@@ -56,7 +60,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
   }) async {
     final active = vehicle;
     if (active == null) {
-      message('Cadastre e selecione um veículo primeiro.');
+      message(tr.expenseNeedVehicle);
       return;
     }
     final changed = await Navigator.of(context).push<bool>(
@@ -71,11 +75,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
     if (changed == true) {
       await load();
       if (mounted && record == null) {
-        message(
-          completed
-              ? 'Manutenção realizada incluída'
-              : 'Próxima manutenção incluída',
-        );
+        message(completed ? tr.maintDoneAdded : tr.maintNextAdded);
       }
     }
   }
@@ -84,17 +84,17 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Excluir manutenção?'),
-        content: Text('${record.service} será removida permanentemente.'),
+        title: Text(tr.maintDeleteTitle),
+        content: Text(tr.maintDeleteText(record.service)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('CANCELAR'),
+            child: Text(tr.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
-            child: const Text('EXCLUIR'),
+            child: Text(tr.deleteAction),
           ),
         ],
       ),
@@ -103,9 +103,9 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
     try {
       await storage.deleteMaintenance(record.id);
       await load();
-      if (mounted) message('Manutenção excluída.');
+      if (mounted) message(tr.maintDeleted);
     } catch (_) {
-      if (mounted) message('Não foi possível excluir a manutenção.');
+      if (mounted) message(tr.maintDeleteError);
     }
   }
 
@@ -132,8 +132,8 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                   Icons.check_circle_outline,
                   color: AppColors.blue,
                 ),
-                title: const Text('Manutenção realizada'),
-                subtitle: const Text('Registrar serviço, oficina e custos'),
+                title: Text(tr.maintDone),
+                subtitle: Text(tr.maintDoneHint),
                 onTap: () {
                   Navigator.pop(sheetContext);
                   openForm(completed: true);
@@ -144,8 +144,8 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                   Icons.event_outlined,
                   color: AppColors.gold,
                 ),
-                title: const Text('Próxima manutenção'),
-                subtitle: const Text('Planejar mesmo sem possuir histórico'),
+                title: Text(tr.maintNext),
+                subtitle: Text(tr.maintNextHint),
                 onTap: () {
                   Navigator.pop(sheetContext);
                   openForm(completed: false);
@@ -170,14 +170,14 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
         appBar: AppBar(
           backgroundColor: AppColors.navy,
           foregroundColor: Colors.white,
-          title: const Text('Manutenções'),
-          bottom: const TabBar(
+          title: Text(tr.maintTitle),
+          bottom: TabBar(
             indicatorColor: AppColors.gold,
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white60,
             tabs: [
-              Tab(text: 'REALIZADAS'),
-              Tab(text: 'PRÓXIMAS'),
+              Tab(text: tr.maintTabDone),
+              Tab(text: tr.maintTabNext),
             ],
           ),
         ),
@@ -191,7 +191,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
           backgroundColor: AppColors.gold,
           foregroundColor: AppColors.navy,
           icon: const Icon(Icons.add),
-          label: const Text('NOVA MANUTENÇÃO'),
+          label: Text(tr.maintNew),
         ),
         body: loading
             ? const Center(child: CircularProgressIndicator())
@@ -202,7 +202,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                   _MaintenanceList(
                     header: _Header(vehicle: vehicle!),
                     summary: _Summary(records: completed, vehicle: vehicle!),
-                    emptyText: 'Nenhuma manutenção realizada',
+                    emptyText: tr.maintEmptyDone,
                     onRefresh: load,
                     children: completed
                         .map(
@@ -217,7 +217,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                   ),
                   _MaintenanceList(
                     header: _Header(vehicle: vehicle!),
-                    emptyText: 'Nenhuma próxima manutenção planejada',
+                    emptyText: tr.maintEmptyNext,
                     onRefresh: load,
                     children: upcoming
                         .map(
@@ -260,7 +260,14 @@ class _MaintenanceList extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
       children: [
         header,
-        if (summary != null) ...[const SizedBox(height: 12), summary!],
+        if (summary != null) ...[
+          const SizedBox(height: 12),
+          summary!,
+          const PremiumUpsellBanner(
+            placement: UpsellPlacement.maintenance,
+            margin: EdgeInsets.only(top: 12),
+          ),
+        ],
         const SizedBox(height: 20),
         if (children.isEmpty)
           Padding(
@@ -330,16 +337,16 @@ class _UpcomingCard extends StatelessWidget {
         ),
         subtitle: Text(
           [
-            record.category,
+            maintenanceCategoryLabel(record.category),
             _date(record.date),
             if (record.mileage > 0) '${record.mileage} km',
           ].join(' • '),
         ),
         trailing: PopupMenuButton<String>(
           onSelected: (value) => value == 'edit' ? onEdit() : onDelete(),
-          itemBuilder: (_) => const [
-            PopupMenuItem(value: 'edit', child: Text('Editar')),
-            PopupMenuItem(value: 'delete', child: Text('Excluir')),
+          itemBuilder: (_) => [
+            PopupMenuItem(value: 'edit', child: Text(tr.edit)),
+            PopupMenuItem(value: 'delete', child: Text(tr.delete)),
           ],
         ),
       ),
@@ -365,7 +372,7 @@ class _Summary extends StatelessWidget {
       children: [
         Expanded(
           child: _Metric(
-            label: 'Este mês',
+            label: tr.thisMonth,
             value: _money(month),
             icon: Icons.calendar_month_outlined,
           ),
@@ -373,7 +380,7 @@ class _Summary extends StatelessWidget {
         const SizedBox(width: 9),
         Expanded(
           child: _Metric(
-            label: 'Total',
+            label: tr.total,
             value: _money(total),
             icon: Icons.payments_outlined,
           ),
@@ -381,7 +388,7 @@ class _Summary extends StatelessWidget {
         const SizedBox(width: 9),
         Expanded(
           child: _Metric(
-            label: 'Alertas',
+            label: tr.alerts,
             value: '$alerts',
             icon: Icons.notifications_active_outlined,
           ),
@@ -480,7 +487,7 @@ class _MaintenanceCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    '${record.category} • ${_date(record.date)} • ${record.mileage} km',
+                    '${maintenanceCategoryLabel(record.category)} • ${_date(record.date)} • ${record.mileage} km',
                     style: const TextStyle(
                       color: AppColors.muted,
                       fontSize: 12,
@@ -530,9 +537,9 @@ class _MaintenanceCard extends StatelessWidget {
                   onDelete();
                 }
               },
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'edit', child: Text('Editar')),
-                PopupMenuItem(value: 'delete', child: Text('Excluir')),
+              itemBuilder: (_) => [
+                PopupMenuItem(value: 'edit', child: Text(tr.edit)),
+                PopupMenuItem(value: 'delete', child: Text(tr.delete)),
               ],
             ),
           ],
@@ -574,13 +581,13 @@ class _Header extends StatelessWidget {
 class _NoVehicle extends StatelessWidget {
   const _NoVehicle();
   @override
-  Widget build(BuildContext context) => const Center(
+  Widget build(BuildContext context) => Center(
     child: Padding(
-      padding: EdgeInsets.all(30),
+      padding: const EdgeInsets.all(30),
       child: Text(
-        'Cadastre e selecione um veículo para acessar as manutenções.',
+        tr.maintNeedVehicle,
         textAlign: TextAlign.center,
-        style: TextStyle(color: AppColors.muted, fontSize: 16),
+        style: const TextStyle(color: AppColors.muted, fontSize: 16),
       ),
     ),
   );
@@ -612,10 +619,10 @@ Color _statusColor(_MaintenanceStatus status) => switch (status) {
 
 String _nextLabel(MaintenanceRecord record, _MaintenanceStatus status) {
   final prefix = status == _MaintenanceStatus.overdue
-      ? 'Vencida'
+      ? tr.maintOverdue
       : status == _MaintenanceStatus.upcoming
-      ? 'Próxima'
-      : 'Prevista';
+      ? tr.maintUpcoming
+      : tr.maintPlanned;
   final values = [
     if (record.nextDate != null) _date(record.nextDate!),
     if (record.nextMileage != null) '${record.nextMileage} km',
@@ -623,7 +630,5 @@ String _nextLabel(MaintenanceRecord record, _MaintenanceStatus status) {
   return '$prefix: ${values.join(' • ')}';
 }
 
-String _date(DateTime value) =>
-    '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}/${value.year}';
-String _money(double value) =>
-    'R\$ ${value.toStringAsFixed(2).replaceAll('.', ',')}';
+String _date(DateTime value) => formatDate(value);
+String _money(double value) => formatMoney(value);

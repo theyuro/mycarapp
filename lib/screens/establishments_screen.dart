@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import '../models/establishment.dart';
 import '../services/establishment_migration_service.dart';
 import '../services/establishment_storage_service.dart';
+import '../services/premium_upsell_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/premium_upsell_banner.dart';
+import '../l10n/l10n.dart';
 
 class EstablishmentsScreen extends StatefulWidget {
   const EstablishmentsScreen({super.key});
@@ -61,7 +64,7 @@ class _EstablishmentsScreenState extends State<EstablishmentsScreen> {
     await storage.saveEstablishment(
       establishment.copyWith(active: false, updatedAt: DateTime.now()),
     );
-    if (mounted) _message('${establishment.name} arquivado.');
+    if (mounted) _message(tr.placeArchived(establishment.name));
     await load();
   }
 
@@ -84,7 +87,7 @@ class _EstablishmentsScreenState extends State<EstablishmentsScreen> {
       final suggestions = await migration.findSuggestions();
       if (!mounted) return;
       if (suggestions.isEmpty) {
-        _message('Nenhum local pendente de organização.');
+        _message(tr.placesNothingToOrganize);
         return;
       }
       final applied = await showModalBottomSheet<int>(
@@ -95,7 +98,7 @@ class _EstablishmentsScreenState extends State<EstablishmentsScreen> {
             _OrganizeSheet(suggestions: suggestions, migration: migration),
       );
       if (applied != null && applied > 0) {
-        _message('$applied local(is) organizado(s).');
+        _message(tr.placesOrganized(applied));
         await load();
       }
     } finally {
@@ -108,10 +111,10 @@ class _EstablishmentsScreenState extends State<EstablishmentsScreen> {
     appBar: AppBar(
       backgroundColor: AppColors.navy,
       foregroundColor: Colors.white,
-      title: const Text('Meus locais'),
+      title: Text(tr.placesTitle),
       actions: [
         IconButton(
-          tooltip: 'Organizar meus locais',
+          tooltip: tr.placesOrganize,
           onPressed: organizing ? null : openOrganize,
           icon: organizing
               ? const SizedBox(
@@ -138,10 +141,17 @@ class _EstablishmentsScreenState extends State<EstablishmentsScreen> {
         ? _EmptyState(onOrganize: openOrganize)
         : ListView.separated(
             padding: const EdgeInsets.all(16),
-            itemCount: establishments.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 8),
+            itemCount: establishments.length + 1,
+            separatorBuilder: (_, index) =>
+                SizedBox(height: index == 0 ? 0 : 8),
             itemBuilder: (context, index) {
-              final establishment = establishments[index];
+              if (index == 0) {
+                return const PremiumUpsellBanner(
+                  placement: UpsellPlacement.establishments,
+                  margin: EdgeInsets.only(bottom: 8),
+                );
+              }
+              final establishment = establishments[index - 1];
               return Card(
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -167,7 +177,7 @@ class _EstablishmentsScreenState extends State<EstablishmentsScreen> {
                   subtitle: Text(establishment.type.label),
                   onTap: () => openEditor(establishment),
                   trailing: IconButton(
-                    tooltip: 'Arquivar',
+                    tooltip: tr.archive,
                     icon: const Icon(Icons.archive_outlined),
                     onPressed: () => archive(establishment),
                   ),
@@ -191,23 +201,22 @@ class _EmptyState extends StatelessWidget {
         children: [
           const Icon(Icons.place_outlined, size: 56, color: AppColors.muted),
           const SizedBox(height: 12),
-          const Text(
-            'Nenhum local cadastrado ainda.',
+          Text(
+            tr.placesEmptyTitle,
             textAlign: TextAlign.center,
-            style: TextStyle(fontWeight: FontWeight.w700),
+            style: const TextStyle(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Cadastre postos e oficinas ao lançar um abastecimento ou '
-            'manutenção, ou organize os locais já digitados como texto.',
+          Text(
+            tr.placesEmptyText,
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.muted),
+            style: const TextStyle(color: AppColors.muted),
           ),
           const SizedBox(height: 16),
           OutlinedButton.icon(
             onPressed: onOrganize,
             icon: const Icon(Icons.auto_fix_high_rounded),
-            label: const Text('ORGANIZAR MEUS LOCAIS'),
+            label: Text(tr.placesOrganizeButton),
           ),
         ],
       ),
@@ -297,22 +306,22 @@ class _EstablishmentEditorSheetState extends State<_EstablishmentEditorSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            widget.establishment == null ? 'Novo local' : 'Editar local',
+            widget.establishment == null ? tr.placeNew : tr.placeEdit,
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 16),
           TextFormField(
             controller: name,
             textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(labelText: 'Nome'),
+            decoration: InputDecoration(labelText: tr.name),
             validator: (value) => (value == null || value.trim().isEmpty)
-                ? 'Informe um nome'
+                ? tr.nameRequired
                 : null,
           ),
           const SizedBox(height: 14),
           DropdownButtonFormField<EstablishmentType>(
             initialValue: type,
-            decoration: const InputDecoration(labelText: 'Tipo'),
+            decoration: InputDecoration(labelText: tr.type),
             items: EstablishmentType.values
                 .map(
                   (item) =>
@@ -325,25 +334,25 @@ class _EstablishmentEditorSheetState extends State<_EstablishmentEditorSheet> {
           TextFormField(
             controller: brand,
             textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(labelText: 'Bandeira (opcional)'),
+            decoration: InputDecoration(labelText: tr.placeBrand),
           ),
           const SizedBox(height: 14),
           TextFormField(
             controller: address,
             textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(labelText: 'Endereço (opcional)'),
+            decoration: InputDecoration(labelText: tr.placeAddress),
           ),
           const SizedBox(height: 14),
           TextFormField(
             controller: neighborhood,
             textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(labelText: 'Bairro (opcional)'),
+            decoration: InputDecoration(labelText: tr.placeNeighborhood),
           ),
           const SizedBox(height: 6),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Favorito'),
-            subtitle: const Text('Fica no topo das sugestões rápidas'),
+            title: Text(tr.favorite),
+            subtitle: Text(tr.placeFavoriteHint),
             value: favorite,
             activeThumbColor: AppColors.blue,
             onChanged: (value) => setState(() => favorite = value),
@@ -358,7 +367,7 @@ class _EstablishmentEditorSheetState extends State<_EstablishmentEditorSheet> {
                 backgroundColor: AppColors.gold,
                 foregroundColor: AppColors.navy,
               ),
-              child: Text(saving ? 'SALVANDO...' : 'SALVAR'),
+              child: Text(saving ? tr.saving : tr.save),
             ),
           ),
         ],
@@ -405,15 +414,14 @@ class _OrganizeSheetState extends State<_OrganizeSheet> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Organizar meus locais',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+        Text(
+          tr.placesOrganize,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 6),
-        const Text(
-          'Encontramos estes nomes digitados em lançamentos antigos. '
-          'Selecione os que devem virar um local estruturado.',
-          style: TextStyle(color: AppColors.muted),
+        Text(
+          tr.placesOrganizeIntro,
+          style: const TextStyle(color: AppColors.muted),
         ),
         const SizedBox(height: 12),
         ConstrainedBox(
@@ -429,7 +437,7 @@ class _OrganizeSheetState extends State<_OrganizeSheet> {
                 value: selected.contains(index),
                 title: Text(group.name),
                 subtitle: Text(
-                  '${group.type.label} · ${group.recordCount} lançamento(s)',
+                  tr.placesGroupInfo(group.type.label, group.recordCount),
                 ),
                 onChanged: (value) => setState(() {
                   if (value == true) {
@@ -453,9 +461,7 @@ class _OrganizeSheetState extends State<_OrganizeSheet> {
               foregroundColor: AppColors.navy,
             ),
             child: Text(
-              applying
-                  ? 'ORGANIZANDO...'
-                  : 'UNIFICAR ${selected.length} SELECIONADO(S)',
+              applying ? tr.organizing : tr.placesUnify(selected.length),
             ),
           ),
         ),

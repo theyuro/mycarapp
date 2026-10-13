@@ -11,6 +11,7 @@ import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/subscription_entitlement.dart';
+import '../l10n/l10n.dart';
 
 class SubscriptionOption {
   const SubscriptionOption({
@@ -33,13 +34,16 @@ class SubscriptionOption {
 
   bool get isAnnual => billingPeriod == 'P1Y';
   bool get isPromotional => offerId != null;
-  String get title => isAnnual ? 'Plano anual' : 'Plano mensal';
+  String get title => isAnnual ? tr.planAnnual : tr.planMonthly;
 
   String get priceDescription {
+    final renewal = isAnnual
+        ? tr.perYear(renewalPrice)
+        : tr.perMonth(renewalPrice);
     if (isPromotional && price != renewalPrice) {
-      return '$price na oferta; depois $renewalPrice${isAnnual ? '/ano' : '/mês'}';
+      return tr.priceOfferThen(price, renewal);
     }
-    return '$renewalPrice${isAnnual ? '/ano' : '/mês'}';
+    return renewal;
   }
 }
 
@@ -53,8 +57,8 @@ class AccessService extends ChangeNotifier {
   /// Modo gratuito: quando `true`, o app é 100% gratuito, com todos os
   /// recursos liberados e monetização apenas por anúncios (AdMob). A cobrança
   /// (Google Play, ofertas, restauração de compras) fica desligada, mas o
-  /// código permanece aqui, dormente, para ser reativado trocando para `false`.
-  static const freeModeEnabled = true;
+  /// código permanece aqui, dormente, para ser reativado trocando para `true`.
+  static const freeModeEnabled = false;
 
   final InAppPurchase _store = InAppPurchase.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -77,6 +81,10 @@ class AccessService extends ChangeNotifier {
   SubscriptionEntitlement entitlement =
       const SubscriptionEntitlement.inactive();
   DateTime? premiumFreeUntil = DateTime(2026, 8, 31);
+
+  /// Build mínimo aceito pelo servidor (ver UpdateService); `null` enquanto
+  /// não consultado.
+  int? minimumBuild;
   bool _initialized = false;
   bool storeAvailable = false;
   bool loadingStore = true;
@@ -86,6 +94,18 @@ class AccessService extends ChangeNotifier {
   String? storeMessage;
 
   bool get subscriptionActive => _subscriptionActive || _betaPremiumActive;
+
+  /// Recursos Premium liberados: assinante ou app em modo gratuito. O plano
+  /// gratuito tem todos os recursos do app; o Premium remove os anúncios e
+  /// inclui o backup automático em nuvem.
+  bool get premiumUnlocked => freeModeEnabled || subscriptionActive;
+
+  /// Anúncios e convites para assinar aparecem só para quem não é Premium.
+  bool get showsAds => freeModeEnabled || !subscriptionActive;
+
+  /// Backup automático em nuvem: só para assinantes (no modo gratuito não há
+  /// cobrança, então também não há nuvem).
+  bool get cloudBackupEnabled => subscriptionActive;
   bool get paidSubscriptionActive => _subscriptionActive;
   bool get betaPremiumActive => _betaPremiumActive;
   bool get signedIn => _auth.currentUser != null;
@@ -109,8 +129,7 @@ class AccessService extends ChangeNotifier {
   }
 
   bool get trialActive => trialRemaining > Duration.zero;
-  bool get hasAccess =>
-      freeModeEnabled || subscriptionActive || trialActive;
+  bool get hasAccess => freeModeEnabled || subscriptionActive || trialActive;
 
   Future<void> initialize() async {
     if (_initialized) return;
@@ -125,7 +144,7 @@ class AccessService extends ChangeNotifier {
       _handlePurchases,
       onError: (Object error) {
         purchasePending = false;
-        storeMessage = 'Não foi possível concluir a comunicação com a loja.';
+        storeMessage = tr.storeCommError;
         notifyListeners();
       },
     );
@@ -133,8 +152,8 @@ class AccessService extends ChangeNotifier {
       (user) => unawaited(_bindUser(user)),
     );
     await _bindUser(_auth.currentUser);
-    if (freeModeEnabled) return;
     unawaited(_loadRemoteAccess());
+    if (freeModeEnabled) return;
     unawaited(_connectStore());
   }
 
@@ -199,6 +218,7 @@ class AccessService extends ChangeNotifier {
       );
       premiumFreeUntil = until?.toLocal();
       _betaPremiumActive = data['freePremiumActive'] as bool? ?? false;
+      minimumBuild = (data['minimumBuild'] as num?)?.toInt();
       notifyListeners();
     } on Object catch (error) {
       debugPrint('Não foi possível consultar o acesso temporário: $error');
@@ -211,7 +231,7 @@ class AccessService extends ChangeNotifier {
     try {
       storeAvailable = await _store.isAvailable();
       if (!storeAvailable) {
-        storeMessage = 'Google Play não está disponível neste aparelho.';
+        storeMessage = tr.storeUnavailable;
         return;
       }
       final response = await _store.queryProductDetails({
@@ -220,19 +240,16 @@ class AccessService extends ChangeNotifier {
       if (response.error != null) {
         storeMessage = response.error!.message;
       } else if (response.productDetails.isEmpty) {
-        storeMessage =
-            'Produto não encontrado. Confirme o ID no Google Play Console.';
+        storeMessage = tr.storeProductNotFound;
       } else {
         _storeProducts = response.productDetails;
         _refreshSubscriptionOptions();
-        storeMessage = subscriptionOptions.isEmpty
-            ? 'Nenhum plano disponível para esta conta.'
-            : null;
+        storeMessage = subscriptionOptions.isEmpty ? tr.storeNoPlans : null;
       }
       if (_auth.currentUser != null) await _store.restorePurchases();
     } on Object catch (error) {
       debugPrint('Falha ao conectar à Google Play: $error');
-      storeMessage = 'Não foi possível acessar a Google Play.';
+      storeMessage = tr.storeAccessError;
     } finally {
       loadingStore = false;
       notifyListeners();
@@ -341,7 +358,7 @@ class AccessService extends ChangeNotifier {
     final user = _auth.currentUser;
     final option = selectedSubscription;
     if (user == null) {
-      storeMessage = 'Entre com sua conta Google para assinar.';
+      storeMessage = tr.storeSignInToSubscribe;
       notifyListeners();
       return;
     }
@@ -358,35 +375,35 @@ class AccessService extends ChangeNotifier {
       );
       if (!started) {
         purchasePending = false;
-        storeMessage = 'A compra não pôde ser iniciada.';
+        storeMessage = tr.storePurchaseNotStarted;
         notifyListeners();
       }
     } on Object catch (error) {
       debugPrint('Falha ao iniciar assinatura: $error');
       purchasePending = false;
-      storeMessage = 'Não foi possível iniciar a compra.';
+      storeMessage = tr.storePurchaseStartError;
       notifyListeners();
     }
   }
 
   Future<void> restorePurchases() async {
     if (_auth.currentUser == null) {
-      storeMessage = 'Entre com sua conta Google para restaurar a assinatura.';
+      storeMessage = tr.storeSignInToRestore;
       notifyListeners();
       return;
     }
     if (!storeAvailable || purchasePending) return;
     purchasePending = true;
-    storeMessage = 'Procurando compras anteriores...';
+    storeMessage = tr.storeSearching;
     notifyListeners();
     try {
       await _store.restorePurchases();
       storeMessage = _subscriptionActive
-          ? 'Assinatura restaurada.'
-          : 'Compras consultadas. Validando com a Google Play...';
+          ? tr.storeRestored
+          : tr.storeValidatingRestore;
     } on Object catch (error) {
       debugPrint('Falha ao restaurar assinatura: $error');
-      storeMessage = 'Não foi possível restaurar as compras.';
+      storeMessage = tr.storeRestoreError;
     } finally {
       purchasePending = false;
       notifyListeners();
@@ -403,16 +420,15 @@ class AccessService extends ChangeNotifier {
           break;
         case PurchaseStatus.pending:
           purchasePending = true;
-          storeMessage = 'Pagamento pendente na Google Play.';
+          storeMessage = tr.storePending;
           break;
         case PurchaseStatus.error:
           purchasePending = false;
-          storeMessage =
-              purchase.error?.message ?? 'A compra não foi concluída.';
+          storeMessage = purchase.error?.message ?? tr.storeNotCompleted;
           break;
         case PurchaseStatus.canceled:
           purchasePending = false;
-          storeMessage = 'Compra cancelada.';
+          storeMessage = tr.storeCanceled;
           break;
       }
     }
@@ -423,18 +439,18 @@ class AccessService extends ChangeNotifier {
     final user = _auth.currentUser;
     if (user == null) {
       purchasePending = false;
-      storeMessage = 'Entre na mesma conta usada para iniciar a assinatura.';
+      storeMessage = tr.storeSameAccount;
       return;
     }
     final token = purchase.verificationData.serverVerificationData.trim();
     if (token.isEmpty) {
       purchasePending = false;
-      storeMessage = 'A Google Play não forneceu os dados para validação.';
+      storeMessage = tr.storeNoVerificationData;
       return;
     }
 
     purchasePending = true;
-    storeMessage = 'Validando assinatura com a Google Play...';
+    storeMessage = tr.storeValidating;
     notifyListeners();
     try {
       final result = await _functions
@@ -444,17 +460,14 @@ class AccessService extends ChangeNotifier {
       entitlement = SubscriptionEntitlement.fromJson(data);
       _subscriptionActive = entitlement.active;
       purchasePending = false;
-      storeMessage = entitlement.active
-          ? 'Assinatura MyCarApp ativa.'
-          : 'A assinatura não está ativa na Google Play.';
+      storeMessage = entitlement.active ? tr.storeActive : tr.storeNotActive;
       if (entitlement.active && purchase.pendingCompletePurchase) {
         await _store.completePurchase(purchase);
       }
     } on Object catch (error) {
       debugPrint('Falha ao validar assinatura: $error');
       purchasePending = false;
-      storeMessage =
-          'Não foi possível validar a assinatura. Tente restaurar novamente.';
+      storeMessage = tr.storeValidationError;
     }
   }
 

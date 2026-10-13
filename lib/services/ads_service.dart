@@ -33,7 +33,7 @@ class AdsService extends ChangeNotifier {
 
   /// Quantas atividades principais (abastecimento, manutenção ou despesa
   /// novos) o usuário registra entre um intersticial e outro.
-  static const activitiesPerInterstitial = 2;
+  static const activitiesPerInterstitial = 1;
 
   bool _initialized = false;
   InterstitialAd? _interstitial;
@@ -48,6 +48,10 @@ class AdsService extends ChangeNotifier {
   Future<void>? _counterLoaded;
   bool _canRequestAds = false;
   bool _privacyOptionsRequired = false;
+
+  /// Chamado quando o usuário fecha um intersticial; o app usa para mostrar
+  /// o convite para assinar o Premium.
+  VoidCallback? onInterstitialDismissed;
 
   bool get supported =>
       !kIsWeb &&
@@ -80,9 +84,7 @@ class AdsService extends ChangeNotifier {
         : _androidTestInterstitialId;
   }
 
-  bool get _shouldShowAds =>
-      canRequestAds &&
-      (AccessService.freeModeEnabled || !AccessService.instance.hasAccess);
+  bool get _shouldShowAds => canRequestAds && AccessService.instance.showsAds;
 
   /// Registra uma atividade principal concluída e, a cada
   /// [activitiesPerInterstitial] atividades, exibe o intersticial.
@@ -117,6 +119,7 @@ class AdsService extends ChangeNotifier {
       onAdDismissedFullScreenContent: (ad) {
         ad.dispose();
         _loadInterstitial();
+        onInterstitialDismissed?.call();
       },
       onAdFailedToShowFullScreenContent: (ad, error) {
         reportAdIssue(

@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import '../services/authentication_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_logo.dart';
-import 'first_use_screen.dart';
+import 'home_screen.dart';
 import 'login_screen.dart';
+import '../l10n/l10n.dart';
 
 class PresentationScreen extends StatefulWidget {
   const PresentationScreen({super.key});
@@ -29,7 +30,7 @@ class _PresentationScreenState extends State<PresentationScreen> {
     _opening = true;
     _timer?.cancel();
     final signedIn = AuthenticationService.instance.currentUser != null;
-    final next = signedIn ? await startScreenAfterLogin() : const LoginScreen();
+    final Widget next = signedIn ? const HomeScreen() : const LoginScreen();
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder<void>(
@@ -70,10 +71,10 @@ class _PresentationScreenState extends State<PresentationScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'GESTÃO VEICULAR INTELIGENTE',
+                Text(
+                  tr.appTagline,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: AppColors.goldLight,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -83,10 +84,10 @@ class _PresentationScreenState extends State<PresentationScreen> {
                 const SizedBox(height: 20),
                 Container(width: 48, height: 3, color: AppColors.gold),
                 const Spacer(flex: 4),
-                const Text(
-                  'Tecnologia que acompanha o seu caminho.',
+                Text(
+                  tr.presentationSlogan,
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white60, fontSize: 13),
+                  style: const TextStyle(color: Colors.white60, fontSize: 13),
                 ),
                 const SizedBox(height: 18),
                 const SizedBox(

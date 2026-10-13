@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/vehicle.dart';
+import 'auto_backup_service.dart';
+import '../l10n/l10n.dart';
 
 class VehicleStorageService {
   static Future<void> _writeQueue = Future.value();
@@ -44,9 +46,7 @@ class VehicleStorageService {
           .map((item) => Vehicle.fromJson(item as Map<String, dynamic>))
           .toList();
     } on Object {
-      throw const FileSystemException(
-        'O arquivo local de veículos está corrompido.',
-      );
+      throw FileSystemException(tr.storageVehiclesCorrupted);
     }
   }
 
@@ -95,7 +95,7 @@ class VehicleStorageService {
       final photo = vehicle.photos[index];
       final source = File(photo.path);
       if (!await source.exists()) {
-        throw FileSystemException('Foto não encontrada', photo.path);
+        throw FileSystemException(tr.storagePhotoNotFound, photo.path);
       }
       if (source.parent.path == photoDirectory.path) {
         permanentPhotos.add(photo);
@@ -162,6 +162,7 @@ class VehicleStorageService {
   }
 
   Future<void> _writeVehicles(List<Vehicle> vehicles) async {
+    AutoBackupService.instance.markDirty();
     final file = await _vehiclesFile();
     await _writeJsonSafely(
       file,

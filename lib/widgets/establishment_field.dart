@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/establishment.dart';
 import '../theme/app_colors.dart';
+import '../l10n/l10n.dart';
 
 /// Campo de seleção de estabelecimento com busca, chips de sugestão rápida
 /// (mais usados recentemente) e criação inline ("+ Novo"), conforme a
@@ -38,7 +39,10 @@ class EstablishmentField extends StatefulWidget {
 
   final ValueChanged<String> onTextChanged;
   final ValueChanged<Establishment?> onEstablishmentSelected;
-  final Future<Establishment> Function(String name) onCreateEstablishment;
+
+  /// Cria o estabelecimento; retorna `null` quando a criação não foi
+  /// permitida (ex.: limite de postos do plano gratuito).
+  final Future<Establishment?> Function(String name) onCreateEstablishment;
 
   @override
   State<EstablishmentField> createState() => _EstablishmentFieldState();
@@ -123,7 +127,7 @@ class _EstablishmentFieldState extends State<EstablishmentField> {
     setState(() => _creating = true);
     try {
       final created = await widget.onCreateEstablishment(name);
-      if (!mounted) return;
+      if (!mounted || created == null) return;
       setState(() => _selectedId = created.id);
       widget.onEstablishmentSelected(created);
       _focusNode.unfocus();
@@ -233,7 +237,9 @@ class _EstablishmentFieldState extends State<EstablishmentField> {
                       Icons.add_circle_outline_rounded,
                       color: AppColors.blue,
                     ),
-                    title: Text('Criar "${_controller.text.trim()}"'),
+                    title: Text(
+                      tr.establishmentCreate(_controller.text.trim()),
+                    ),
                     onTap: _createFromQuery,
                   ),
               ],

@@ -9,6 +9,7 @@ import '../models/vehicle.dart';
 import '../services/document_storage_service.dart';
 import '../services/vehicle_storage_service.dart';
 import '../theme/app_colors.dart';
+import '../l10n/l10n.dart';
 
 class DocumentsScreen extends StatefulWidget {
   const DocumentsScreen({super.key});
@@ -46,7 +47,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() => loading = false);
-      message('Não foi possível carregar os documentos.');
+      message(tr.docsLoadError);
     }
   }
 
@@ -68,7 +69,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
       );
       if (selected == null) return;
       if (selected.path == null) {
-        throw const FileSystemException('Arquivo indisponível.');
+        throw FileSystemException(tr.fileUnavailable);
       }
       await storage.importPdf(
         sourcePath: selected.path!,
@@ -77,11 +78,11 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
         vehicleId: vehicleId,
       );
       await load();
-      if (mounted) message('Documento anexado.', oneSecond: true);
+      if (mounted) message(tr.docAttached, oneSecond: true);
     } on FormatException catch (error) {
       if (mounted) message(error.message);
     } catch (_) {
-      if (mounted) message('Não foi possível anexar o PDF.');
+      if (mounted) message(tr.docAttachError);
     } finally {
       if (mounted) setState(() => importingType = null);
     }
@@ -89,12 +90,12 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
 
   Future<void> open(AppDocument document) async {
     if (!await File(document.path).exists()) {
-      message('O arquivo não foi encontrado. Anexe o documento novamente.');
+      message(tr.docFileMissing);
       return;
     }
     final result = await OpenFilex.open(document.path, type: 'application/pdf');
     if (result.type != ResultType.done && mounted) {
-      message('Não há um leitor de PDF disponível no aparelho.');
+      message(tr.docNoPdfReader);
     }
   }
 
@@ -102,17 +103,17 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Excluir documento?'),
-        content: const Text('A cópia armazenada no MyCarApp será removida.'),
+        title: Text(tr.docDeleteTitle),
+        content: Text(tr.docDeleteText),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('CANCELAR'),
+            child: Text(tr.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
-            child: const Text('EXCLUIR'),
+            child: Text(tr.deleteAction),
           ),
         ],
       ),
@@ -120,7 +121,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     if (confirmed != true) return;
     await storage.deleteDocument(document);
     await load();
-    if (mounted) message('Documento excluído.', oneSecond: true);
+    if (mounted) message(tr.docDeleted, oneSecond: true);
   }
 
   void message(String text, {bool oneSecond = false}) {
@@ -145,7 +146,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.navy,
         foregroundColor: Colors.white,
-        title: const Text('Documentos'),
+        title: Text(tr.docsTitle),
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator())
@@ -155,8 +156,8 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                 const _PrivacyNotice(),
                 const SizedBox(height: 16),
                 _DocumentCard(
-                  title: 'CNH-e',
-                  subtitle: 'Carteira Nacional de Habilitação em PDF',
+                  title: tr.docDriverLicense,
+                  subtitle: tr.docDriverLicenseHint,
                   icon: Icons.badge_outlined,
                   document: cnh,
                   loading: importingType == 'cnh',
@@ -166,10 +167,10 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                 ),
                 const SizedBox(height: 12),
                 _DocumentCard(
-                  title: 'Documento do veículo',
+                  title: tr.docVehicle,
                   subtitle: vehicle == null
-                      ? 'Selecione um veículo para anexar o CRLV-e'
-                      : 'CRLV-e de ${vehicle!.nickname}',
+                      ? tr.docSelectVehicle
+                      : tr.docVehicleOf(vehicle!.nickname),
                   icon: Icons.directions_car_filled_outlined,
                   document: vehicleDocument,
                   loading: importingType == 'vehicle',
@@ -300,18 +301,18 @@ class _DocumentCard extends StatelessWidget {
                             ? Icons.upload_file_rounded
                             : Icons.open_in_new_rounded,
                       ),
-                label: Text(document == null ? 'ANEXAR PDF' : 'ABRIR PDF'),
+                label: Text(document == null ? tr.docAttachPdf : tr.docOpenPdf),
               ),
             ),
             if (document != null) ...[
               const SizedBox(width: 8),
               IconButton(
-                tooltip: 'Substituir PDF',
+                tooltip: tr.docReplacePdf,
                 onPressed: onImport,
                 icon: const Icon(Icons.sync_rounded),
               ),
               IconButton(
-                tooltip: 'Excluir',
+                tooltip: tr.delete,
                 onPressed: onDelete,
                 color: Colors.redAccent,
                 icon: const Icon(Icons.delete_outline_rounded),
@@ -334,15 +335,19 @@ class _PrivacyNotice extends StatelessWidget {
       color: AppColors.goldLight,
       borderRadius: BorderRadius.circular(14),
     ),
-    child: const Row(
+    child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(Icons.lock_outline_rounded, color: AppColors.navy),
-        SizedBox(width: 10),
+        const Icon(Icons.lock_outline_rounded, color: AppColors.navy),
+        const SizedBox(width: 10),
         Expanded(
           child: Text(
-            'Os PDFs são copiados para o armazenamento interno do MyCarApp e permanecem somente neste aparelho.',
-            style: TextStyle(color: AppColors.text, fontSize: 12, height: 1.35),
+            tr.docsStorageNote,
+            style: const TextStyle(
+              color: AppColors.text,
+              fontSize: 12,
+              height: 1.35,
+            ),
           ),
         ),
       ],
