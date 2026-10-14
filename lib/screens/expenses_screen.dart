@@ -9,6 +9,7 @@ import '../services/premium_upsell_service.dart';
 import '../services/vehicle_storage_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/free_user_banner_ad.dart';
+import '../widgets/native_list_ad.dart';
 import '../widgets/premium_upsell_banner.dart';
 import '../l10n/l10n.dart';
 
@@ -135,7 +136,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       // Anúncio no rodapé; o FAB flutua acima dele, com folga.
       bottomNavigationBar: const SafeArea(
         top: false,
-        child: FreeUserBannerAd(),
+        child: FreeUserBannerAd(placement: BannerPlacement.expenses),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: vehicle == null ? null : openForm,
@@ -192,13 +193,21 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                ...expenses.map(
-                  (expense) => _ExpenseTile(
-                    expense: expense,
-                    month: month,
-                    onEdit: () => openForm(expense: expense),
-                    onDelete: () => delete(expense),
-                  ),
+                // Despesas com anúncios nativos intercalados.
+                ...withNativeAds(expenses).map(
+                  (entry) => switch (entry) {
+                    NativeListAdSlot(:final slot) => NativeListAd(
+                      key: ValueKey('native-expenses-$slot'),
+                      margin: const EdgeInsets.all(4),
+                      borderRadius: 12,
+                    ),
+                    NativeListItem(item: final expense) => _ExpenseTile(
+                      expense: expense,
+                      month: month,
+                      onEdit: () => openForm(expense: expense),
+                      onDelete: () => delete(expense),
+                    ),
+                  },
                 ),
               ],
             ),

@@ -2,24 +2,43 @@ import 'package:flutter/material.dart';
 
 import '../screens/lifetime_purchase_screen.dart';
 import '../services/access_service.dart';
+import '../services/ads_config.dart';
+import '../services/ads_service.dart';
 import '../theme/app_colors.dart';
 import '../l10n/l10n.dart';
+import 'rewarded_ad_free.dart';
 
 bool _showing = false;
 
+/// O que o usuário escolheu no convite.
+enum _AfterAdChoice { subscribe, rewarded, notNow }
+
 /// Convite para assinar o Premium, mostrado logo depois que o usuário fecha
 /// um anúncio intersticial. Some para quem já é Premium.
+///
+/// Aparece só de vez em quando: precisa estar ligado no Remote Config e ter
+/// passado o intervalo mínimo desde o último convite. Nos demais
+/// intersticiais o usuário volta direto para o app.
 Future<void> showPremiumAfterAdSheet(BuildContext context) async {
   if (_showing || !AccessService.instance.showsAds) return;
   if (AccessService.freeModeEnabled) return;
   _showing = true;
   try {
-    final subscribe = await showModalBottomSheet<bool>(
+    if (!await AdsService.instance.premiumAfterAdDue()) return;
+    if (!context.mounted) return;
+    await AdsService.instance.markPremiumAfterAdShown();
+    if (!context.mounted) return;
+    final choice = await showModalBottomSheet<_AfterAdChoice>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (_) => const _PremiumAfterAdSheet(),
     );
-    if (subscribe == true && context.mounted) await openPremium(context);
+    if (!context.mounted) return;
+    if (choice == _AfterAdChoice.subscribe) {
+      await openPremium(context);
+    } else if (choice == _AfterAdChoice.rewarded) {
+      await watchRewardedForAdFree(context);
+    }
   } finally {
     _showing = false;
   }
@@ -108,7 +127,8 @@ class _PremiumAfterAdSheet extends StatelessWidget {
               width: double.infinity,
               height: 50,
               child: FilledButton(
-                onPressed: () => Navigator.of(context).pop(true),
+                onPressed: () =>
+                    Navigator.of(context).pop(_AfterAdChoice.subscribe),
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.gold,
                   foregroundColor: AppColors.navy,
@@ -116,8 +136,33 @@ class _PremiumAfterAdSheet extends StatelessWidget {
                 child: Text(tr.afterAdSubscribe),
               ),
             ),
+            // Alternativa gratuita: um vídeo premiado dá algumas horas sem
+            // anúncios em tela cheia (os banners continuam).
+            if (rewardedOfferAvailable) ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () =>
+                      Navigator.of(context).pop(_AfterAdChoice.rewarded),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.white38),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                  ),
+                  icon: const Icon(Icons.ondemand_video_rounded, size: 20),
+                  label: Text(
+                    tr.afterAdRewarded(AdsConfig.instance.rewardedAdFreeHours),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ],
             TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
+              onPressed: () => Navigator.of(context).pop(_AfterAdChoice.notNow),
               child: Text(
                 tr.notNow,
                 style: const TextStyle(color: Colors.white70),

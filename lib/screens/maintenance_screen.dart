@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../models/maintenance_record.dart';
 import '../models/vehicle.dart';
+import '../services/ads_config.dart';
 import '../services/maintenance_storage_service.dart';
 import '../services/premium_upsell_service.dart';
 import '../services/vehicle_storage_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/free_user_banner_ad.dart';
+import '../widgets/native_list_ad.dart';
 import '../widgets/premium_upsell_banner.dart';
 import '../widgets/vehicle_type_icon.dart';
 import 'maintenance_form_screen.dart';
@@ -164,6 +166,14 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
       ..sort((a, b) => b.date.compareTo(a.date));
     final upcoming = records.where((item) => !item.isCompleted).toList()
       ..sort((a, b) => a.date.compareTo(b.date));
+    // Anúncios nativos intercalados; as duas abas dividem o limite por tela.
+    final completedEntries = withNativeAds(completed);
+    final usedAds = nativeAdCount(completedEntries);
+    final upcomingEntries = withNativeAds(
+      upcoming,
+      maxAds: AdsConfig.instance.nativeMaxPerScreen - usedAds,
+      firstSlot: usedAds,
+    );
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -184,7 +194,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
         // Anúncio no rodapé; o FAB flutua acima dele, com folga.
         bottomNavigationBar: const SafeArea(
           top: false,
-          child: FreeUserBannerAd(),
+          child: FreeUserBannerAd(placement: BannerPlacement.maintenance),
         ),
         floatingActionButton: FloatingActionButton.extended(
           onPressed: vehicle == null ? null : chooseMaintenanceType,
@@ -204,14 +214,21 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                     summary: _Summary(records: completed, vehicle: vehicle!),
                     emptyText: tr.maintEmptyDone,
                     onRefresh: load,
-                    children: completed
+                    children: completedEntries
                         .map(
-                          (record) => _MaintenanceCard(
-                            record: record,
-                            vehicle: vehicle!,
-                            onEdit: () => openForm(record: record),
-                            onDelete: () => remove(record),
-                          ),
+                          (entry) => switch (entry) {
+                            NativeListAdSlot(:final slot) => NativeListAd(
+                              key: ValueKey('native-maintenance-$slot'),
+                              borderRadius: 12,
+                            ),
+                            NativeListItem(item: final record) =>
+                              _MaintenanceCard(
+                                record: record,
+                                vehicle: vehicle!,
+                                onEdit: () => openForm(record: record),
+                                onDelete: () => remove(record),
+                              ),
+                          },
                         )
                         .toList(),
                   ),
@@ -219,15 +236,21 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                     header: _Header(vehicle: vehicle!),
                     emptyText: tr.maintEmptyNext,
                     onRefresh: load,
-                    children: upcoming
+                    children: upcomingEntries
                         .map(
-                          (record) => _UpcomingCard(
-                            record: record,
-                            vehicle: vehicle!,
-                            onEdit: () =>
-                                openForm(record: record, completed: false),
-                            onDelete: () => remove(record),
-                          ),
+                          (entry) => switch (entry) {
+                            NativeListAdSlot(:final slot) => NativeListAd(
+                              key: ValueKey('native-maintenance-$slot'),
+                              borderRadius: 12,
+                            ),
+                            NativeListItem(item: final record) => _UpcomingCard(
+                              record: record,
+                              vehicle: vehicle!,
+                              onEdit: () =>
+                                  openForm(record: record, completed: false),
+                              onDelete: () => remove(record),
+                            ),
+                          },
                         )
                         .toList(),
                   ),

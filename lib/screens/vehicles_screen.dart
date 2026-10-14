@@ -120,7 +120,10 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
       title: Text(tr.vehiclesTitle),
     ),
     // Anúncio no rodapé; o FAB flutua acima dele, com folga.
-    bottomNavigationBar: const SafeArea(top: false, child: FreeUserBannerAd()),
+    bottomNavigationBar: const SafeArea(
+      top: false,
+      child: FreeUserBannerAd(placement: BannerPlacement.vehicles),
+    ),
     floatingActionButton: FloatingActionButton.extended(
       onPressed: () => openForm(),
       backgroundColor: AppColors.gold,

@@ -1053,5 +1053,49 @@
   "navMore": "Mais",
   "forceUpdateTitle": "Atualize o MyCarApp",
   "forceUpdateText": "Esta versão não é mais compatível. Atualize para continuar usando o app; seus dados continuam salvos no celular.",
-  "forceUpdateButton": "ATUALIZAR AGORA"
+  "forceUpdateButton": "ATUALIZAR AGORA",
+  "adFreeMenuTitle": "Ficar {hours}h sem anúncios em tela cheia",
+  "@adFreeMenuTitle": {
+    "placeholders": {
+      "hours": {
+        "type": "Object"
+      }
+    }
+  },
+  "adFreeMenuSubtitle": "Assista a um vídeo curto. Os banners continuam.",
+  "adFreeMenuActive": "Sem anúncios em tela cheia por mais {hours}h",
+  "@adFreeMenuActive": {
+    "placeholders": {
+      "hours": {
+        "type": "Object"
+      }
+    }
+  },
+  "adFreeMenuActiveSubtitle": "Os banners continuam aparecendo.",
+  "adFreeMenuAddMore": "Assista a outro vídeo para somar +{hours}h (máx. 9h)",
+  "@adFreeMenuAddMore": {
+    "placeholders": {
+      "hours": {
+        "type": "Object"
+      }
+    }
+  },
+  "afterAdRewarded": "Ou assista a um vídeo e fique {hours}h sem anúncios em tela cheia",
+  "@afterAdRewarded": {
+    "placeholders": {
+      "hours": {
+        "type": "Object"
+      }
+    }
+  },
+  "rewardedUnavailable": "Vídeo indisponível no momento, tente mais tarde",
+  "rewardedNotEarned": "Assista ao vídeo até o fim para ganhar o período sem anúncios.",
+  "rewardedEarned": "Pronto! Sem anúncios em tela cheia por {hours}h. Os banners continuam.",
+  "@rewardedEarned": {
+    "placeholders": {
+      "hours": {
+        "type": "Object"
+      }
+    }
+  }
 }

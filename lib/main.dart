@@ -7,6 +7,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'l10n/l10n.dart';
 import 'screens/presentation_screen.dart';
 import 'services/access_service.dart';
+import 'services/ads_config.dart';
 import 'services/ads_service.dart';
 import 'services/auto_backup_service.dart';
 import 'services/firebase_bootstrap.dart';
@@ -28,6 +29,9 @@ Future<void> main() async {
     final context = _navigatorKey.currentContext;
     if (context != null) unawaited(showPremiumAfterAdSheet(context));
   };
+  // Limites dos anúncios vindos do Remote Config: busca em segundo plano e,
+  // até responder (ou se falhar), valem os padrões locais.
+  AdsConfig.instance.initialize();
   unawaited(AdsService.instance.initialize());
   runApp(const MyCarApp());
 }

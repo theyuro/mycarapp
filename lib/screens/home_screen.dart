@@ -8,6 +8,7 @@ import '../models/maintenance_record.dart';
 import '../models/vehicle.dart';
 import '../models/vehicle_expense.dart';
 import '../services/access_service.dart';
+import '../services/ads_config.dart';
 import '../services/ads_service.dart';
 import '../services/auto_backup_service.dart';
 import '../services/expense_storage_service.dart';
@@ -20,6 +21,7 @@ import '../theme/app_colors.dart';
 import '../widgets/free_user_banner_ad.dart';
 import '../widgets/premium_upsell_banner.dart';
 import '../widgets/recommendation_banner.dart';
+import '../widgets/rewarded_ad_free.dart';
 import '../widgets/vehicle_type_icon.dart';
 import 'account_screen.dart';
 import 'data_transfer_screen.dart';
@@ -366,6 +368,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> showMoreMenu() async {
+    // Adianta o carregamento do vídeo premiado, para ele estar pronto se o
+    // usuário escolher "ficar sem anúncios em tela cheia".
+    if (rewardedOfferAvailable) AdsService.instance.loadRewarded();
+    final adFreeActive = AdsService.instance.adFreeActive;
+    final adFreeAtLimit = AdsService.instance.adFreeAtLimit;
     await showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
@@ -380,6 +387,29 @@ class _HomeScreenState extends State<HomeScreen> {
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
             ),
           ),
+          // Vídeo premiado: horas sem anúncios em tela cheia. Com o período
+          // ativo, mostra o tempo restante e permite somar outro vídeo; só
+          // fica desabilitado quando o período já está no teto.
+          if (rewardedOfferAvailable)
+            _MoreMenuTile(
+              icon: Icons.ondemand_video_rounded,
+              title: adFreeActive
+                  ? tr.adFreeMenuActive(adFreeRemainingHours())
+                  : tr.adFreeMenuTitle(AdsConfig.instance.rewardedAdFreeHours),
+              subtitle: !adFreeActive
+                  ? tr.adFreeMenuSubtitle
+                  : adFreeAtLimit
+                  ? tr.adFreeMenuActiveSubtitle
+                  : tr.adFreeMenuAddMore(
+                      AdsConfig.instance.rewardedAdFreeHours,
+                    ),
+              onTap: adFreeAtLimit
+                  ? null
+                  : () {
+                      Navigator.pop(sheetContext);
+                      watchRewardedForAdFree(context);
+                    },
+            ),
           _MoreMenuTile(
             icon: Icons.support_agent_rounded,
             title: tr.supportTitle,
@@ -581,7 +611,7 @@ class _HomeScreenState extends State<HomeScreen> {
     bottomNavigationBar: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const FreeUserBannerAd(),
+        const FreeUserBannerAd(placement: BannerPlacement.home),
         _HomeBottomBar(
           onHome: () {},
           onFuelings: openFuelingHistory,
@@ -1308,16 +1338,26 @@ class _MoreMenuTile extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.onTap,
+    this.subtitle,
   });
   final IconData icon;
   final String title;
-  final VoidCallback onTap;
+  final String? subtitle;
+  // Nulo deixa o item desabilitado (ex.: período sem anúncios já ativo).
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) => ListTile(
-    leading: Icon(icon, color: AppColors.blue),
+    enabled: onTap != null,
+    leading: Icon(
+      icon,
+      color: onTap == null ? AppColors.muted : AppColors.blue,
+    ),
     title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-    trailing: const Icon(Icons.chevron_right_rounded),
+    subtitle: subtitle == null
+        ? null
+        : Text(subtitle!, style: const TextStyle(fontSize: 12)),
+    trailing: onTap == null ? null : const Icon(Icons.chevron_right_rounded),
     onTap: onTap,
   );
 }

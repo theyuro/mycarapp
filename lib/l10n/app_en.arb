@@ -628,5 +628,14 @@
   "navMore": "More",
   "forceUpdateTitle": "Update MyCarApp",
   "forceUpdateText": "This version is no longer supported. Update to keep using the app; your data stays saved on your phone.",
-  "forceUpdateButton": "UPDATE NOW"
+  "forceUpdateButton": "UPDATE NOW",
+  "adFreeMenuTitle": "Go {hours}h without full-screen ads",
+  "adFreeMenuSubtitle": "Watch a short video. Banners still show.",
+  "adFreeMenuActive": "No full-screen ads for {hours}h more",
+  "adFreeMenuActiveSubtitle": "Banners still show.",
+  "adFreeMenuAddMore": "Watch another video to add +{hours}h (max 9h)",
+  "afterAdRewarded": "Or watch a video and go {hours}h without full-screen ads",
+  "rewardedUnavailable": "Video unavailable right now, try again later",
+  "rewardedNotEarned": "Watch the video to the end to earn the ad-free period.",
+  "rewardedEarned": "Done! No full-screen ads for {hours}h. Banners still show."
 }

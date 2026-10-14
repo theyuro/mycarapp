@@ -7,6 +7,7 @@ import '../services/premium_upsell_service.dart';
 import '../services/vehicle_storage_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/free_user_banner_ad.dart';
+import '../widgets/native_list_ad.dart';
 import '../widgets/premium_upsell_banner.dart';
 import '../widgets/vehicle_type_icon.dart';
 import 'fueling_form_screen.dart';
@@ -148,71 +149,86 @@ class _FuelingHistoryScreenState extends State<FuelingHistoryScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      backgroundColor: AppColors.navy,
-      foregroundColor: Colors.white,
-      title: Text(tr.historyTitle),
-    ),
-    // Anúncio no rodapé; o FAB flutua acima dele, com folga.
-    bottomNavigationBar: const SafeArea(top: false, child: FreeUserBannerAd()),
-    floatingActionButton: FloatingActionButton.extended(
-      onPressed: vehicle == null ? null : () => openForm(),
-      backgroundColor: AppColors.gold,
-      foregroundColor: AppColors.navy,
-      icon: const Icon(Icons.add),
-      label: Text(tr.fuelUp),
-    ),
-    body: loading
-        ? const Center(child: CircularProgressIndicator())
-        : vehicle == null
-        ? const _NoVehicle()
-        : RefreshIndicator(
-            onRefresh: loadHistory,
-            child: records.isEmpty
-                ? _EmptyHistory(vehicle: vehicle!, onAdd: () => openForm())
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-                    itemCount: records.length + 2,
-                    itemBuilder: (context, index) {
-                      if (index == 0) {
-                        return _VehicleHeader(vehicle: vehicle!);
-                      }
-                      if (index == 1) {
+  Widget build(BuildContext context) {
+    // Registros com anúncios nativos intercalados. Cada item guarda o índice
+    // original, usado no agrupamento por mês.
+    final entries = withNativeAds(records);
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: AppColors.navy,
+        foregroundColor: Colors.white,
+        title: Text(tr.historyTitle),
+      ),
+      // Anúncio no rodapé; o FAB flutua acima dele, com folga.
+      bottomNavigationBar: const SafeArea(
+        top: false,
+        child: FreeUserBannerAd(placement: BannerPlacement.fuelingHistory),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: vehicle == null ? null : () => openForm(),
+        backgroundColor: AppColors.gold,
+        foregroundColor: AppColors.navy,
+        icon: const Icon(Icons.add),
+        label: Text(tr.fuelUp),
+      ),
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : vehicle == null
+          ? const _NoVehicle()
+          : RefreshIndicator(
+              onRefresh: loadHistory,
+              child: records.isEmpty
+                  ? _EmptyHistory(vehicle: vehicle!, onAdd: () => openForm())
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                      itemCount: entries.length + 2,
+                      itemBuilder: (context, index) {
+                        if (index == 0) {
+                          return _VehicleHeader(vehicle: vehicle!);
+                        }
+                        if (index == 1) {
+                          return Column(
+                            children: [
+                              _HistorySummary(records: records),
+                              const PremiumUpsellBanner(
+                                placement: UpsellPlacement.fuelingHistory,
+                                margin: EdgeInsets.only(top: 12),
+                              ),
+                            ],
+                          );
+                        }
+                        final entry = entries[index - 2];
+                        if (entry is NativeListAdSlot<FuelingRecord>) {
+                          return NativeListAd(
+                            key: ValueKey('native-fueling-${entry.slot}'),
+                          );
+                        }
+                        final item = entry as NativeListItem<FuelingRecord>;
+                        final recordIndex = item.index;
+                        final record = item.item;
+                        final showMonth =
+                            recordIndex == 0 ||
+                            !_sameMonth(
+                              record.date,
+                              records[recordIndex - 1].date,
+                            );
                         return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _HistorySummary(records: records),
-                            const PremiumUpsellBanner(
-                              placement: UpsellPlacement.fuelingHistory,
-                              margin: EdgeInsets.only(top: 12),
+                            if (showMonth) _MonthHeader(date: record.date),
+                            _FuelingCard(
+                              record: record,
+                              consumption: consumptionByRecord[record.id],
+                              onEdit: () => openForm(record),
+                              onDelete: () => confirmDelete(record),
                             ),
                           ],
                         );
-                      }
-                      final recordIndex = index - 2;
-                      final record = records[recordIndex];
-                      final showMonth =
-                          recordIndex == 0 ||
-                          !_sameMonth(
-                            record.date,
-                            records[recordIndex - 1].date,
-                          );
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (showMonth) _MonthHeader(date: record.date),
-                          _FuelingCard(
-                            record: record,
-                            consumption: consumptionByRecord[record.id],
-                            onEdit: () => openForm(record),
-                            onDelete: () => confirmDelete(record),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-          ),
-  );
+                      },
+                    ),
+            ),
+    );
+  }
 }
 
 class _VehicleHeader extends StatelessWidget {

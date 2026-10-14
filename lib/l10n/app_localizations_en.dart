@@ -2081,4 +2081,43 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get forceUpdateButton => 'UPDATE NOW';
+
+  @override
+  String adFreeMenuTitle(Object hours) {
+    return 'Go ${hours}h without full-screen ads';
+  }
+
+  @override
+  String get adFreeMenuSubtitle => 'Watch a short video. Banners still show.';
+
+  @override
+  String adFreeMenuActive(Object hours) {
+    return 'No full-screen ads for ${hours}h more';
+  }
+
+  @override
+  String get adFreeMenuActiveSubtitle => 'Banners still show.';
+
+  @override
+  String adFreeMenuAddMore(Object hours) {
+    return 'Watch another video to add +${hours}h (max 9h)';
+  }
+
+  @override
+  String afterAdRewarded(Object hours) {
+    return 'Or watch a video and go ${hours}h without full-screen ads';
+  }
+
+  @override
+  String get rewardedUnavailable =>
+      'Video unavailable right now, try again later';
+
+  @override
+  String get rewardedNotEarned =>
+      'Watch the video to the end to earn the ad-free period.';
+
+  @override
+  String rewardedEarned(Object hours) {
+    return 'Done! No full-screen ads for ${hours}h. Banners still show.';
+  }
 }

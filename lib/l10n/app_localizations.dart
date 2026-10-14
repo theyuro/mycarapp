@@ -3877,6 +3877,60 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'ATUALIZAR AGORA'**
   String get forceUpdateButton;
+
+  /// No description provided for @adFreeMenuTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ficar {hours}h sem anúncios em tela cheia'**
+  String adFreeMenuTitle(Object hours);
+
+  /// No description provided for @adFreeMenuSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Assista a um vídeo curto. Os banners continuam.'**
+  String get adFreeMenuSubtitle;
+
+  /// No description provided for @adFreeMenuActive.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sem anúncios em tela cheia por mais {hours}h'**
+  String adFreeMenuActive(Object hours);
+
+  /// No description provided for @adFreeMenuActiveSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Os banners continuam aparecendo.'**
+  String get adFreeMenuActiveSubtitle;
+
+  /// No description provided for @adFreeMenuAddMore.
+  ///
+  /// In pt, this message translates to:
+  /// **'Assista a outro vídeo para somar +{hours}h (máx. 9h)'**
+  String adFreeMenuAddMore(Object hours);
+
+  /// No description provided for @afterAdRewarded.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ou assista a um vídeo e fique {hours}h sem anúncios em tela cheia'**
+  String afterAdRewarded(Object hours);
+
+  /// No description provided for @rewardedUnavailable.
+  ///
+  /// In pt, this message translates to:
+  /// **'Vídeo indisponível no momento, tente mais tarde'**
+  String get rewardedUnavailable;
+
+  /// No description provided for @rewardedNotEarned.
+  ///
+  /// In pt, this message translates to:
+  /// **'Assista ao vídeo até o fim para ganhar o período sem anúncios.'**
+  String get rewardedNotEarned;
+
+  /// No description provided for @rewardedEarned.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pronto! Sem anúncios em tela cheia por {hours}h. Os banners continuam.'**
+  String rewardedEarned(Object hours);
 }
 
 class _AppLocalizationsDelegate

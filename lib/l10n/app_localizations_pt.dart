@@ -2096,4 +2096,44 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get forceUpdateButton => 'ATUALIZAR AGORA';
+
+  @override
+  String adFreeMenuTitle(Object hours) {
+    return 'Ficar ${hours}h sem anúncios em tela cheia';
+  }
+
+  @override
+  String get adFreeMenuSubtitle =>
+      'Assista a um vídeo curto. Os banners continuam.';
+
+  @override
+  String adFreeMenuActive(Object hours) {
+    return 'Sem anúncios em tela cheia por mais ${hours}h';
+  }
+
+  @override
+  String get adFreeMenuActiveSubtitle => 'Os banners continuam aparecendo.';
+
+  @override
+  String adFreeMenuAddMore(Object hours) {
+    return 'Assista a outro vídeo para somar +${hours}h (máx. 9h)';
+  }
+
+  @override
+  String afterAdRewarded(Object hours) {
+    return 'Ou assista a um vídeo e fique ${hours}h sem anúncios em tela cheia';
+  }
+
+  @override
+  String get rewardedUnavailable =>
+      'Vídeo indisponível no momento, tente mais tarde';
+
+  @override
+  String get rewardedNotEarned =>
+      'Assista ao vídeo até o fim para ganhar o período sem anúncios.';
+
+  @override
+  String rewardedEarned(Object hours) {
+    return 'Pronto! Sem anúncios em tela cheia por ${hours}h. Os banners continuam.';
+  }
 }
