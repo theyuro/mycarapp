@@ -22,6 +22,8 @@ class AdsConfig {
   static const _rewardedAdFreeHours = 'rewarded_ad_free_hours';
   static const _nativeEnabled = 'native_enabled';
   static const _nativeEveryNItems = 'native_every_n_items';
+  static const _appOpenEnabled = 'app_open_enabled';
+  static const _appOpenChancePercent = 'app_open_chance_percent';
 
   /// Valores usados enquanto o Remote Config não respondeu, se ele falhar ou
   /// se o parâmetro não existir no console.
@@ -33,6 +35,8 @@ class AdsConfig {
     _rewardedAdFreeHours: 3,
     _nativeEnabled: true,
     _nativeEveryNItems: 5,
+    _appOpenEnabled: true,
+    _appOpenChancePercent: 50,
   };
 
   bool _initialized = false;
@@ -115,4 +119,13 @@ class AdsConfig {
 
   /// Um nativo a cada N itens da lista (mínimo 1), sem máximo por tela.
   int get nativeEveryNItems => math.max(1, _int(_nativeEveryNItems));
+
+
+  /// Liga/desliga o anúncio de abertura, exibido na abertura seguinte a um
+  /// registro salvo sem intersticial.
+  bool get appOpenEnabled => _bool(_appOpenEnabled);
+
+  /// Chance (0 a 100) de um registro salvo sem intersticial deixar um
+  /// anúncio de abertura pendente: assim ele não aparece sempre.
+  int get appOpenChancePercent => _int(_appOpenChancePercent).clamp(0, 100);
 }

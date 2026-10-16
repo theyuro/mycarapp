@@ -370,9 +370,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> showMoreMenu() async {
     // Adianta o carregamento do vídeo premiado, para ele estar pronto se o
     // usuário escolher "ficar sem anúncios em tela cheia".
-    if (rewardedOfferAvailable) AdsService.instance.loadRewarded();
+    // No teto do período sem anúncios outro vídeo não somaria tempo.
     final adFreeActive = AdsService.instance.adFreeActive;
     final adFreeAtLimit = AdsService.instance.adFreeAtLimit;
+    if (rewardedOfferAvailable && !adFreeAtLimit) {
+      AdsService.instance.loadRewarded();
+    }
     await showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,

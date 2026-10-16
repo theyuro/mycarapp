@@ -1,0 +1,72 @@
+{
+  "parameterGroups": {
+    "Anúncios": {
+      "description": "Limites dos anúncios (lib/services/ads_config.dart). Sem valor publicado, o app usa os padrões do código.",
+      "parameters": {
+        "interstitial_activities_per_show": {
+          "defaultValue": {
+            "value": "1"
+          },
+          "description": "Registros salvos necessários para liberar um intersticial (mínimo 1). Sem intervalo mínimo, limite diário nem carência.",
+          "valueType": "NUMBER"
+        },
+        "app_open_enabled": {
+          "defaultValue": {
+            "value": "true"
+          },
+          "description": "Anúncio de abertura na abertura seguinte a um registro salvo sem intersticial.",
+          "valueType": "BOOLEAN"
+        },
+        "app_open_chance_percent": {
+          "defaultValue": {
+            "value": "50"
+          },
+          "description": "Chance (0 a 100) de um registro salvo sem intersticial deixar um anúncio de abertura pendente.",
+          "valueType": "NUMBER"
+        },
+        "premium_after_ad_enabled": {
+          "defaultValue": {
+            "value": "true"
+          },
+          "description": "Convite Premium depois do intersticial.",
+          "valueType": "BOOLEAN"
+        },
+        "premium_after_ad_interval_days": {
+          "defaultValue": {
+            "value": "7"
+          },
+          "description": "Dias entre dois convites Premium após anúncio.",
+          "valueType": "NUMBER"
+        },
+        "rewarded_enabled": {
+          "defaultValue": {
+            "value": "true"
+          },
+          "description": "Vídeo premiado (horas sem anúncios em tela cheia).",
+          "valueType": "BOOLEAN"
+        },
+        "rewarded_ad_free_hours": {
+          "defaultValue": {
+            "value": "3"
+          },
+          "description": "Horas sem anúncios em tela cheia por vídeo assistido (teto de 9 h).",
+          "valueType": "NUMBER"
+        },
+        "native_enabled": {
+          "defaultValue": {
+            "value": "true"
+          },
+          "description": "Anúncios nativos nas listas.",
+          "valueType": "BOOLEAN"
+        },
+        "native_every_n_items": {
+          "defaultValue": {
+            "value": "5"
+          },
+          "description": "Um nativo a cada N itens da lista, sem máximo por tela.",
+          "valueType": "NUMBER"
+        }
+      }
+    }
+  }
+}

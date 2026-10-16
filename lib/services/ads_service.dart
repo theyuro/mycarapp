@@ -1,15 +1,19 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'access_service.dart';
 import 'ads_config.dart';
+import 'authentication_service.dart';
+import 'vehicle_storage_service.dart';
 
 /// Telas com banner no rodapé. Cada uma usa o próprio bloco de anúncio no
 /// AdMob, para acompanhar a receita por tela.
@@ -73,6 +77,13 @@ class AdsService extends ChangeNotifier {
   static const _androidProductionNativeId =
       'ca-app-pub-3009025921589541/2393546777';
 
+  static const _androidTestAppOpenId = 'ca-app-pub-3940256099942544/9257395921';
+  static const _iosTestAppOpenId = 'ca-app-pub-3940256099942544/5575463023';
+  // Anúncio de abertura de produção (Android). A política do AdMob não
+  // permite intersticial na abertura do app, só este formato.
+  static const _androidProductionAppOpenId =
+      'ca-app-pub-3009025921589541/8264833867';
+
   /// Teto do período sem anúncios em tela cheia, mesmo somando vários vídeos.
   static const _maxAdFree = Duration(hours: 9);
 
@@ -82,7 +93,30 @@ class AdsService extends ChangeNotifier {
   // O AdMob invalida um intersticial carregado após 1 hora; acima disto ele
   // é descartado e recarregado em vez de falhar na exibição.
   static const _interstitialMaxAge = Duration(minutes: 55);
+  // Ao salvar com o intersticial ainda carregando, espera no máximo isto
+  // antes de desistir; mais que isso o anúncio pareceria fora de contexto.
+  static const _interstitialShowWait = Duration(seconds: 3);
   bool _loadingInterstitial = false;
+  Completer<void>? _interstitialLoad;
+  // Anúncio de abertura: só para quem saiu do app devendo um anúncio (salvou
+  // um registro e o intersticial não chegou a aparecer).
+  AppOpenAd? _appOpen;
+  DateTime? _appOpenLoadedAt;
+  bool _loadingAppOpen = false;
+  // O AdMob invalida um anúncio de abertura carregado após 4 horas.
+  static const _appOpenMaxAge = Duration(hours: 3, minutes: 55);
+  // Carregado depois disto da abertura, não é exibido (pareceria fora de
+  // contexto, no meio do uso): fica guardado para a próxima abertura.
+  static const _appOpenShowWindow = Duration(seconds: 8);
+  // Voltar ao app depois de menos que isto (câmera, login, compra) não conta
+  // como nova abertura.
+  static const _appOpenMinBackground = Duration(minutes: 2);
+  DateTime? _openedAt;
+  DateTime? _hiddenAt;
+  // Evita um anúncio de abertura logo ao voltar de outro anúncio em tela
+  // cheia (a tela do anúncio também tira o app do primeiro plano).
+  bool _fullScreenShowing = false;
+  final _random = math.Random();
   // O vídeo premiado segue a mesma regra de validade do intersticial.
   RewardedAd? _rewarded;
   DateTime? _rewardedLoadedAt;
@@ -157,6 +191,15 @@ class AdsService extends ChangeNotifier {
         : _androidTestNativeId;
   }
 
+  String get appOpenAdUnitId {
+    if (kReleaseMode && defaultTargetPlatform == TargetPlatform.android) {
+      return _androidProductionAppOpenId;
+    }
+    return defaultTargetPlatform == TargetPlatform.iOS
+        ? _iosTestAppOpenId
+        : _androidTestAppOpenId;
+  }
+
   bool get _shouldShowAds => canRequestAds && AccessService.instance.showsAds;
 
   bool get _shouldLoadRewarded =>
@@ -197,10 +240,14 @@ class AdsService extends ChangeNotifier {
   /// anúncios) foi lido do disco.
   Future<void> ensureStateLoaded() => _stateLoaded ??= _loadState();
 
-  /// Chamado quando o usuário começa uma atividade principal (abre um
-  /// formulário de registro). Carrega o intersticial só se ele puder ser
-  /// exibido ao salvar: um anúncio carregado e nunca exibido conta como
-  /// solicitação correspondida sem impressão e derruba a taxa de exibição.
+  /// Chamado na abertura do app (e ao voltar do segundo plano) e quando o
+  /// usuário começa uma atividade principal. Carrega o intersticial só se ele
+  /// puder ser exibido no próximo registro salvo: um anúncio carregado e
+  /// nunca exibido conta como solicitação sem impressão no AdMob.
+  ///
+  /// Carregar já na abertura é necessário porque o uso típico é rápido
+  /// (abre, registra o abastecimento e sai): carregando só ao digitar, o
+  /// anúncio quase nunca ficava pronto antes de o usuário salvar.
   void prepareInterstitial() => unawaited(_prepareInterstitial());
 
   Future<void> _prepareInterstitial() async {
@@ -243,16 +290,33 @@ class AdsService extends ChangeNotifier {
       return;
     }
     _discardExpiredInterstitial();
+    final loading = _interstitialLoad;
+    if (_interstitial == null && _loadingInterstitial && loading != null) {
+      // Salvou antes de o anúncio terminar de carregar: espera um pouco.
+      await loading.future.timeout(_interstitialShowWait, onTimeout: () {});
+      // Saiu do app enquanto esperava: o anúncio fica para a próxima
+      // abertura.
+      if (WidgetsBinding.instance.lifecycleState !=
+          AppLifecycleState.resumed) {
+        _markAdOwed();
+        return;
+      }
+    }
     final ad = _interstitial;
-    if (ad == null) {
-      // Não carregou a tempo: o próximo formulário tenta de novo.
+    if (ad == null || _fullScreenShowing) {
+      // Não carregou a tempo: a próxima abertura do app compensa com o
+      // anúncio de abertura.
+      debugPrint('Anúncios: intersticial não carregou a tempo.');
+      _markAdOwed();
       return;
     }
     _interstitial = null;
+    _fullScreenShowing = true;
     ad.fullScreenContentCallback = FullScreenContentCallback(
       onAdShowedFullScreenContent: (_) => _recordInterstitialShown(),
       onAdDismissedFullScreenContent: (ad) {
         ad.dispose();
+        _fullScreenShowing = false;
         onInterstitialDismissed?.call();
       },
       onAdFailedToShowFullScreenContent: (ad, error) {
@@ -261,6 +325,139 @@ class AdsService extends ChangeNotifier {
           'code=${error.code} domain=${error.domain} ${error.message}',
         );
         ad.dispose();
+        _fullScreenShowing = false;
+        _markAdOwed();
+      },
+    );
+    unawaited(ad.show());
+  }
+
+  /// O usuário salvou um registro e não viu o intersticial: por sorteio
+  /// (`app_open_chance_percent`), fica um anúncio pendente que aparece na
+  /// próxima abertura do app. Sorteado aqui, e não na abertura, para só
+  /// carregar o anúncio quando ele de fato vai aparecer. Já deixa o anúncio
+  /// carregando, para estar pronto se o app voltar do segundo plano.
+  void _markAdOwed() {
+    if (!AdsConfig.instance.appOpenEnabled) return;
+    if (!_state.adOwed) {
+      final chance = AdsConfig.instance.appOpenChancePercent;
+      if (_random.nextInt(100) >= chance) {
+        debugPrint('Anúncios: abertura não sorteada ($chance%).');
+        return;
+      }
+      _state.adOwed = true;
+      unawaited(_saveState());
+    }
+    _loadAppOpen();
+  }
+
+  /// Chamado na abertura do app (já com o consentimento resolvido) e ao
+  /// voltar do segundo plano depois de [_appOpenMinBackground]. Exibe o
+  /// anúncio de abertura se o usuário ficou devendo um anúncio.
+  Future<void> _handleAppOpened() async {
+    _openedAt = DateTime.now();
+    prepareInterstitial();
+    if (!await _appOpenDue()) return;
+    final ad = _validAppOpen();
+    if (ad != null) {
+      _showAppOpen(ad);
+    } else {
+      // Carrega agora; se ficar pronto dentro da janela, é exibido.
+      _loadAppOpen();
+    }
+  }
+
+  Future<bool> _appOpenDue() async {
+    if (!_shouldShowAds || !AdsConfig.instance.appOpenEnabled) return false;
+    await ensureStateLoaded();
+    if (!_state.adOwed || adFreeActive || _fullScreenShowing) return false;
+    // Só depois do login e do cadastro do veículo: antes disso o usuário
+    // ainda está conhecendo o app.
+    if (AuthenticationService.instance.currentUser == null) return false;
+    try {
+      if ((await VehicleStorageService().loadVehicles()).isEmpty) return false;
+    } on Object {
+      return false;
+    }
+    return true;
+  }
+
+  AppOpenAd? _validAppOpen() {
+    final loadedAt = _appOpenLoadedAt;
+    if (_appOpen != null &&
+        loadedAt != null &&
+        DateTime.now().difference(loadedAt) > _appOpenMaxAge) {
+      _appOpen!.dispose();
+      _appOpen = null;
+    }
+    return _appOpen;
+  }
+
+  void _loadAppOpen() {
+    if (!_shouldShowAds ||
+        !AdsConfig.instance.appOpenEnabled ||
+        _loadingAppOpen ||
+        _validAppOpen() != null) {
+      return;
+    }
+    _loadingAppOpen = true;
+    AppOpenAd.load(
+      adUnitId: appOpenAdUnitId,
+      request: const AdRequest(),
+      adLoadCallback: AppOpenAdLoadCallback(
+        onAdLoaded: (ad) {
+          _loadingAppOpen = false;
+          _appOpen = ad;
+          _appOpenLoadedAt = DateTime.now();
+          unawaited(_showAppOpenIfStillOpening());
+        },
+        onAdFailedToLoad: (error) {
+          _loadingAppOpen = false;
+          reportAdIssue(
+            'app_open_load',
+            'code=${error.code} domain=${error.domain} ${error.message}',
+          );
+        },
+      ),
+    );
+  }
+
+  /// Exibe o anúncio recém-carregado só se o app acabou de abrir; senão ele
+  /// fica guardado para a próxima abertura.
+  Future<void> _showAppOpenIfStillOpening() async {
+    final openedAt = _openedAt;
+    if (openedAt == null ||
+        DateTime.now().difference(openedAt) > _appOpenShowWindow ||
+        WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+      return;
+    }
+    if (!await _appOpenDue()) return;
+    final ad = _validAppOpen();
+    if (ad != null) _showAppOpen(ad);
+  }
+
+  void _showAppOpen(AppOpenAd ad) {
+    _appOpen = null;
+    _fullScreenShowing = true;
+    ad.fullScreenContentCallback = FullScreenContentCallback(
+      onAdShowedFullScreenContent: (_) {
+        // Pago o anúncio devido. O contador do intersticial não é zerado:
+        // o próximo registro salvo ainda mostra o intersticial.
+        _state.adOwed = false;
+        unawaited(_saveState());
+        _logEvent('ad_app_open_shown');
+      },
+      onAdDismissedFullScreenContent: (ad) {
+        ad.dispose();
+        _fullScreenShowing = false;
+      },
+      onAdFailedToShowFullScreenContent: (ad, error) {
+        reportAdIssue(
+          'app_open_show',
+          'code=${error.code} domain=${error.domain} ${error.message}',
+        );
+        ad.dispose();
+        _fullScreenShowing = false;
       },
     );
     unawaited(ad.show());
@@ -284,6 +481,7 @@ class AdsService extends ChangeNotifier {
 
   void _recordInterstitialShown() {
     _state.activitiesSinceInterstitial = 0;
+    _state.adOwed = false;
     unawaited(_saveState());
     _logEvent('ad_interstitial_shown');
   }
@@ -320,6 +518,7 @@ class AdsService extends ChangeNotifier {
     final ad = _rewarded!;
     _rewarded = null;
     _showingRewarded = true;
+    _fullScreenShowing = true;
     var earned = false;
     final completion = Completer<RewardedResult>();
     ad.fullScreenContentCallback = FullScreenContentCallback(
@@ -328,6 +527,7 @@ class AdsService extends ChangeNotifier {
       onAdDismissedFullScreenContent: (ad) {
         ad.dispose();
         _showingRewarded = false;
+        _fullScreenShowing = false;
         if (!completion.isCompleted) {
           completion.complete(
             earned ? RewardedResult.earned : RewardedResult.notEarned,
@@ -341,6 +541,7 @@ class AdsService extends ChangeNotifier {
         );
         ad.dispose();
         _showingRewarded = false;
+        _fullScreenShowing = false;
         if (!completion.isCompleted) {
           completion.complete(RewardedResult.unavailable);
         }
@@ -488,6 +689,7 @@ class AdsService extends ChangeNotifier {
       return;
     }
     _loadingInterstitial = true;
+    final completion = _interstitialLoad = Completer<void>();
     InterstitialAd.load(
       adUnitId: interstitialAdUnitId,
       request: const AdRequest(),
@@ -496,9 +698,11 @@ class AdsService extends ChangeNotifier {
           _loadingInterstitial = false;
           _interstitial = ad;
           _interstitialLoadedAt = DateTime.now();
+          completion.complete();
         },
         onAdFailedToLoad: (error) {
           _loadingInterstitial = false;
+          completion.complete();
           reportAdIssue(
             'interstitial_load',
             'code=${error.code} domain=${error.domain} ${error.message}',
@@ -551,6 +755,24 @@ class AdsService extends ChangeNotifier {
     if (!_canRequestAds) {
       reportAdIssue('consent_blocked', 'canRequestAds=false após o UMP');
     }
+    // Abertura do app: anúncio de abertura, se devido, e intersticial pronto
+    // para o registro desta sessão. Voltar do segundo plano depois de um
+    // tempo conta como nova abertura (o anúncio carregado também expira).
+    unawaited(_handleAppOpened());
+    // initialize() roda uma vez só, então o listener é registrado uma vez.
+    AppLifecycleListener(
+      onHide: () => _hiddenAt = DateTime.now(),
+      onShow: () {
+        final hiddenAt = _hiddenAt;
+        _hiddenAt = null;
+        if (hiddenAt == null || _fullScreenShowing) return;
+        if (DateTime.now().difference(hiddenAt) >= _appOpenMinBackground) {
+          unawaited(_handleAppOpened());
+        } else {
+          prepareInterstitial();
+        }
+      },
+    );
   }
 
   /// Registra no Crashlytics (não fatal) uma falha do fluxo de anúncios, para
@@ -613,6 +835,9 @@ class _AdsState {
   int activitiesSinceInterstitial = 0;
   DateTime? adFreeUntil;
   DateTime? lastPremiumAfterAdAt;
+  // Salvou um registro sem ver o intersticial: a próxima abertura mostra o
+  // anúncio de abertura.
+  bool adOwed = false;
 
   // Chaves antigas (limite diário, intervalo, carência) que ainda existam no
   // arquivo são ignoradas e somem na próxima gravação.
@@ -621,12 +846,14 @@ class _AdsState {
         (json['activitiesSinceInterstitial'] as num?)?.toInt() ?? 0;
     adFreeUntil = _date(json['adFreeUntil']);
     lastPremiumAfterAdAt = _date(json['lastPremiumAfterAdAt']);
+    adOwed = json['adOwed'] as bool? ?? false;
   }
 
   Map<String, dynamic> toJson() => {
     'activitiesSinceInterstitial': activitiesSinceInterstitial,
     'adFreeUntil': adFreeUntil?.toIso8601String(),
     'lastPremiumAfterAdAt': lastPremiumAfterAdAt?.toIso8601String(),
+    'adOwed': adOwed,
   };
 
   static DateTime? _date(Object? value) =>
