@@ -1,3 +1,5 @@
+import '../l10n/l10n.dart';
+
 class Vehicle {
   const Vehicle({
     required this.id,
@@ -28,7 +30,7 @@ class Vehicle {
   final String vehicleType;
 
   bool get isMotorcycle => vehicleType == 'motorcycle';
-  String get typeLabel => isMotorcycle ? 'Moto' : 'Carro';
+  String get typeLabel => isMotorcycle ? tr.vehicleMotorcycle : tr.vehicleCar;
 
   Vehicle copyWith({
     String? nickname,

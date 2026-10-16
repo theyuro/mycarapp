@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notification_channel_alerts">MyCarApp alerts</string>
+    <string name="maintenance_upcoming">Upcoming maintenance</string>
+    <string name="maintenance_scheduled">Scheduled maintenance</string>
+    <string name="calendar_event_title">MyCarApp Maintenance</string>
+</resources>

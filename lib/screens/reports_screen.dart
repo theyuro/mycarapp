@@ -10,9 +10,9 @@ import '../services/expense_storage_service.dart';
 import '../services/fueling_storage_service.dart';
 import '../services/maintenance_storage_service.dart';
 import '../services/vehicle_storage_service.dart';
-import '../services/access_service.dart';
 import '../theme/app_colors.dart';
-import 'lifetime_purchase_screen.dart';
+import '../l10n/l10n.dart';
+import '../l10n/labels.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -200,7 +200,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     appBar: AppBar(
       backgroundColor: AppColors.navy,
       foregroundColor: Colors.white,
-      title: const Text('Relatórios'),
+      title: Text(tr.reportsTitle),
     ),
     body: loading
         ? const Center(child: CircularProgressIndicator())
@@ -211,51 +211,44 @@ class _ReportsScreenState extends State<ReportsScreen> {
               children: [
                 _ExpandableReportCard(
                   icon: Icons.local_gas_station_outlined,
-                  title: 'Gastos com combustível',
-                  subtitle: 'Total gasto e preço médio por litro',
+                  title: tr.reportFuelTitle,
+                  subtitle: tr.reportFuelSubtitle,
                   initiallyExpanded: true,
                   child: _FuelExpenseReport(
                     records: fuelings,
                     period: fuelPeriod,
-                    onPeriodChanged: (value) => _selectPremiumPeriod(
-                      value,
-                      (selected) => setState(() => fuelPeriod = selected),
-                    ),
+                    onPeriodChanged: (value) =>
+                        setState(() => fuelPeriod = value),
                   ),
                 ),
                 const SizedBox(height: 16),
                 _ExpandableReportCard(
                   icon: Icons.build_circle_outlined,
-                  title: 'Gastos com manutenções',
-                  subtitle: 'Somente manutenções realizadas',
+                  title: tr.reportMaintTitle,
+                  subtitle: tr.reportMaintSubtitle,
                   child: _MaintenanceExpenseReport(
                     records: maintenances,
                     period: maintenancePeriod,
-                    onPeriodChanged: (value) => _selectPremiumPeriod(
-                      value,
-                      (selected) =>
-                          setState(() => maintenancePeriod = selected),
-                    ),
+                    onPeriodChanged: (value) =>
+                        setState(() => maintenancePeriod = value),
                   ),
                 ),
                 const SizedBox(height: 16),
-                if (_premiumUnlocked) ...[
-                  _ConsumptionReport(
-                    vehicle: vehicle,
-                    results: results,
-                    confirmedFillUps: confirmedFillUps,
-                  ),
-                  const SizedBox(height: 16),
-                  _CostPerKmCard(
-                    fuelings: fuelings,
-                    maintenances: maintenances,
-                    expenses: expenses,
-                    period: overallPeriod,
-                    onPeriodChanged: (value) =>
-                        setState(() => overallPeriod = value),
-                  ),
-                  const SizedBox(height: 16),
-                ],
+                _ConsumptionReport(
+                  vehicle: vehicle,
+                  results: results,
+                  confirmedFillUps: confirmedFillUps,
+                ),
+                const SizedBox(height: 16),
+                _CostPerKmCard(
+                  fuelings: fuelings,
+                  maintenances: maintenances,
+                  expenses: expenses,
+                  period: overallPeriod,
+                  onPeriodChanged: (value) =>
+                      setState(() => overallPeriod = value),
+                ),
+                const SizedBox(height: 16),
                 _StationReportCard(
                   key: ValueKey('station-report-${vehicle?.id}'),
                   results: results,
@@ -264,121 +257,59 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   period: stationPeriod,
                   onPeriodChanged: (value) =>
                       setState(() => stationPeriod = value),
-                  isPremium: _premiumUnlocked,
-                  onUpgrade: _openPremium,
                 ),
-                if (_premiumUnlocked) ...[
-                  const SizedBox(height: 16),
-                  _WorkshopReportCard(
-                    maintenances: maintenances,
-                    fuelings: fuelings,
-                    establishments: establishments,
-                    period: workshopPeriod,
-                    onPeriodChanged: (value) =>
-                        setState(() => workshopPeriod = value),
-                  ),
-                ] else ...[
-                  const SizedBox(height: 16),
-                  _PremiumReportsCard(onTap: _openPremium),
-                ],
+                const SizedBox(height: 16),
+                _WorkshopReportCard(
+                  maintenances: maintenances,
+                  fuelings: fuelings,
+                  establishments: establishments,
+                  period: workshopPeriod,
+                  onPeriodChanged: (value) =>
+                      setState(() => workshopPeriod = value),
+                ),
               ],
             ),
           ),
   );
-
-  Future<void> _selectPremiumPeriod(
-    _ReportPeriod value,
-    ValueChanged<_ReportPeriod> select,
-  ) async {
-    if (value == _ReportPeriod.oneMonth ||
-        _premiumUnlocked) {
-      select(value);
-      return;
-    }
-    await _openPremium();
-  }
-
-  /// No modo gratuito todos os relatórios ficam liberados.
-  bool get _premiumUnlocked =>
-      AccessService.freeModeEnabled ||
-      AccessService.instance.subscriptionActive;
-
-  Future<void> _openPremium() => Navigator.of(context).push<void>(
-    MaterialPageRoute<void>(builder: (_) => const SubscriptionScreen()),
-  );
-}
-
-class _PremiumReportsCard extends StatelessWidget {
-  const _PremiumReportsCard({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(20),
-    decoration: BoxDecoration(
-      gradient: const LinearGradient(colors: [AppColors.navy, AppColors.blue]),
-      borderRadius: BorderRadius.circular(20),
-    ),
-    child: Column(
-      children: [
-        const Icon(
-          Icons.workspace_premium_rounded,
-          color: AppColors.gold,
-          size: 38,
-        ),
-        const SizedBox(height: 10),
-        const Text(
-          'Mais relatórios com o Premium',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 19,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'Compare períodos maiores, acompanhe a evolução do consumo do veículo e veja o ranking completo entre todos os seus postos.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white70, height: 1.35),
-        ),
-        const SizedBox(height: 16),
-        FilledButton(
-          onPressed: onTap,
-          style: FilledButton.styleFrom(
-            backgroundColor: AppColors.gold,
-            foregroundColor: AppColors.navy,
-          ),
-          child: const Text('CONHECER O PREMIUM'),
-        ),
-      ],
-    ),
-  );
 }
 
 enum _ReportPeriod {
-  oneMonth('1 mês', 1),
-  threeMonths('3 meses', 3),
-  sixMonths('6 meses', 6),
-  oneYear('1 ano', 12),
-  all('Total', null);
+  oneMonth(1),
+  threeMonths(3),
+  sixMonths(6),
+  oneYear(12),
+  all(null);
 
-  const _ReportPeriod(this.label, this.months);
-  final String label;
+  const _ReportPeriod(this.months);
   final int? months;
+
+  String get label => switch (this) {
+    oneMonth => tr.period1Month,
+    threeMonths => tr.period3Months,
+    sixMonths => tr.period6Months,
+    oneYear => tr.period1Year,
+    all => tr.total,
+  };
 }
 
 /// Opções de período do relatório "Por posto" (Seção 1.2 do guia): apenas
 /// 3/6/12 meses e "tudo" — sem a opção de 1 mês, que raramente reúne
 /// abastecimentos suficientes para comparar postos.
 enum _StationPeriod {
-  threeMonths('3 meses', 3),
-  sixMonths('6 meses', 6),
-  oneYear('12 meses', 12),
-  all('Tudo', null);
+  threeMonths(3),
+  sixMonths(6),
+  oneYear(12),
+  all(null);
 
-  const _StationPeriod(this.label, this.months);
-  final String label;
+  const _StationPeriod(this.months);
   final int? months;
+
+  String get label => switch (this) {
+    threeMonths => tr.period3Months,
+    sixMonths => tr.period6Months,
+    oneYear => tr.period12Months,
+    all => tr.periodAll,
+  };
 
   DateTime? startDate() {
     final value = months;
@@ -553,14 +484,14 @@ class _FuelExpenseReport extends StatelessWidget {
             children: [
               Expanded(
                 child: _ExpenseMetric(
-                  label: 'Total gasto',
+                  label: tr.totalSpent,
                   value: _moneyValue(total),
                 ),
               ),
               const SizedBox(width: 9),
               Expanded(
                 child: _ExpenseMetric(
-                  label: 'Preço médio',
+                  label: tr.averagePrice,
                   value: liters == 0 ? '--' : '${_decimal(averagePrice)}/L',
                 ),
               ),
@@ -568,19 +499,19 @@ class _FuelExpenseReport extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           if (months.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 18),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 18),
               child: Center(
                 child: Text(
-                  'Nenhum abastecimento neste período.',
-                  style: TextStyle(color: AppColors.muted),
+                  tr.reportNoFuelings,
+                  style: const TextStyle(color: AppColors.muted),
                 ),
               ),
             )
           else ...[
-            const Text(
-              'DETALHAMENTO POR MÊS',
-              style: TextStyle(
+            Text(
+              tr.monthlyBreakdown,
+              style: const TextStyle(
                 color: AppColors.muted,
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
@@ -662,14 +593,14 @@ class _MaintenanceExpenseReport extends StatelessWidget {
             children: [
               Expanded(
                 child: _ExpenseMetric(
-                  label: 'Total gasto',
+                  label: tr.totalSpent,
                   value: _moneyValue(total),
                 ),
               ),
               const SizedBox(width: 9),
               Expanded(
                 child: _ExpenseMetric(
-                  label: 'Custo médio',
+                  label: tr.averageCost,
                   value: selected.isEmpty ? '--' : _moneyValue(average),
                 ),
               ),
@@ -677,19 +608,19 @@ class _MaintenanceExpenseReport extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           if (months.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 18),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 18),
               child: Center(
                 child: Text(
-                  'Nenhuma manutenção realizada neste período.',
-                  style: TextStyle(color: AppColors.muted),
+                  tr.reportNoMaint,
+                  style: const TextStyle(color: AppColors.muted),
                 ),
               ),
             )
           else ...[
-            const Text(
-              'DETALHAMENTO POR MÊS',
-              style: TextStyle(
+            Text(
+              tr.monthlyBreakdown,
+              style: const TextStyle(
                 color: AppColors.muted,
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
@@ -716,7 +647,9 @@ class _MaintenanceExpenseReport extends StatelessWidget {
                             style: const TextStyle(fontWeight: FontWeight.w800),
                           ),
                           Text(
-                            '${item.maintenances} ${item.maintenances == 1 ? 'manutenção' : 'manutenções'} realizada(s)',
+                            item.maintenances == 1
+                                ? tr.reportMaintDoneOne(item.maintenances)
+                                : tr.reportMaintDoneMany(item.maintenances),
                             style: const TextStyle(
                               color: AppColors.muted,
                               fontSize: 11,
@@ -736,7 +669,7 @@ class _MaintenanceExpenseReport extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Média ${_moneyValue(item.average)}',
+                          tr.reportAverage(_moneyValue(item.average)),
                           style: const TextStyle(
                             color: AppColors.muted,
                             fontSize: 11,
@@ -764,7 +697,7 @@ class _MonthlyMaintenanceExpense {
 
   DateTime get date => DateTime(year, month);
   double get average => maintenances == 0 ? 0 : total / maintenances;
-  String get label => '${_monthName(month)} $year';
+  String get label => _monthLabel(date);
 }
 
 class _ExpenseMetric extends StatelessWidget {
@@ -825,7 +758,7 @@ class _MonthlyExpenseRow extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.w800),
               ),
               Text(
-                '${expense.fillUps} ${expense.fillUps == 1 ? 'abastecimento' : 'abastecimentos'} • ${_decimal(expense.liters)} L',
+                '${expense.fillUps == 1 ? tr.fuelingCountOne(expense.fillUps) : tr.fuelingCountMany(expense.fillUps)} • ${_decimal(expense.liters)} L',
                 style: const TextStyle(color: AppColors.muted, fontSize: 11),
               ),
             ],
@@ -862,26 +795,15 @@ class _MonthlyFuelExpense {
 
   DateTime get date => DateTime(year, month);
   double get pricePerLiter => liters == 0 ? 0 : total / liters;
-  String get label => '${_monthName(month)} $year';
+  String get label => _monthLabel(date);
 }
 
-String _monthName(int month) => const [
-  'Janeiro',
-  'Fevereiro',
-  'Março',
-  'Abril',
-  'Maio',
-  'Junho',
-  'Julho',
-  'Agosto',
-  'Setembro',
-  'Outubro',
-  'Novembro',
-  'Dezembro',
-][month - 1];
+String _monthLabel(DateTime date) {
+  final text = formatMonthYear(date);
+  return text[0].toUpperCase() + text.substring(1);
+}
 
-String _moneyValue(double value) =>
-    'R\$ ${value.toStringAsFixed(2).replaceAll('.', ',')}';
+String _moneyValue(double value) => formatMoney(value);
 
 class _ConsumptionReport extends StatelessWidget {
   const _ConsumptionReport({
@@ -926,20 +848,23 @@ class _ConsumptionReport extends StatelessWidget {
                 child: const Icon(Icons.speed_rounded, color: AppColors.navy),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Consumo estimado',
-                      style: TextStyle(
+                      tr.reportConsumptionTitle,
+                      style: const TextStyle(
                         fontSize: 19,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     Text(
-                      'Cálculo estrito por tanque cheio',
-                      style: TextStyle(color: AppColors.muted, fontSize: 12),
+                      tr.reportConsumptionSubtitle,
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
@@ -948,9 +873,7 @@ class _ConsumptionReport extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           if (vehicle == null)
-            const _Guidance(
-              text: 'Cadastre e selecione um veículo para gerar o relatório.',
-            )
+            _Guidance(text: tr.reportNeedVehicle)
           else ...[
             Container(
               width: double.infinity,
@@ -982,9 +905,9 @@ class _ConsumptionReport extends StatelessWidget {
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const Text(
-                    'Último consumo calculado',
-                    style: TextStyle(color: Colors.white60, fontSize: 11),
+                  Text(
+                    tr.reportLastConsumption,
+                    style: const TextStyle(color: Colors.white60, fontSize: 11),
                   ),
                 ],
               ),
@@ -994,36 +917,33 @@ class _ConsumptionReport extends StatelessWidget {
               children: [
                 Expanded(
                   child: _Metric(
-                    label: 'Média geral',
+                    label: tr.reportOverallAverage,
                     value: average == null ? '--' : '${_decimal(average)} km/L',
                   ),
                 ),
                 const SizedBox(width: 9),
                 Expanded(
                   child: _Metric(
-                    label: 'Tanques confirmados',
+                    label: tr.reportConfirmedTanks,
                     value: '$confirmedFillUps',
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 14),
-            const _Guidance(
-              text:
-                  'Só calculamos entre dois abastecimentos com quilometragem, capacidade informada, tanque cheio e marcador confirmado. Abastecimentos parciais no intervalo também entram na soma de litros.',
-            ),
+            _Guidance(text: tr.reportConsumptionHow),
             if (results.isEmpty) ...[
               const SizedBox(height: 16),
-              const Text(
-                'São necessários pelo menos dois tanques cheios confirmados para calcular o consumo.',
+              Text(
+                tr.reportConsumptionNeedTwo,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.muted),
+                style: const TextStyle(color: AppColors.muted),
               ),
             ] else ...[
               const SizedBox(height: 22),
-              const Text(
-                'DIFERENÇA POR ABASTECIMENTO',
-                style: TextStyle(
+              Text(
+                tr.reportDiffPerFueling,
+                style: const TextStyle(
                   color: AppColors.muted,
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
@@ -1071,7 +991,10 @@ class _DifferenceCard extends StatelessWidget {
                       style: const TextStyle(fontWeight: FontWeight.w800),
                     ),
                     Text(
-                      '${result.distance} km • ${_decimal(result.litersUsed)} L consumidos',
+                      tr.reportLitersUsed(
+                        result.distance,
+                        _decimal(result.litersUsed),
+                      ),
                       style: const TextStyle(
                         color: AppColors.muted,
                         fontSize: 11,
@@ -1101,9 +1024,12 @@ class _DifferenceCard extends StatelessWidget {
                       ),
                     )
                   else
-                    const Text(
-                      'Base de comparação',
-                      style: TextStyle(color: AppColors.muted, fontSize: 10),
+                    Text(
+                      tr.reportBaseline,
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 10,
+                      ),
                     ),
                 ],
               ),
@@ -1113,7 +1039,10 @@ class _DifferenceCard extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              'Capacidade: ${_decimal(capacity)} L • Uso equivalente: ${_decimal(result.litersUsed / capacity)} tanque(s)',
+              tr.reportCapacityUsage(
+                _decimal(capacity),
+                _decimal(result.litersUsed / capacity),
+              ),
               style: const TextStyle(color: AppColors.muted, fontSize: 10),
             ),
           ),
@@ -1183,12 +1112,15 @@ class _Guidance extends StatelessWidget {
 }
 
 enum _StationSort {
-  costPerKm('Custo por km'),
-  consumption('Consumo'),
-  spent('Valor gasto');
+  costPerKm,
+  consumption,
+  spent;
 
-  const _StationSort(this.label);
-  final String label;
+  String get label => switch (this) {
+    costPerKm => tr.sortCostPerKm,
+    consumption => tr.sortConsumption,
+    spent => tr.sortSpent,
+  };
 }
 
 /// Relatório "Por posto" (Seção 1.2 do guia). Gratuito mostra 1 posto só
@@ -1201,8 +1133,6 @@ class _StationReportCard extends StatefulWidget {
     required this.establishments,
     required this.period,
     required this.onPeriodChanged,
-    required this.isPremium,
-    required this.onUpgrade,
   });
 
   final List<_ConsumptionResult> results;
@@ -1210,8 +1140,6 @@ class _StationReportCard extends StatefulWidget {
   final List<Establishment> establishments;
   final _StationPeriod period;
   final ValueChanged<_StationPeriod> onPeriodChanged;
-  final bool isPremium;
-  final VoidCallback onUpgrade;
 
   @override
   State<_StationReportCard> createState() => _StationReportCardState();
@@ -1312,27 +1240,6 @@ class _StationReportCardState extends State<_StationReportCard> {
 
   /// O posto exibido no plano gratuito (Regra 2): o favorito, se ele tiver
   /// alguma medição no período; senão, o mais usado.
-  _StationAggregate? _freeStation(List<_StationAggregate> ranking) {
-    if (ranking.isEmpty) return null;
-    final favoriteIds = widget.establishments
-        .where((item) => item.favorite)
-        .map((item) => item.id)
-        .toSet();
-    final favorites =
-        ranking
-            .where(
-              (item) =>
-                  item.establishmentId != null &&
-                  favoriteIds.contains(item.establishmentId),
-            )
-            .toList()
-          ..sort((a, b) => b.fillUpsCount.compareTo(a.fillUpsCount));
-    if (favorites.isNotEmpty) return favorites.first;
-    final byUsage = [...ranking]
-      ..sort((a, b) => b.fillUpsCount.compareTo(a.fillUpsCount));
-    return byUsage.first;
-  }
-
   @override
   Widget build(BuildContext context) {
     final ranking = _aggregate();
@@ -1364,20 +1271,23 @@ class _StationReportCardState extends State<_StationReportCard> {
                 ),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Por posto',
-                      style: TextStyle(
+                      tr.reportByStation,
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     Text(
-                      'Onde seu carro rende mais',
-                      style: TextStyle(color: AppColors.muted, fontSize: 12),
+                      tr.reportByStationSubtitle,
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
@@ -1403,22 +1313,14 @@ class _StationReportCardState extends State<_StationReportCard> {
             ),
           ),
           const SizedBox(height: 12),
-          const _Guidance(
-            text:
-                'Um resultado só é atribuído a um posto quando todos os abastecimentos daquele intervalo foram feitos no mesmo local e com o mesmo combustível.',
-          ),
+          _Guidance(text: tr.reportStationRule),
           if (ranking.isEmpty) ...[
             const SizedBox(height: 18),
-            const Text(
-              'Ainda não há intervalos completos com posto informado para formar este relatório.',
+            Text(
+              tr.reportStationEmpty,
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.muted),
+              style: const TextStyle(color: AppColors.muted),
             ),
-          ] else if (!widget.isPremium) ...[
-            const SizedBox(height: 18),
-            _FreeStationCard(station: _freeStation(ranking)!),
-            const SizedBox(height: 14),
-            _StationUpsell(onTap: widget.onUpgrade),
           ] else ...[
             const SizedBox(height: 18),
             if (byCost.isNotEmpty)
@@ -1455,173 +1357,6 @@ class _StationReportCardState extends State<_StationReportCard> {
   }
 }
 
-class _StationUpsell extends StatelessWidget {
-  const _StationUpsell({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(13),
-    child: Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-        color: AppColors.goldLight.withValues(alpha: .4),
-        borderRadius: BorderRadius.circular(13),
-      ),
-      child: const Row(
-        children: [
-          Icon(
-            Icons.workspace_premium_outlined,
-            color: AppColors.navy,
-            size: 20,
-          ),
-          SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Compare todos os seus postos com o Premium.',
-              style: TextStyle(
-                color: AppColors.navy,
-                fontWeight: FontWeight.w700,
-                fontSize: 12.5,
-              ),
-            ),
-          ),
-          const Icon(
-            Icons.chevron_right_rounded,
-            color: AppColors.navy,
-            size: 20,
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-class _FreeStationCard extends StatelessWidget {
-  const _FreeStationCard({required this.station});
-  final _StationAggregate station;
-
-  @override
-  Widget build(BuildContext context) {
-    final reliable = station.reliable;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.navy, AppColors.blue],
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            station.name,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          Text(
-            station.fuelType,
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: _StationMetricTile(
-                  label: 'Consumo médio',
-                  value: '${_decimal(station.consumption)} km/L',
-                ),
-              ),
-              const SizedBox(width: 9),
-              Expanded(
-                child: _StationMetricTile(
-                  label: 'Custo por km',
-                  value: station.costPerKm == 0
-                      ? '--'
-                      : _moneyValue(station.costPerKm),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 9),
-          Row(
-            children: [
-              Expanded(
-                child: _StationMetricTile(
-                  label: 'Preço médio/L',
-                  value: station.avgPricePerLiter == 0
-                      ? '--'
-                      : '${_decimal(station.avgPricePerLiter)}/L',
-                ),
-              ),
-              const SizedBox(width: 9),
-              Expanded(
-                child: _StationMetricTile(
-                  label: 'Litros e valor',
-                  value:
-                      '${_decimal(station.totalLiters)} L • ${_moneyValue(station.totalSpent)}',
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 9),
-          Text(
-            'Baseado em ${station.fillUpsCount} '
-            '${station.fillUpsCount == 1 ? 'abastecimento' : 'abastecimentos'}'
-            '${reliable ? '' : ' • amostra pequena, não é conclusivo ainda'}',
-            style: TextStyle(
-              color: reliable ? Colors.white70 : AppColors.goldLight,
-              fontSize: 11,
-              fontWeight: reliable ? FontWeight.w400 : FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StationMetricTile extends StatelessWidget {
-  const _StationMetricTile({required this.label, required this.value});
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(11),
-    decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: .12),
-      borderRadius: BorderRadius.circular(11),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white70, fontSize: 10.5),
-        ),
-        const SizedBox(height: 3),
-        Text(
-          value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w800,
-            fontSize: 14,
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
 class _StationHighlight extends StatelessWidget {
   const _StationHighlight({required this.best, this.second});
   final _StationAggregate best;
@@ -1639,8 +1374,8 @@ class _StationHighlight extends StatelessWidget {
       children: [
         Text(
           best.reliable
-              ? 'Seu melhor custo por km: ${best.name}'
-              : '${best.name} (amostra pequena)',
+              ? tr.reportBestStation(best.name)
+              : tr.reportSmallSample(best.name),
           style: const TextStyle(
             color: Colors.white,
             fontSize: 16,
@@ -1649,14 +1384,17 @@ class _StationHighlight extends StatelessWidget {
         ),
         const SizedBox(height: 3),
         Text(
-          '${_moneyValue(best.costPerKm)}/km • ${_decimal(best.consumption)} km/L • '
-          'baseado em ${best.fillUpsCount} abastecimento(s)',
+          tr.reportBestDetail(
+            _moneyValue(best.costPerKm),
+            _decimal(best.consumption),
+            best.fillUpsCount,
+          ),
           style: const TextStyle(color: Colors.white70, fontSize: 12),
         ),
         if (second != null) ...[
           const Divider(color: Colors.white24, height: 20),
           Text(
-            '2º colocado: ${second!.name}',
+            tr.reportSecondPlace(second!.name),
             style: const TextStyle(color: Colors.white, fontSize: 13),
           ),
           Text(
@@ -1726,18 +1464,18 @@ class _StationRankRow extends StatelessWidget {
                       style: const TextStyle(fontWeight: FontWeight.w800),
                     ),
                     Text(
-                      '${station.fuelType} • ${station.fillUpsCount} '
-                      '${station.fillUpsCount == 1 ? 'abastecimento' : 'abastecimentos'}'
-                      '${variation == null ? '' : ' • ${variation >= 0 ? '+' : ''}${_decimal(variation)}% vs. média'}',
+                      '${valueLabel(station.fuelType)} • '
+                      '${station.fillUpsCount == 1 ? tr.fuelingCountOne(station.fillUpsCount) : tr.fuelingCountMany(station.fillUpsCount)}'
+                      '${variation == null ? '' : ' • ${tr.reportVsAverage('${variation >= 0 ? '+' : ''}${_decimal(variation)}')}'}',
                       style: const TextStyle(
                         color: AppColors.muted,
                         fontSize: 11,
                       ),
                     ),
                     if (!station.reliable)
-                      const Text(
-                        'Amostra pequena',
-                        style: TextStyle(
+                      Text(
+                        tr.smallSample,
+                        style: const TextStyle(
                           color: Colors.orange,
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
@@ -1973,20 +1711,23 @@ class _CostPerKmCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Custo total por km',
-                      style: TextStyle(
+                      tr.reportTotalCostPerKm,
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     Text(
-                      'Combustível, manutenções e despesas somados',
-                      style: TextStyle(color: AppColors.muted, fontSize: 12),
+                      tr.reportTotalCostSubtitle,
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
@@ -2013,16 +1754,16 @@ class _CostPerKmCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           if (distance == null)
-            const Text(
-              'São necessários ao menos dois abastecimentos com quilometragem no período para calcular este relatório.',
-              style: TextStyle(color: AppColors.muted),
+            Text(
+              tr.reportCostNeedTwo,
+              style: const TextStyle(color: AppColors.muted),
             )
           else ...[
             Row(
               children: [
                 Expanded(
                   child: _ExpenseMetric(
-                    label: 'Custo por km',
+                    label: tr.sortCostPerKm,
                     value: costPerKm == null
                         ? '--'
                         : '${_moneyValue(costPerKm)}/km',
@@ -2031,7 +1772,7 @@ class _CostPerKmCard extends StatelessWidget {
                 const SizedBox(width: 9),
                 Expanded(
                   child: _ExpenseMetric(
-                    label: 'Projeção anual',
+                    label: tr.reportAnnualProjection,
                     value: _moneyValue(annualProjection),
                   ),
                 ),
@@ -2039,16 +1780,17 @@ class _CostPerKmCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              '${_decimal(distance.toDouble())} km rodados • '
-              '${_moneyValue(total)} no total '
-              '(combustível ${_moneyValue(fuelTotal)} • manutenção ${_moneyValue(maintenanceTotal)} • despesas ${_moneyValue(expenseTotal)})',
+              tr.reportCostBreakdown(
+                _decimal(distance.toDouble()),
+                _moneyValue(total),
+                _moneyValue(fuelTotal),
+                _moneyValue(maintenanceTotal),
+                _moneyValue(expenseTotal),
+              ),
               style: const TextStyle(color: AppColors.muted, fontSize: 11.5),
             ),
             const SizedBox(height: 10),
-            const _Guidance(
-              text:
-                  'A projeção anual estende a média mensal do período selecionado — não considera sazonalidade nem manutenções pontuais fora do padrão.',
-            ),
+            _Guidance(text: tr.reportProjectionNote),
           ],
         ],
       ),
@@ -2089,7 +1831,7 @@ class _WorkshopReportCard extends StatelessWidget {
         if (item.id == establishmentId) return item.name;
       }
     }
-    return _displayStation(record.workshop?.trim() ?? 'Oficina não informada');
+    return _displayStation(record.workshop?.trim() ?? tr.reportWorkshopUnknown);
   }
 
   List<MaintenanceRecord> _filtered() {
@@ -2202,20 +1944,23 @@ class _WorkshopReportCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Por oficina',
-                      style: TextStyle(
+                      tr.reportByWorkshop,
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     Text(
-                      'Onde seu dinheiro de manutenção vai',
-                      style: TextStyle(color: AppColors.muted, fontSize: 12),
+                      tr.reportByWorkshopSubtitle,
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
@@ -2243,24 +1988,24 @@ class _WorkshopReportCard extends StatelessWidget {
           const SizedBox(height: 16),
           if (costPer1000 != null) ...[
             _ExpenseMetric(
-              label: 'Custo de manutenção por 1.000 km',
+              label: tr.reportCostPer1000,
               value: _moneyValue(costPer1000),
             ),
             const SizedBox(height: 16),
           ],
           if (ranking.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
               child: Text(
-                'Nenhuma manutenção com oficina informada neste período.',
+                tr.reportNoWorkshop,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.muted),
+                style: const TextStyle(color: AppColors.muted),
               ),
             )
           else ...[
-            const Text(
-              'POR OFICINA',
-              style: TextStyle(
+            Text(
+              tr.reportByWorkshopHeader,
+              style: const TextStyle(
                 color: AppColors.muted,
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
@@ -2272,9 +2017,9 @@ class _WorkshopReportCard extends StatelessWidget {
           ],
           if (sortedComposition.isNotEmpty) ...[
             const SizedBox(height: 10),
-            const Text(
-              'COMPOSIÇÃO POR TIPO DE SERVIÇO',
-              style: TextStyle(
+            Text(
+              tr.reportCompositionHeader,
+              style: const TextStyle(
                 color: AppColors.muted,
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
@@ -2293,9 +2038,9 @@ class _WorkshopReportCard extends StatelessWidget {
           ],
           if (comparison.isNotEmpty) ...[
             const SizedBox(height: 10),
-            const Text(
-              'MESMO SERVIÇO, OFICINAS DIFERENTES',
-              style: TextStyle(
+            Text(
+              tr.reportSameServiceHeader,
+              style: const TextStyle(
                 color: AppColors.muted,
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
@@ -2337,14 +2082,14 @@ class _WorkshopRow extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.w800),
               ),
               Text(
-                '${workshop.visitCount} ${workshop.visitCount == 1 ? 'visita' : 'visitas'} • '
-                'ticket médio ${_moneyValue(workshop.avgTicket)}',
+                '${workshop.visitCount == 1 ? tr.reportVisitsOne(workshop.visitCount) : tr.reportVisitsMany(workshop.visitCount)} • '
+                '${tr.reportAvgTicket(_moneyValue(workshop.avgTicket))}',
                 style: const TextStyle(color: AppColors.muted, fontSize: 11),
               ),
               if (workshop.reworkAlert)
-                const Text(
-                  'Possível retrabalho: duas visitas do mesmo tipo em até 30 dias',
-                  style: TextStyle(
+                Text(
+                  tr.reportRework,
+                  style: const TextStyle(
                     color: Colors.orange,
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
@@ -2525,6 +2270,5 @@ String _displayStation(String value) {
   return withoutPrefix.isEmpty ? value.trim() : withoutPrefix;
 }
 
-String _decimal(double value) => value.toStringAsFixed(2).replaceAll('.', ',');
-String _date(DateTime value) =>
-    '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}/${value.year}';
+String _decimal(double value) => formatDecimal(value);
+String _date(DateTime value) => formatDate(value);

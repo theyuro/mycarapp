@@ -11,12 +11,15 @@ import '../models/vehicle.dart';
 import '../services/ads_service.dart';
 import '../services/establishment_storage_service.dart';
 import '../services/fueling_storage_service.dart';
+import '../services/image_pick_service.dart';
 import '../services/notification_service.dart';
 import '../services/receipt_ocr_service.dart';
 import '../theme/app_colors.dart';
-import '../widgets/vehicle_type_icon.dart';
 import '../widgets/establishment_field.dart';
 import '../widgets/receipt_attachments_field.dart';
+import '../widgets/vehicle_type_icon.dart';
+import '../l10n/l10n.dart';
+import '../l10n/labels.dart';
 
 class FuelingFormScreen extends StatefulWidget {
   const FuelingFormScreen({super.key, required this.vehicle, this.record});
@@ -67,6 +70,7 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
   void initState() {
     super.initState();
     final record = widget.record;
+    if (record == null) AdsService.instance.prepareInterstitial();
     date = record?.date ?? DateTime.now();
     fuelType = _initialFuelType(record?.fuelType ?? widget.vehicle.fuel);
     fullTank = record?.fullTank ?? false;
@@ -132,15 +136,14 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
     return 'Outro';
   }
 
-  String _editableNumber(double value) =>
-      value.toStringAsFixed(2).replaceAll('.', ',');
+  String _editableNumber(double value) => formatInput(value);
 
   double? _parseNumber(String value) =>
       double.tryParse(value.trim().replaceAll(',', '.'));
 
   String? _positiveNumber(String? value) {
     final number = _parseNumber(value ?? '');
-    return number == null || number <= 0 ? 'Informe um valor válido' : null;
+    return number == null || number <= 0 ? tr.invalidValue : null;
   }
 
   Future<void> selectDate() async {
@@ -180,9 +183,11 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
       if (capacity != null && record.liters > capacity) {
         await notificationService.addUnique(
           key: 'fuel-overfill-${record.id}',
-          title: 'Abastecimento inadequado',
-          message:
-              '${record.liters.toStringAsFixed(2).replaceAll('.', ',')} L informados para um tanque de ${capacity.toStringAsFixed(2).replaceAll('.', ',')} L.',
+          title: tr.fuelingOverfillTitle,
+          message: tr.fuelingOverfillMessage(
+            formatDecimal(record.liters),
+            formatDecimal(capacity),
+          ),
           category: 'overfill',
         );
       }
@@ -191,8 +196,8 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível salvar o abastecimento.'),
+        SnackBar(
+          content: Text(tr.fuelingSaveError),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -202,7 +207,7 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
   }
 
   Future<void> scanReceipt() async {
-    final photo = await ImagePicker().pickImage(
+    final photo = await ImagePickService.pick(
       source: ImageSource.camera,
       imageQuality: 86,
       maxWidth: 2048,
@@ -243,8 +248,8 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Não foi possível ler a nota. Tente outra foto.'),
+          SnackBar(
+            content: Text(tr.ocrReadError),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -257,46 +262,44 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
   Future<bool?> _confirmOcr(ReceiptOcrResult result) => showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Conferir dados reconhecidos'),
+      title: Text(tr.ocrReviewTitle),
       content: result.hasAnyValue
           ? Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _OcrLine('Posto', result.station),
-                _OcrLine('Combustível', result.fuelType),
+                _OcrLine(tr.ocrStation, result.station),
+                _OcrLine(tr.fuel, fuelLabel(result.fuelType)),
                 _OcrLine(
-                  'Abastecimento',
+                  tr.ocrFueling,
                   result.liters == null
                       ? null
                       : '${_editableNumber(result.liters!)} L',
                 ),
                 _OcrLine(
-                  'Preço total',
+                  tr.ocrTotalPrice,
                   result.totalPrice == null
                       ? null
-                      : 'R\$ ${_editableNumber(result.totalPrice!)}',
+                      : formatMoney(result.totalPrice!),
                 ),
                 _OcrLine(
-                  'Data',
+                  tr.date,
                   result.date == null ? null : _formatDate(result.date!),
                 ),
                 const SizedBox(height: 10),
-                const Text('Revise os campos antes de salvar.'),
+                Text(tr.ocrReviewHint),
               ],
             )
-          : const Text(
-              'Nenhum dado foi reconhecido. Tente fotografar novamente com boa luz e a nota inteira visível.',
-            ),
+          : Text(tr.ocrNothing),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
-          child: const Text('CANCELAR'),
+          child: Text(tr.cancel),
         ),
         if (result.hasAnyValue)
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('PREENCHER'),
+            child: Text(tr.ocrFill),
           ),
       ],
     ),
@@ -317,9 +320,7 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
     appBar: AppBar(
       backgroundColor: AppColors.navy,
       foregroundColor: Colors.white,
-      title: Text(
-        widget.record == null ? 'Novo abastecimento' : 'Editar abastecimento',
-      ),
+      title: Text(widget.record == null ? tr.fuelingNew : tr.fuelingEdit),
     ),
     body: Form(
       key: formKey,
@@ -329,7 +330,7 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
           _InfoBanner(vehicle: widget.vehicle),
           const SizedBox(height: 16),
           _FormCard(
-            title: 'Dados do abastecimento',
+            title: tr.fuelingData,
             icon: Icons.local_gas_station_rounded,
             child: Column(
               children: [
@@ -337,9 +338,9 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
                   onTap: selectDate,
                   borderRadius: BorderRadius.circular(14),
                   child: InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: 'Data',
-                      suffixIcon: Icon(Icons.calendar_month_outlined),
+                    decoration: InputDecoration(
+                      labelText: tr.date,
+                      suffixIcon: const Icon(Icons.calendar_month_outlined),
                     ),
                     child: Text(_formatDate(date)),
                   ),
@@ -347,11 +348,13 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
                 const SizedBox(height: 14),
                 DropdownButtonFormField<String>(
                   initialValue: fuelType,
-                  decoration: const InputDecoration(labelText: 'Combustível'),
+                  decoration: InputDecoration(labelText: tr.fuel),
                   items: fuelTypes
                       .map(
-                        (item) =>
-                            DropdownMenuItem(value: item, child: Text(item)),
+                        (item) => DropdownMenuItem(
+                          value: item,
+                          child: Text(valueLabel(item)),
+                        ),
                       )
                       .toList(),
                   onChanged: (value) => setState(() => fuelType = value!),
@@ -368,8 +371,8 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
                         inputFormatters: [
                           FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
                         ],
-                        decoration: const InputDecoration(
-                          labelText: 'Litros',
+                        decoration: InputDecoration(
+                          labelText: tr.liters,
                           suffixText: 'L',
                         ),
                         validator: _positiveNumber,
@@ -385,9 +388,9 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
                         inputFormatters: [
                           FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
                         ],
-                        decoration: const InputDecoration(
-                          labelText: 'Valor total',
-                          prefixText: 'R\$ ',
+                        decoration: InputDecoration(
+                          labelText: tr.totalValue,
+                          prefixText: '$currencySymbol ',
                         ),
                         validator: _positiveNumber,
                       ),
@@ -399,28 +402,26 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
                   controller: mileage,
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: const InputDecoration(
-                    labelText: 'Quilometragem',
+                  decoration: InputDecoration(
+                    labelText: tr.mileage,
                     suffixText: 'km',
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return fullTank && gaugeMarkedFull
-                          ? 'Obrigatória para o cálculo'
+                          ? tr.fuelingMileageRequired
                           : null;
                     }
                     return int.tryParse(value) == null
-                        ? 'Informe uma quilometragem válida'
+                        ? tr.fuelingMileageInvalid
                         : null;
                   },
                 ),
                 const SizedBox(height: 6),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Tanque cheio'),
-                  subtitle: const Text(
-                    'Necessário para calcular o consumo com precisão',
-                  ),
+                  title: Text(tr.fullTank),
+                  subtitle: Text(tr.fuelingFullTankHint),
                   value: fullTank,
                   activeThumbColor: AppColors.blue,
                   onChanged: (value) => setState(() {
@@ -438,16 +439,16 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
                     ],
-                    decoration: const InputDecoration(
-                      labelText: 'Capacidade total do tanque',
+                    decoration: InputDecoration(
+                      labelText: tr.tankCapacity,
                       suffixText: 'L',
-                      helperText: 'Consulte o manual do veículo',
+                      helperText: tr.tankCapacityHint,
                     ),
                     validator: (value) {
                       if (!fullTank) return null;
                       final capacity = _parseNumber(value ?? '');
                       if (capacity == null || capacity <= 0) {
-                        return 'Informe a capacidade do tanque';
+                        return tr.tankCapacityRequired;
                       }
                       return null;
                     },
@@ -455,10 +456,8 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
                   const SizedBox(height: 6),
                   CheckboxListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('O marcador indicou tanque cheio?'),
-                    subtitle: const Text(
-                      'Somente confirmações reais entram no consumo estimado',
-                    ),
+                    title: Text(tr.fuelingGaugeFull),
+                    subtitle: Text(tr.fuelingGaugeFullHint),
                     value: gaugeMarkedFull,
                     activeColor: AppColors.blue,
                     onChanged: (value) =>
@@ -469,13 +468,13 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
             ),
           ),
           _FormCard(
-            title: 'Informações opcionais',
+            title: tr.optionalInfo,
             icon: Icons.notes_rounded,
             child: Column(
               children: [
                 EstablishmentField(
                   key: ValueKey(establishmentFieldGeneration),
-                  label: 'Posto de combustível',
+                  label: tr.placeTypeStation,
                   type: EstablishmentType.posto,
                   establishments: stations,
                   recentIds: recentStationIds,
@@ -501,13 +500,13 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
                   textCapitalization: TextCapitalization.sentences,
                   minLines: 3,
                   maxLines: 5,
-                  decoration: const InputDecoration(labelText: 'Observações'),
+                  decoration: InputDecoration(labelText: tr.notes),
                 ),
               ],
             ),
           ),
           _FormCard(
-            title: 'Nota fiscal e comprovantes',
+            title: tr.receiptsSection,
             icon: Icons.receipt_long_outlined,
             child: ReceiptAttachmentsField(
               attachments: attachments,
@@ -531,7 +530,7 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.save_outlined),
-              label: Text(saving ? 'SALVANDO...' : 'SALVAR ABASTECIMENTO'),
+              label: Text(saving ? tr.saving : tr.fuelingSave),
             ),
           ),
           const SizedBox(height: 20),
@@ -550,12 +549,11 @@ class _OcrLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 7),
-    child: Text('$label: ${value ?? 'Não identificado'}'),
+    child: Text('$label: ${value ?? tr.notIdentified}'),
   );
 }
 
-String _formatDate(DateTime date) =>
-    '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+String _formatDate(DateTime date) => formatDate(date);
 
 class _InfoBanner extends StatelessWidget {
   const _InfoBanner({required this.vehicle});

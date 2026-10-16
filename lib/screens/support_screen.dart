@@ -4,6 +4,7 @@ import '../models/support_ticket.dart';
 import '../services/account_cloud_service.dart';
 import '../theme/app_colors.dart';
 import 'login_screen.dart';
+import '../l10n/l10n.dart';
 
 class SupportScreen extends StatefulWidget {
   const SupportScreen({super.key});
@@ -40,7 +41,7 @@ class _SupportScreenState extends State<SupportScreen> {
     } on Object catch (error) {
       if (!mounted) return;
       setState(() => loading = false);
-      message('Não foi possível carregar os chamados.');
+      message(tr.supportLoadError);
       debugPrint('Erro ao carregar chamados: $error');
     }
   }
@@ -74,7 +75,7 @@ class _SupportScreenState extends State<SupportScreen> {
     appBar: AppBar(
       backgroundColor: AppColors.navy,
       foregroundColor: Colors.white,
-      title: Text(isAdmin ? 'Central de chamados · Admin' : 'Ajuda e feedback'),
+      title: Text(isAdmin ? tr.supportAdminTitle : tr.supportScreenTitle),
     ),
     floatingActionButton: cloud.currentUser == null
         ? null
@@ -83,7 +84,7 @@ class _SupportScreenState extends State<SupportScreen> {
             backgroundColor: AppColors.gold,
             foregroundColor: AppColors.navy,
             icon: const Icon(Icons.add_comment_outlined),
-            label: const Text('NOVO CHAMADO'),
+            label: Text(tr.supportNew),
           ),
     body: loading
         ? const Center(child: CircularProgressIndicator())
@@ -98,18 +99,15 @@ class _SupportScreenState extends State<SupportScreen> {
             onRefresh: load,
             child: tickets.isEmpty
                 ? ListView(
-                    children: const [
-                      SizedBox(height: 160),
-                      Icon(
+                    children: [
+                      const SizedBox(height: 160),
+                      const Icon(
                         Icons.forum_outlined,
                         size: 68,
                         color: AppColors.blue,
                       ),
-                      SizedBox(height: 14),
-                      Text(
-                        'Nenhum chamado aberto ainda.',
-                        textAlign: TextAlign.center,
-                      ),
+                      const SizedBox(height: 14),
+                      Text(tr.supportEmpty, textAlign: TextAlign.center),
                     ],
                   )
                 : ListView.separated(
@@ -169,13 +167,13 @@ class _NewTicketSheetState extends State<_NewTicketSheet> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Chamado #$number enviado.')));
+      ).showSnackBar(SnackBar(content: Text(tr.supportSent(number))));
       Navigator.pop(context, true);
     } on Object catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível enviar o chamado.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(tr.supportSendError)));
       debugPrint('Erro ao enviar chamado: $error');
       setState(() => sending = false);
     }
@@ -201,22 +199,22 @@ class _NewTicketSheetState extends State<_NewTicketSheet> {
       child: ListView(
         shrinkWrap: true,
         children: [
-          const Text(
-            'Novo chamado',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+          Text(
+            tr.supportNewTitle,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 14),
           SegmentedButton<String>(
-            segments: const [
+            segments: [
               ButtonSegment(
                 value: 'feedback',
-                icon: Icon(Icons.lightbulb_outline),
-                label: Text('Feedback'),
+                icon: const Icon(Icons.lightbulb_outline),
+                label: Text(tr.supportFeedback),
               ),
               ButtonSegment(
                 value: 'bug',
-                icon: Icon(Icons.bug_report_outlined),
-                label: Text('Bug'),
+                icon: const Icon(Icons.bug_report_outlined),
+                label: Text(tr.supportBug),
               ),
             ],
             selected: {type},
@@ -225,28 +223,29 @@ class _NewTicketSheetState extends State<_NewTicketSheet> {
           const SizedBox(height: 14),
           TextFormField(
             controller: subject,
-            decoration: const InputDecoration(labelText: 'Assunto'),
-            validator: (value) =>
-                (value?.trim().length ?? 0) < 3 ? 'Informe o assunto' : null,
+            decoration: InputDecoration(labelText: tr.supportSubject),
+            validator: (value) => (value?.trim().length ?? 0) < 3
+                ? tr.supportSubjectRequired
+                : null,
           ),
           const SizedBox(height: 14),
           TextFormField(
             controller: description,
             minLines: 5,
             maxLines: 8,
-            decoration: const InputDecoration(
-              labelText: 'Conte o que aconteceu',
-              hintText: 'Se for um bug, descreva os passos até o problema.',
+            decoration: InputDecoration(
+              labelText: tr.supportDetails,
+              hintText: tr.supportDetailsHint,
             ),
             validator: (value) => (value?.trim().length ?? 0) < 10
-                ? 'Descreva com mais detalhes'
+                ? tr.supportDetailsRequired
                 : null,
           ),
           const SizedBox(height: 18),
           FilledButton.icon(
             onPressed: sending ? null : send,
             icon: const Icon(Icons.send_outlined),
-            label: Text(sending ? 'ENVIANDO...' : 'ENVIAR CHAMADO'),
+            label: Text(sending ? tr.backupUploadingSend : tr.supportSend),
           ),
         ],
       ),
@@ -306,9 +305,9 @@ class _TicketDetailScreenState extends State<_TicketDetailScreen> {
         Text(widget.ticket.message, style: const TextStyle(height: 1.45)),
         if (widget.ticket.adminResponse != null && !widget.isAdmin) ...[
           const SizedBox(height: 22),
-          const Text(
-            'Resposta do suporte',
-            style: TextStyle(fontWeight: FontWeight.w800),
+          Text(
+            tr.supportReply,
+            style: const TextStyle(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 6),
           Text(widget.ticket.adminResponse!),
@@ -317,14 +316,17 @@ class _TicketDetailScreenState extends State<_TicketDetailScreen> {
           const SizedBox(height: 22),
           DropdownButtonFormField<String>(
             initialValue: status,
-            decoration: const InputDecoration(labelText: 'Status'),
-            items: const [
-              DropdownMenuItem(value: 'open', child: Text('Aberto')),
+            decoration: InputDecoration(labelText: tr.status),
+            items: [
+              DropdownMenuItem(value: 'open', child: Text(tr.statusOpen)),
               DropdownMenuItem(
                 value: 'in_progress',
-                child: Text('Em andamento'),
+                child: Text(tr.statusInProgress),
               ),
-              DropdownMenuItem(value: 'resolved', child: Text('Resolvido')),
+              DropdownMenuItem(
+                value: 'resolved',
+                child: Text(tr.statusResolved),
+              ),
             ],
             onChanged: (value) => setState(() => status = value!),
           ),
@@ -333,12 +335,12 @@ class _TicketDetailScreenState extends State<_TicketDetailScreen> {
             controller: response,
             minLines: 4,
             maxLines: 8,
-            decoration: const InputDecoration(labelText: 'Resposta ao usuário'),
+            decoration: InputDecoration(labelText: tr.supportReplyToUser),
           ),
           const SizedBox(height: 16),
           FilledButton(
             onPressed: saving ? null : save,
-            child: Text(saving ? 'SALVANDO...' : 'SALVAR RESPOSTA'),
+            child: Text(saving ? tr.saving : tr.supportSaveReply),
           ),
         ],
       ],
@@ -362,15 +364,9 @@ class _SignInRequired extends StatelessWidget {
             color: AppColors.blue,
           ),
           const SizedBox(height: 14),
-          const Text(
-            'Entre na sua conta para enviar e acompanhar chamados.',
-            textAlign: TextAlign.center,
-          ),
+          Text(tr.supportSignIn, textAlign: TextAlign.center),
           const SizedBox(height: 18),
-          FilledButton(
-            onPressed: onTap,
-            child: const Text('ENTRAR COM GOOGLE'),
-          ),
+          FilledButton(onPressed: onTap, child: Text(tr.loginWithGoogle)),
         ],
       ),
     ),
@@ -378,7 +374,7 @@ class _SignInRequired extends StatelessWidget {
 }
 
 String _status(String value) => switch (value) {
-  'in_progress' => 'Em andamento',
-  'resolved' => 'Resolvido',
-  _ => 'Aberto',
+  'in_progress' => tr.statusInProgress,
+  'resolved' => tr.statusResolved,
+  _ => tr.statusOpen,
 };

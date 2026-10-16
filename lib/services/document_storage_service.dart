@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/app_document.dart';
+import 'auto_backup_service.dart';
+import '../l10n/l10n.dart';
 
 class DocumentStorageService {
   static Future<void> _writeQueue = Future.value();
@@ -43,7 +45,7 @@ class DocumentStorageService {
         .openRead(0, 5)
         .fold<List<int>>(<int>[], (bytes, chunk) => bytes..addAll(chunk));
     if (signature.length < 5 || String.fromCharCodes(signature) != '%PDF-') {
-      throw const FormatException('O arquivo selecionado não é um PDF válido.');
+      throw FormatException(tr.docInvalidPdf);
     }
 
     final records = await loadDocuments();
@@ -78,6 +80,32 @@ class DocumentStorageService {
     return document;
   });
 
+  /// Grava um documento vindo do backup em nuvem: copia o PDF de
+  /// [AppDocument.path] para a pasta de documentos e substitui o registro de
+  /// mesmo id, se houver.
+  Future<AppDocument> restoreDocument(
+    AppDocument document,
+  ) => _serialized(() async {
+    final directory = await _directory();
+    final destination = File(
+      '${directory.path}${Platform.pathSeparator}${document.type}_${document.vehicleId ?? 'owner'}_${document.id}.pdf',
+    );
+    await File(document.path).copy(destination.path);
+    final restored = AppDocument(
+      id: document.id,
+      type: document.type,
+      vehicleId: document.vehicleId,
+      path: destination.path,
+      originalName: document.originalName,
+      importedAt: document.importedAt,
+    );
+    final records = await loadDocuments();
+    records.removeWhere((item) => item.id == document.id);
+    records.add(restored);
+    await _write(records);
+    return restored;
+  });
+
   Future<void> deleteDocument(AppDocument document) => _serialized(() async {
     final records = await loadDocuments();
     records.removeWhere((item) => item.id == document.id);
@@ -87,6 +115,7 @@ class DocumentStorageService {
   });
 
   Future<void> _write(List<AppDocument> records) async {
+    AutoBackupService.instance.markDirty();
     final file = await _dataFile();
     final temporary = File('${file.path}.tmp');
     await temporary.writeAsString(

@@ -5,6 +5,7 @@ import '../screens/account_screen.dart';
 import '../services/access_service.dart';
 import '../services/recommendation_banner_service.dart';
 import '../theme/app_colors.dart';
+import '../l10n/l10n.dart';
 
 /// Banner de recomendação (Seção 5 do guia de planejamento): convite
 /// discreto e dispensável para avaliar o app ou indicar um amigo, exibido
@@ -118,7 +119,7 @@ class _RecommendationBannerState extends State<RecommendationBanner> {
               ),
             ),
             IconButton(
-              tooltip: 'Dispensar',
+              tooltip: tr.dismiss,
               onPressed: _busy ? null : _dismiss,
               icon: const Icon(
                 Icons.close_rounded,
@@ -141,13 +142,11 @@ IconData _iconFor(RecommendationBannerType type) => switch (type) {
 };
 
 String _textFor(RecommendationBannerType type) => switch (type) {
-  RecommendationBannerType.rating =>
-    'Gostando de acompanhar seus gastos? Conta pra gente na Play Store.',
-  RecommendationBannerType.referral =>
-    'Curtiu o MyCarApp? Indique um amigo e ganhe desconto na assinatura.',
+  RecommendationBannerType.rating => tr.recoRatingText,
+  RecommendationBannerType.referral => tr.recoReferralText,
 };
 
 String _ctaFor(RecommendationBannerType type) => switch (type) {
-  RecommendationBannerType.rating => 'AVALIAR',
-  RecommendationBannerType.referral => 'INDICAR',
+  RecommendationBannerType.rating => tr.recoRate,
+  RecommendationBannerType.referral => tr.recoRefer,
 };

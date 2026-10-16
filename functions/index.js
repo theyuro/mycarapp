@@ -108,6 +108,8 @@ exports.getAppAccess = onCall({enforceAppCheck: false}, async (request) => {
   return {
     premiumFreeUntil: configured.toISOString(),
     freePremiumActive: configured.getTime() > Date.now(),
+    // Build mínimo do app: abaixo dele o app bloqueia e pede atualização.
+    minimumBuild: Number(snapshot.data()?.minimumBuild || 0),
     isAdmin: isAdmin(request),
   };
 });
@@ -308,8 +310,8 @@ exports.applyReferralCode = onCall({enforceAppCheck: false}, async (request) => 
       referrerUid,
       code,
       status: "pending_payment",
-      discountPercent: 50,
-      discountMonths: 3,
+      discountPercent: 30,
+      discountMonths: 12,
       createdAt: FieldValue.serverTimestamp(),
     });
     transaction.set(userRef, {
@@ -339,7 +341,8 @@ exports.getPromotionEligibility = onCall(
       }
       if (user.referralOfferEligible === true ||
           (user.referralRewardCredits || 0) > 0) {
-        availableOfferTags.push("referral-3m-50");
+        // 30% no primeiro ano do plano anual (oferta da Play Console).
+        availableOfferTags.push("referral-yr-30");
       }
       if (!user.firstPaidAt && subscriberCount < founderLimit) {
         availableOfferTags.push("first-1000-annual-pl");

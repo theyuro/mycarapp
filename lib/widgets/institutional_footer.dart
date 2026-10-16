@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../theme/app_colors.dart';
+import '../l10n/l10n.dart';
 
 /// URL institucional da Giles Desenvolvimento de Softwares.
 ///
@@ -55,10 +56,7 @@ class InstitutionalFooter extends StatelessWidget {
               TextSpan(
                 style: TextStyle(color: baseColor, fontSize: 11),
                 children: [
-                  const TextSpan(
-                    text:
-                        'Desenvolvido por Giles Desenvolvimento de Softwares\n',
-                  ),
+                  TextSpan(text: '${tr.footerDevelopedBy}\n'),
                   TextSpan(
                     text: 'gilessoftwares.com.br',
                     style: TextStyle(

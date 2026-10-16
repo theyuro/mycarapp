@@ -16,6 +16,8 @@ import '../theme/app_colors.dart';
 import '../widgets/vehicle_type_icon.dart';
 import '../widgets/establishment_field.dart';
 import '../widgets/receipt_attachments_field.dart';
+import '../l10n/l10n.dart';
+import '../l10n/labels.dart';
 
 class MaintenanceFormScreen extends StatefulWidget {
   const MaintenanceFormScreen({
@@ -79,6 +81,7 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
   void initState() {
     super.initState();
     final record = widget.record;
+    if (record == null) AdsService.instance.prepareInterstitial();
     isCompleted = record?.isCompleted ?? widget.initialCompleted;
     category = record?.category ?? categories.first;
     if (!categories.contains(category)) category = categories.last;
@@ -139,9 +142,8 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
     }
   }
 
-  String _editableCost(double? value) => value == null || value == 0
-      ? ''
-      : value.toStringAsFixed(2).replaceAll('.', ',');
+  String _editableCost(double? value) =>
+      value == null || value == 0 ? '' : formatInput(value);
 
   double? _parseCost(String value) =>
       double.tryParse(value.trim().replaceAll(',', '.'));
@@ -166,7 +168,7 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
   String? validateCost(String? value) {
     if (value == null || value.trim().isEmpty) return null;
     final parsed = _parseCost(value);
-    return parsed == null || parsed < 0 ? 'Valor inválido' : null;
+    return parsed == null || parsed < 0 ? tr.invalidValueShort : null;
   }
 
   Future<void> save() async {
@@ -197,9 +199,9 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
     } on Object catch (error, stackTrace) {
       debugPrint('Erro ao salvar manutenção: $error\n$stackTrace');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível salvar a manutenção.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(tr.maintSaveError)));
       setState(() => saving = false);
       return;
     }
@@ -223,7 +225,7 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
         await calendar.addAllDayMaintenance(
           date: calendarDate,
           service: record.service,
-          category: record.category,
+          category: valueLabel(record.category),
         );
       } on Object catch (error, stackTrace) {
         reminderWarning = true;
@@ -233,13 +235,9 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
     if (widget.record == null) AdsService.instance.registerMainActivity();
     if (!mounted) return;
     if (reminderWarning) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Manutenção salva. Não foi possível concluir o lembrete na agenda.',
-          ),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(tr.maintSavedCalendarError)));
     }
     Navigator.of(context).pop(true);
   }
@@ -262,8 +260,8 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
       foregroundColor: Colors.white,
       title: Text(
         widget.record == null
-            ? (isCompleted ? 'Manutenção realizada' : 'Próxima manutenção')
-            : 'Editar manutenção',
+            ? (isCompleted ? tr.maintDone : tr.maintNext)
+            : tr.maintEdit,
       ),
     ),
     body: Form(
@@ -274,16 +272,16 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
           _VehicleBanner(vehicle: widget.vehicle),
           const SizedBox(height: 16),
           SegmentedButton<bool>(
-            segments: const [
+            segments: [
               ButtonSegment(
                 value: true,
-                icon: Icon(Icons.check_circle_outline),
-                label: Text('Realizada'),
+                icon: const Icon(Icons.check_circle_outline),
+                label: Text(tr.maintDoneShort),
               ),
               ButtonSegment(
                 value: false,
-                icon: Icon(Icons.event_outlined),
-                label: Text('Próxima'),
+                icon: const Icon(Icons.event_outlined),
+                label: Text(tr.maintUpcoming),
               ),
             ],
             selected: {isCompleted},
@@ -299,28 +297,30 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
           const SizedBox(height: 16),
           _Section(
             icon: Icons.build_circle_outlined,
-            title: isCompleted ? 'Serviço realizado' : 'Serviço previsto',
+            title: isCompleted ? tr.maintServiceDone : tr.maintServicePlanned,
             child: Column(
               children: [
                 TextFormField(
                   controller: service,
                   textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(
-                    labelText: 'Descrição do serviço',
-                    hintText: 'Ex.: Troca de óleo e filtro',
+                  decoration: InputDecoration(
+                    labelText: tr.maintServiceDescription,
+                    hintText: tr.maintServiceExample,
                   ),
                   validator: (value) => value == null || value.trim().isEmpty
-                      ? 'Informe o serviço'
+                      ? tr.maintServiceRequired
                       : null,
                 ),
                 const SizedBox(height: 14),
                 DropdownButtonFormField<String>(
                   initialValue: category,
-                  decoration: const InputDecoration(labelText: 'Categoria'),
+                  decoration: InputDecoration(labelText: tr.category),
                   items: categories
                       .map(
-                        (item) =>
-                            DropdownMenuItem(value: item, child: Text(item)),
+                        (item) => DropdownMenuItem(
+                          value: item,
+                          child: Text(valueLabel(item)),
+                        ),
                       )
                       .toList(),
                   onChanged: (value) => setState(() => category = value!),
@@ -330,7 +330,9 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
                   children: [
                     Expanded(
                       child: _DateField(
-                        label: isCompleted ? 'Data realizada' : 'Data prevista',
+                        label: isCompleted
+                            ? tr.maintDateDone
+                            : tr.maintDatePlanned,
                         date: date,
                         onTap: () => pickDate(next: false),
                       ),
@@ -345,8 +347,8 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
                         ],
                         decoration: InputDecoration(
                           labelText: isCompleted
-                              ? 'Quilometragem'
-                              : 'Km prevista',
+                              ? tr.mileage
+                              : tr.maintKmPlanned,
                           suffixText: 'km',
                         ),
                         validator: (value) {
@@ -355,10 +357,10 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
                             return null;
                           }
                           final parsed = int.tryParse(value ?? '');
-                          if (parsed == null) return 'Informe a km';
+                          if (parsed == null) return tr.maintKmRequired;
                           if (!isCompleted &&
                               parsed <= widget.vehicle.mileage) {
-                            return 'Maior que a atual';
+                            return tr.maintKmGreater;
                           }
                           return null;
                         },
@@ -370,7 +372,7 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
                   const SizedBox(height: 14),
                   EstablishmentField(
                     key: ValueKey(establishmentFieldGeneration),
-                    label: 'Oficina ou profissional (opcional)',
+                    label: tr.maintShop,
                     type: EstablishmentType.oficina,
                     establishments: workshops,
                     recentIds: recentWorkshopIds,
@@ -397,13 +399,13 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
           if (isCompleted)
             _Section(
               icon: Icons.payments_outlined,
-              title: 'Custos',
+              title: tr.maintCosts,
               child: Row(
                 children: [
                   Expanded(
                     child: _CostField(
                       controller: laborCost,
-                      label: 'Mão de obra',
+                      label: tr.maintLabor,
                       validator: validateCost,
                     ),
                   ),
@@ -411,7 +413,7 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
                   Expanded(
                     child: _CostField(
                       controller: partsCost,
-                      label: 'Peças',
+                      label: tr.maintParts,
                       validator: validateCost,
                     ),
                   ),
@@ -421,21 +423,21 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
           if (isCompleted)
             _Section(
               icon: Icons.event_repeat_rounded,
-              title: 'Próxima manutenção',
+              title: tr.maintNext,
               child: Column(
                 children: [
                   TextFormField(
                     controller: nextMileage,
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(
-                      labelText: 'Próxima quilometragem',
+                    decoration: InputDecoration(
+                      labelText: tr.maintNextKm,
                       suffixText: 'km',
                     ),
                   ),
                   const SizedBox(height: 14),
                   _DateField(
-                    label: 'Próxima data (opcional)',
+                    label: tr.maintNextDate,
                     date: nextDate,
                     onTap: () => pickDate(next: true),
                     onClear: nextDate == null
@@ -448,21 +450,19 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
           if (!isCompleted || nextDate != null)
             _Section(
               icon: Icons.calendar_month_outlined,
-              title: 'Agenda do telefone',
+              title: tr.maintCalendar,
               child: SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 value: addToCalendar,
                 activeThumbColor: AppColors.blue,
                 onChanged: (value) => setState(() => addToCalendar = value),
-                title: const Text('Adicionar à minha agenda'),
-                subtitle: const Text(
-                  'Evento de dia inteiro: MyCarApp Manutenção',
-                ),
+                title: Text(tr.maintAddToCalendar),
+                subtitle: Text(tr.maintCalendarHint),
               ),
             ),
           _Section(
             icon: Icons.receipt_long_outlined,
-            title: 'Nota fiscal e comprovantes',
+            title: tr.receiptsSection,
             child: ReceiptAttachmentsField(
               attachments: attachments,
               onChanged: (value) => setState(() => attachments = value),
@@ -470,15 +470,13 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
           ),
           _Section(
             icon: Icons.notes_rounded,
-            title: 'Observações',
+            title: tr.notes,
             child: TextFormField(
               controller: notes,
               textCapitalization: TextCapitalization.sentences,
               minLines: 3,
               maxLines: 5,
-              decoration: const InputDecoration(
-                hintText: 'Peças utilizadas, marcas, garantias...',
-              ),
+              decoration: InputDecoration(hintText: tr.maintNotesHint),
             ),
           ),
           SizedBox(
@@ -492,10 +490,10 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
               icon: const Icon(Icons.save_outlined),
               label: Text(
                 saving
-                    ? 'SALVANDO...'
+                    ? tr.saving
                     : isCompleted
-                    ? 'SALVAR MANUTENÇÃO'
-                    : 'SALVAR PRÓXIMA MANUTENÇÃO',
+                    ? tr.maintSave
+                    : tr.maintSaveNext,
               ),
             ),
           ),
@@ -521,7 +519,10 @@ class _CostField extends StatelessWidget {
     controller: controller,
     keyboardType: const TextInputType.numberWithOptions(decimal: true),
     inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]'))],
-    decoration: InputDecoration(labelText: label, prefixText: 'R\$ '),
+    decoration: InputDecoration(
+      labelText: label,
+      prefixText: '$currencySymbol ',
+    ),
     validator: validator,
   );
 }
@@ -549,7 +550,7 @@ class _DateField extends StatelessWidget {
             ? const Icon(Icons.calendar_month_outlined)
             : IconButton(onPressed: onClear, icon: const Icon(Icons.close)),
       ),
-      child: Text(date == null ? 'Não definida' : _date(date!)),
+      child: Text(date == null ? tr.notSetFem : _date(date!)),
     ),
   );
 }
@@ -619,5 +620,4 @@ class _Section extends StatelessWidget {
   );
 }
 
-String _date(DateTime value) =>
-    '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}/${value.year}';
+String _date(DateTime value) => formatDate(value);

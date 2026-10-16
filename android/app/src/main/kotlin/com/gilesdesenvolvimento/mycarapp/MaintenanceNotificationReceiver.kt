@@ -21,7 +21,7 @@ class MaintenanceNotificationReceiver : BroadcastReceiver() {
         val channelId = "mycarapp_alerts"
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             manager.createNotificationChannel(
-                NotificationChannel(channelId, "Alertas do MyCarApp", NotificationManager.IMPORTANCE_DEFAULT)
+                NotificationChannel(channelId, context.getString(R.string.notification_channel_alerts), NotificationManager.IMPORTANCE_DEFAULT)
             )
         }
         val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -30,10 +30,10 @@ class MaintenanceNotificationReceiver : BroadcastReceiver() {
             @Suppress("DEPRECATION")
             Notification.Builder(context)
         }
-        val message = intent.getStringExtra("message") ?: "Manutenção programada"
+        val message = intent.getStringExtra("message") ?: context.getString(R.string.maintenance_scheduled)
         val notification = builder
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle("Próxima manutenção")
+            .setContentTitle(context.getString(R.string.maintenance_upcoming))
             .setContentText(message)
             .setStyle(Notification.BigTextStyle().bigText(message))
             .setAutoCancel(true)

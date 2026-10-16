@@ -5,6 +5,8 @@ import 'package:path_provider/path_provider.dart';
 
 import '../models/maintenance_record.dart';
 import 'attachment_storage_service.dart';
+import 'auto_backup_service.dart';
+import '../l10n/l10n.dart';
 
 class MaintenanceStorageService {
   static Future<void> _writeQueue = Future.value();
@@ -37,9 +39,7 @@ class MaintenanceStorageService {
           )
           .toList();
     } on Object {
-      throw const FileSystemException(
-        'O arquivo local de manutenções está corrompido.',
-      );
+      throw FileSystemException(tr.storageMaintenanceCorrupted);
     }
   }
 
@@ -72,6 +72,7 @@ class MaintenanceStorageService {
   });
 
   Future<void> _writeRecords(List<MaintenanceRecord> records) async {
+    AutoBackupService.instance.markDirty();
     final file = await _dataFile();
     await _writeJsonSafely(file, records.map((item) => item.toJson()).toList());
   }

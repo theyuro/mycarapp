@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/promotion_eligibility.dart';
 import '../models/support_ticket.dart';
+import '../l10n/l10n.dart';
 
 class AccountCloudService {
   AccountCloudService({FirebaseAuth? auth, FirebaseFunctions? functions})
@@ -103,7 +104,7 @@ class AccountCloudService {
 
   void _requireUser() {
     if (_auth.currentUser == null) {
-      throw StateError('Entre na sua conta para usar este recurso.');
+      throw StateError(tr.signInRequired);
     }
   }
 }

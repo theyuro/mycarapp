@@ -3,13 +3,15 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../models/vehicle.dart';
-import '../services/access_service.dart';
+import '../services/premium_upsell_service.dart';
 import '../services/vehicle_storage_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/free_user_banner_ad.dart';
+import '../widgets/premium_upsell_banner.dart';
 import '../widgets/vehicle_type_icon.dart';
 import 'vehicle_registration_screen.dart';
-import 'lifetime_purchase_screen.dart';
+import '../l10n/l10n.dart';
+import '../l10n/labels.dart';
 
 class VehiclesScreen extends StatefulWidget {
   const VehiclesScreen({super.key});
@@ -43,20 +45,11 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() => loading = false);
-      showMessage('Não foi possível carregar os veículos.');
+      showMessage(tr.vehiclesLoadError);
     }
   }
 
   Future<void> openForm([Vehicle? vehicle]) async {
-    if (vehicle == null &&
-        vehicles.isNotEmpty &&
-        !AccessService.freeModeEnabled &&
-        !AccessService.instance.subscriptionActive) {
-      await Navigator.of(context).push<void>(
-        MaterialPageRoute<void>(builder: (_) => const SubscriptionScreen()),
-      );
-      return;
-    }
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => VehicleRegistrationScreen(vehicle: vehicle),
@@ -65,7 +58,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
     if (changed == true) {
       await loadVehicles();
       if (mounted && vehicle == null) {
-        showMessage('Veículo incluído', oneSecond: true);
+        showMessage(tr.vehicleAdded, oneSecond: true);
       }
     }
   }
@@ -74,26 +67,24 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
     await storage.setActiveVehicle(vehicle.id);
     if (!mounted) return;
     setState(() => activeId = vehicle.id);
-    showMessage('${vehicle.nickname} é o veículo ativo.');
+    showMessage(tr.vehicleNowActive(vehicle.nickname));
   }
 
   Future<void> confirmDelete(Vehicle vehicle) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Excluir veículo?'),
-        content: Text(
-          'O cadastro e as fotos de ${vehicle.nickname} serão apagados do aparelho. Os abastecimentos já registrados serão preservados.',
-        ),
+        title: Text(tr.vehicleDeleteTitle),
+        content: Text(tr.vehicleDeleteText(vehicle.nickname)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('CANCELAR'),
+            child: Text(tr.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
-            child: const Text('EXCLUIR'),
+            child: Text(tr.deleteAction),
           ),
         ],
       ),
@@ -102,9 +93,9 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
     try {
       await storage.deleteVehicle(vehicle.id);
       await loadVehicles();
-      if (mounted) showMessage('Veículo excluído.');
+      if (mounted) showMessage(tr.vehicleDeleted);
     } catch (_) {
-      if (mounted) showMessage('Não foi possível excluir o veículo.');
+      if (mounted) showMessage(tr.vehicleDeleteError);
     }
   }
 
@@ -126,25 +117,19 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
     appBar: AppBar(
       backgroundColor: AppColors.navy,
       foregroundColor: Colors.white,
-      title: const Text('Meus veículos'),
+      title: Text(tr.vehiclesTitle),
     ),
     // Anúncio no rodapé; o FAB flutua acima dele, com folga.
     bottomNavigationBar: const SafeArea(
       top: false,
-      child: FreeUserBannerAd(),
+      child: FreeUserBannerAd(placement: BannerPlacement.vehicles),
     ),
     floatingActionButton: FloatingActionButton.extended(
       onPressed: () => openForm(),
       backgroundColor: AppColors.gold,
       foregroundColor: AppColors.navy,
       icon: const Icon(Icons.add),
-      label: Text(
-        vehicles.isNotEmpty &&
-                !AccessService.freeModeEnabled &&
-                !AccessService.instance.subscriptionActive
-            ? 'MAIS VEÍCULOS · PREMIUM'
-            : 'NOVO VEÍCULO',
-      ),
+      label: Text(tr.newVehicle),
     ),
     body: loading
         ? const Center(child: CircularProgressIndicator())
@@ -152,10 +137,16 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
         ? _EmptyVehicles(onAdd: () => openForm())
         : ListView.separated(
             padding: const EdgeInsets.fromLTRB(16, 18, 16, 100),
-            itemCount: vehicles.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 12),
+            itemCount: vehicles.length + 1,
+            separatorBuilder: (_, index) =>
+                SizedBox(height: index == 0 ? 0 : 12),
             itemBuilder: (_, index) {
-              final vehicle = vehicles[index];
+              if (index == 0) {
+                return const PremiumUpsellBanner(
+                  placement: UpsellPlacement.vehicles,
+                );
+              }
+              final vehicle = vehicles[index - 1];
               return _VehicleCard(
                 vehicle: vehicle,
                 isActive: vehicle.id == activeId,
@@ -233,7 +224,7 @@ class _VehicleCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '${vehicle.mileage} km • ${vehicle.fuel} • ${vehicle.transmission}',
+                    '${vehicle.mileage} km • ${valueLabel(vehicle.fuel)} • ${valueLabel(vehicle.transmission)}',
                     style: const TextStyle(
                       color: AppColors.muted,
                       fontSize: 12,
@@ -245,16 +236,16 @@ class _VehicleCard extends StatelessWidget {
                       if (!isActive)
                         TextButton(
                           onPressed: onSelect,
-                          child: const Text('USAR ESTE'),
+                          child: Text(tr.useThis),
                         ),
                       const Spacer(),
                       IconButton(
-                        tooltip: 'Editar',
+                        tooltip: tr.edit,
                         onPressed: onEdit,
                         icon: const Icon(Icons.edit_outlined),
                       ),
                       IconButton(
-                        tooltip: 'Excluir',
+                        tooltip: tr.delete,
                         onPressed: onDelete,
                         icon: const Icon(
                           Icons.delete_outline,
@@ -324,21 +315,21 @@ class _EmptyVehicles extends StatelessWidget {
         children: [
           const Icon(Icons.garage_outlined, size: 72, color: AppColors.blue),
           const SizedBox(height: 18),
-          const Text(
-            'Nenhum veículo cadastrado',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+          Text(
+            tr.vehiclesEmptyTitle,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Cadastre seu primeiro carro ou moto para começar a registrar abastecimentos.',
+          Text(
+            tr.vehiclesEmptyText,
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.muted),
+            style: const TextStyle(color: AppColors.muted),
           ),
           const SizedBox(height: 20),
           FilledButton.icon(
             onPressed: onAdd,
             icon: const Icon(Icons.add),
-            label: const Text('CADASTRAR VEÍCULO'),
+            label: Text(tr.addVehicle),
           ),
         ],
       ),

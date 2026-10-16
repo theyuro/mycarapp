@@ -5,8 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/vehicle.dart';
+import '../services/image_pick_service.dart';
 import '../services/vehicle_storage_service.dart';
 import '../theme/app_colors.dart';
+import '../l10n/l10n.dart';
+import '../l10n/labels.dart';
 
 class VehicleRegistrationScreen extends StatefulWidget {
   const VehicleRegistrationScreen({super.key, this.vehicle});
@@ -482,7 +485,7 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
 
   String? requiredField(Object? value) =>
       value == null || value.toString().trim().isEmpty
-      ? 'Campo obrigatório'
+      ? tr.fieldRequired
       : null;
 
   void addDocument() {
@@ -493,7 +496,7 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
   }
 
   Future<void> addPhoto() async {
-    final file = await ImagePicker().pickImage(
+    final file = await ImagePickService.pick(
       source: ImageSource.gallery,
       imageQuality: 82,
       maxWidth: 1920,
@@ -535,15 +538,15 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Não foi possível salvar: ${error.message}'),
+          content: Text(tr.vehicleSaveErrorDetail(error.message)),
           behavior: SnackBarBehavior.floating,
         ),
       );
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível salvar o veículo. Tente novamente.'),
+        SnackBar(
+          content: Text(tr.vehicleSaveError),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -558,263 +561,285 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
       backgroundColor: AppColors.navy,
       foregroundColor: Colors.white,
       title: Text(
-        widget.vehicle == null ? 'Cadastrar veículo' : 'Editar veículo',
+        widget.vehicle == null ? tr.addVehicleTitle : tr.editVehicleTitle,
       ),
     ),
     body: Form(
       key: formKey,
-      child: ListView(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        children: [
-          SectionCard(
-            icon: Icons.badge_outlined,
-            title: 'Identificação',
-            child: Column(
-              children: [
-                SizedBox(
-                  width: double.infinity,
-                  child: SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(
-                        value: 'car',
-                        icon: Icon(Icons.directions_car_rounded),
-                        label: Text('Carro'),
-                      ),
-                      ButtonSegment(
-                        value: 'motorcycle',
-                        icon: Icon(Icons.two_wheeler_rounded),
-                        label: Text('Moto'),
-                      ),
-                    ],
-                    selected: {vehicleType},
-                    onSelectionChanged: (selection) => setState(() {
-                      vehicleType = selection.first;
-                      brand = null;
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SectionCard(
+              icon: Icons.badge_outlined,
+              title: tr.vehicleIdentification,
+              child: Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: SegmentedButton<String>(
+                      segments: [
+                        ButtonSegment(
+                          value: 'car',
+                          icon: const Icon(Icons.directions_car_rounded),
+                          label: Text(tr.vehicleCar),
+                        ),
+                        ButtonSegment(
+                          value: 'motorcycle',
+                          icon: const Icon(Icons.two_wheeler_rounded),
+                          label: Text(tr.vehicleMotorcycle),
+                        ),
+                      ],
+                      selected: {vehicleType},
+                      onSelectionChanged: (selection) => setState(() {
+                        vehicleType = selection.first;
+                        brand = null;
+                        model = null;
+                        customBrand.clear();
+                        customModel.clear();
+                        transmission = vehicleType == 'motorcycle'
+                            ? 'Manual'
+                            : 'Automático';
+                        photoType = photoTypes.first;
+                      }),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: nickname,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: InputDecoration(
+                      labelText: tr.vehicleNickname,
+                      hintText: vehicleType == 'motorcycle'
+                          ? tr.vehicleNicknameMoto
+                          : tr.vehicleNicknameCar,
+                    ),
+                    validator: requiredField,
+                  ),
+                  const SizedBox(height: 14),
+                  DropdownButtonFormField<String>(
+                    key: ValueKey(vehicleType),
+                    initialValue: brand,
+                    decoration: InputDecoration(labelText: tr.brand),
+                    items: [...models.keys, otherBrand]
+                        .map(
+                          (e) => DropdownMenuItem(
+                            value: e,
+                            child: Text(valueLabel(e)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) => setState(() {
+                      brand = value;
                       model = null;
-                      customBrand.clear();
                       customModel.clear();
-                      transmission = vehicleType == 'motorcycle'
-                          ? 'Manual'
-                          : 'Automático';
-                      photoType = photoTypes.first;
                     }),
+                    validator: requiredField,
                   ),
-                ),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: nickname,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: InputDecoration(
-                    labelText: 'Apelido do veículo',
-                    hintText: vehicleType == 'motorcycle'
-                        ? 'Ex.: Minha moto'
-                        : 'Ex.: Meu carro',
-                  ),
-                  validator: requiredField,
-                ),
-                const SizedBox(height: 14),
-                DropdownButtonFormField<String>(
-                  initialValue: brand,
-                  decoration: const InputDecoration(labelText: 'Marca'),
-                  items: [...models.keys, otherBrand]
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                      .toList(),
-                  onChanged: (value) => setState(() {
-                    brand = value;
-                    model = null;
-                    customModel.clear();
-                  }),
-                  validator: requiredField,
-                ),
-                if (brand == otherBrand) ...[
+                  if (brand == otherBrand) ...[
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: customBrand,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: InputDecoration(
+                        labelText: tr.brandName,
+                        hintText: tr.brandHint,
+                      ),
+                      validator: requiredField,
+                    ),
+                  ],
                   const SizedBox(height: 14),
+                  DropdownButtonFormField<String>(
+                    key: ValueKey('$vehicleType/$brand'),
+                    initialValue: model,
+                    decoration: InputDecoration(labelText: tr.model),
+                    items:
+                        [
+                              ...(models[brand] ?? const <String>[]),
+                              if (brand != null) otherModel,
+                            ]
+                            .map(
+                              (e) => DropdownMenuItem(
+                                value: e,
+                                child: Text(valueLabel(e)),
+                              ),
+                            )
+                            .toList(),
+                    onChanged: brand == null
+                        ? null
+                        : (value) => setState(() => model = value),
+                    validator: requiredField,
+                  ),
+                  if (model == otherModel) ...[
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: customModel,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: InputDecoration(
+                        labelText: tr.modelName,
+                        hintText: tr.modelHint,
+                      ),
+                      validator: requiredField,
+                    ),
+                  ],
+                  const SizedBox(height: 14),
+                  DropdownButtonFormField<int>(
+                    initialValue: year,
+                    decoration: InputDecoration(labelText: tr.vehicleYear),
+                    items: years
+                        .map(
+                          (e) => DropdownMenuItem(value: e, child: Text('$e')),
+                        )
+                        .toList(),
+                    onChanged: (value) => setState(() => year = value),
+                    validator: (value) => value == null ? tr.selectYear : null,
+                  ),
+                ],
+              ),
+            ),
+            SectionCard(
+              icon: Icons.tune_rounded,
+              title: tr.vehicleFeatures,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  DropdownButtonFormField<String>(
+                    initialValue: fuel,
+                    decoration: InputDecoration(labelText: tr.fuel),
+                    items: ['Gasolina', 'Flex', 'Híbrido', 'Elétrico']
+                        .map(
+                          (e) => DropdownMenuItem(
+                            value: e,
+                            child: Text(valueLabel(e)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) => setState(() => fuel = value),
+                    validator: requiredField,
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    tr.transmission,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 9),
+                  SizedBox(
+                    width: double.infinity,
+                    child: SegmentedButton<String>(
+                      segments: vehicleType == 'motorcycle'
+                          ? [
+                              ButtonSegment(
+                                value: 'Manual',
+                                label: Text(tr.transmissionManual),
+                              ),
+                              ButtonSegment(
+                                value: 'Automático',
+                                label: Text(tr.transmissionAutomatic),
+                              ),
+                            ]
+                          : [
+                              ButtonSegment(
+                                value: 'Automático',
+                                label: Text(tr.transmissionAutomatic),
+                              ),
+                              ButtonSegment(
+                                value: 'Convencional',
+                                label: Text(tr.transmissionManual),
+                              ),
+                            ],
+                      selected: {transmission},
+                      onSelectionChanged: (value) =>
+                          setState(() => transmission = value.first),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
                   TextFormField(
-                    controller: customBrand,
-                    textCapitalization: TextCapitalization.words,
-                    decoration: const InputDecoration(
-                      labelText: 'Nome da marca',
-                      hintText: 'Digite a marca do veículo',
+                    controller: mileage,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: InputDecoration(
+                      labelText: tr.currentMileage,
+                      suffixText: 'km',
                     ),
                     validator: requiredField,
                   ),
                 ],
-                const SizedBox(height: 14),
-                DropdownButtonFormField<String>(
-                  key: ValueKey(brand),
-                  initialValue: model,
-                  decoration: const InputDecoration(labelText: 'Modelo'),
-                  items:
-                      [
-                            ...(models[brand] ?? const <String>[]),
-                            if (brand != null) otherModel,
-                          ]
-                          .map(
-                            (e) => DropdownMenuItem(value: e, child: Text(e)),
-                          )
-                          .toList(),
-                  onChanged: brand == null
-                      ? null
-                      : (value) => setState(() => model = value),
-                  validator: requiredField,
+              ),
+            ),
+            SectionCard(
+              icon: Icons.description_outlined,
+              title: tr.documentsByYear,
+              trailing: IconButton(
+                onPressed: addDocument,
+                icon: const Icon(
+                  Icons.add_circle_outline,
+                  color: AppColors.blue,
                 ),
-                if (model == otherModel) ...[
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: customModel,
-                    textCapitalization: TextCapitalization.words,
-                    decoration: const InputDecoration(
-                      labelText: 'Nome do modelo',
-                      hintText: 'Digite o modelo do veículo',
+              ),
+              child: Column(
+                children: List.generate(documents.length, documentRow),
+              ),
+            ),
+            SectionCard(
+              icon: Icons.photo_camera_outlined,
+              title: tr.vehiclePhotos,
+              child: Column(
+                children: [
+                  DropdownButtonFormField<String>(
+                    initialValue: photoType,
+                    isExpanded: true,
+                    decoration: InputDecoration(labelText: tr.photoWhat),
+                    items: photoTypes
+                        .map(
+                          (e) => DropdownMenuItem(
+                            value: e,
+                            child: Text(valueLabel(e)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) => setState(() => photoType = value!),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: addPhoto,
+                      icon: const Icon(Icons.add_photo_alternate_outlined),
+                      label: Text(tr.photoSelect),
                     ),
-                    validator: requiredField,
                   ),
+                  if (photos.isNotEmpty) ...[
+                    const SizedBox(height: 14),
+                    ...photoHistory(),
+                  ],
                 ],
-                const SizedBox(height: 14),
-                DropdownButtonFormField<int>(
-                  initialValue: year,
-                  decoration: const InputDecoration(
-                    labelText: 'Ano do veículo',
-                  ),
-                  items: years
-                      .map((e) => DropdownMenuItem(value: e, child: Text('$e')))
-                      .toList(),
-                  onChanged: (value) => setState(() => year = value),
-                  validator: (value) =>
-                      value == null ? 'Selecione o ano' : null,
-                ),
-              ],
-            ),
-          ),
-          SectionCard(
-            icon: Icons.tune_rounded,
-            title: 'Características',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                DropdownButtonFormField<String>(
-                  initialValue: fuel,
-                  decoration: const InputDecoration(labelText: 'Combustível'),
-                  items: ['Gasolina', 'Flex', 'Híbrido', 'Elétrico']
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                      .toList(),
-                  onChanged: (value) => setState(() => fuel = value),
-                  validator: requiredField,
-                ),
-                const SizedBox(height: 18),
-                const Text(
-                  'Câmbio',
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 9),
-                SizedBox(
-                  width: double.infinity,
-                  child: SegmentedButton<String>(
-                    segments: vehicleType == 'motorcycle'
-                        ? const [
-                            ButtonSegment(
-                              value: 'Manual',
-                              label: Text('Manual'),
-                            ),
-                            ButtonSegment(
-                              value: 'Automático',
-                              label: Text('Automático'),
-                            ),
-                          ]
-                        : const [
-                            ButtonSegment(
-                              value: 'Automático',
-                              label: Text('Automático'),
-                            ),
-                            ButtonSegment(
-                              value: 'Convencional',
-                              label: Text('Convencional'),
-                            ),
-                          ],
-                    selected: {transmission},
-                    onSelectionChanged: (value) =>
-                        setState(() => transmission = value.first),
-                  ),
-                ),
-                const SizedBox(height: 18),
-                TextFormField(
-                  controller: mileage,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: const InputDecoration(
-                    labelText: 'Quilometragem atual',
-                    suffixText: 'km',
-                  ),
-                  validator: requiredField,
-                ),
-              ],
-            ),
-          ),
-          SectionCard(
-            icon: Icons.description_outlined,
-            title: 'Documentação por ano',
-            trailing: IconButton(
-              onPressed: addDocument,
-              icon: const Icon(Icons.add_circle_outline, color: AppColors.blue),
-            ),
-            child: Column(
-              children: List.generate(documents.length, documentRow),
-            ),
-          ),
-          SectionCard(
-            icon: Icons.photo_camera_outlined,
-            title: 'Fotos do veículo',
-            child: Column(
-              children: [
-                DropdownButtonFormField<String>(
-                  initialValue: photoType,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'O que aparece na foto?',
-                  ),
-                  items: photoTypes
-                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                      .toList(),
-                  onChanged: (value) => setState(() => photoType = value!),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: addPhoto,
-                    icon: const Icon(Icons.add_photo_alternate_outlined),
-                    label: const Text('SELECIONAR FOTO'),
-                  ),
-                ),
-                if (photos.isNotEmpty) ...[
-                  const SizedBox(height: 14),
-                  ...photoHistory(),
-                ],
-              ],
-            ),
-          ),
-          SizedBox(
-            height: 56,
-            child: FilledButton.icon(
-              onPressed: isSaving ? null : save,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.gold,
-                foregroundColor: AppColors.navy,
-              ),
-              icon: isSaving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.save_outlined),
-              label: Text(
-                isSaving ? 'SALVANDO...' : 'SALVAR VEÍCULO',
-                style: const TextStyle(fontWeight: FontWeight.w800),
               ),
             ),
-          ),
-          const SizedBox(height: 20),
-        ],
+            SizedBox(
+              height: 56,
+              child: FilledButton.icon(
+                onPressed: isSaving ? null : save,
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.gold,
+                  foregroundColor: AppColors.navy,
+                ),
+                icon: isSaving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save_outlined),
+                label: Text(
+                  isSaving ? tr.saving : tr.vehicleSave,
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     ),
   );
@@ -837,7 +862,7 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
                 width: 115,
                 child: DropdownButtonFormField<int>(
                   initialValue: item.year,
-                  decoration: const InputDecoration(labelText: 'Ano'),
+                  decoration: InputDecoration(labelText: tr.year),
                   items: years
                       .where((e) => e == item.year || !used.contains(e))
                       .map((e) => DropdownMenuItem(value: e, child: Text('$e')))
@@ -858,14 +883,14 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
           ),
           CheckboxListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('IPVA pago'),
+            title: Text(tr.docTaxPaid),
             value: item.ipvaPaid,
             activeColor: AppColors.blue,
             onChanged: (value) => setState(() => item.ipvaPaid = value!),
           ),
           CheckboxListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Licenciamento pago'),
+            title: Text(tr.docLicensingPaid),
             value: item.licensingPaid,
             activeColor: AppColors.blue,
             onChanged: (value) => setState(() => item.licensingPaid = value!),
@@ -878,8 +903,7 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
   Widget photoRow(int index) {
     final item = photos[index];
     final decodedSize = (58 * MediaQuery.devicePixelRatioOf(context)).ceil();
-    final date =
-        '${item.date.day.toString().padLeft(2, '0')}/${item.date.month.toString().padLeft(2, '0')}/${item.date.year}';
+    final date = formatDate(item.date);
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -913,7 +937,7 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  item.type,
+                  valueLabel(item.type),
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
                 Text(
@@ -962,7 +986,7 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
               ),
               const SizedBox(width: 7),
               Text(
-                '${group.length} ${group.length == 1 ? 'foto' : 'fotos'}',
+                tr.photoCount(group.length),
                 style: const TextStyle(color: AppColors.muted, fontSize: 12),
               ),
             ],
@@ -990,7 +1014,7 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
           children: [
             AppBar(
               automaticallyImplyLeading: false,
-              title: Text(photo.type),
+              title: Text(valueLabel(photo.type)),
               actions: [
                 IconButton(
                   onPressed: () => Navigator.pop(context),
@@ -1021,21 +1045,8 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
 }
 
 String _photoMonth(DateTime date) {
-  const months = [
-    'Janeiro',
-    'Fevereiro',
-    'Março',
-    'Abril',
-    'Maio',
-    'Junho',
-    'Julho',
-    'Agosto',
-    'Setembro',
-    'Outubro',
-    'Novembro',
-    'Dezembro',
-  ];
-  return '${months[date.month - 1]} de ${date.year}';
+  final text = formatMonthYear(date);
+  return text[0].toUpperCase() + text.substring(1);
 }
 
 class SectionCard extends StatelessWidget {

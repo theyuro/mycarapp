@@ -6,7 +6,8 @@ import '../services/authentication_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/institutional_footer.dart';
-import 'first_use_screen.dart';
+import 'home_screen.dart';
+import '../l10n/l10n.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -18,12 +19,10 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool signingIn = false;
 
-  Future<void> _start(BuildContext context) async {
-    final next = await startScreenAfterLogin();
-    if (!context.mounted) return;
-    Navigator.of(
-      context,
-    ).pushReplacement(MaterialPageRoute<void>(builder: (_) => next));
+  void _start(BuildContext context) {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(builder: (_) => const HomeScreen()),
+    );
   }
 
   Future<void> _signInWithGoogle() async {
@@ -31,7 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => signingIn = true);
     try {
       await AuthenticationService.instance.signInWithGoogle();
-      if (mounted) await _start(context);
+      if (mounted) _start(context);
     } on Object catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -50,30 +49,28 @@ class _LoginScreenState extends State<LoginScreen> {
       return switch (error.code) {
         GoogleSignInExceptionCode.clientConfigurationError ||
         GoogleSignInExceptionCode.providerConfigurationError =>
-          'Não foi possível validar o acesso com Google. Tente novamente em alguns instantes.',
-        GoogleSignInExceptionCode.interrupted =>
-          'A entrada com Google foi interrompida. Tente novamente.',
-        GoogleSignInExceptionCode.canceled =>
-          'Entrada com Google interrompida. Se você escolheu uma conta, tente novamente em instantes.',
-        _ => 'Não foi possível entrar com Google. Tente novamente.',
+          tr.loginErrorConfig,
+        GoogleSignInExceptionCode.interrupted => tr.loginErrorInterrupted,
+        GoogleSignInExceptionCode.canceled => tr.loginErrorCanceledMaybe,
+        _ => tr.loginErrorGeneric,
       };
     }
     if (error is FirebaseAuthException) {
       if (error.code == 'network-request-failed') {
-        return 'Verifique sua conexão e tente novamente.';
+        return tr.errorCheckConnection;
       }
       if (error.code == 'account-exists-with-different-credential') {
-        return 'Esta conta já usa outra forma de entrada.';
+        return tr.loginErrorOtherProvider;
       }
     }
     final value = error.toString().toLowerCase();
     if (value.contains('canceled') || value.contains('cancelled')) {
-      return 'Entrada com Google cancelada.';
+      return tr.loginErrorCanceled;
     }
     if (value.contains('network')) {
-      return 'Verifique sua conexão e tente novamente.';
+      return tr.errorCheckConnection;
     }
-    return 'Não foi possível entrar com Google. Tente novamente.';
+    return tr.loginErrorGeneric;
   }
 
   @override
@@ -97,10 +94,10 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
             const SizedBox(height: 4),
-            const Text(
-              'GESTÃO VEICULAR INTELIGENTE',
+            Text(
+              tr.appTagline,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 color: AppColors.goldLight,
                 fontSize: 10,
                 letterSpacing: 1.35,
@@ -127,7 +124,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       )
                     : const Icon(Icons.account_circle_outlined),
                 label: Text(
-                  signingIn ? 'ENTRANDO...' : 'ENTRAR COM GOOGLE',
+                  signingIn ? tr.loginSigningIn : tr.loginWithGoogle,
                   style: const TextStyle(
                     fontWeight: FontWeight.w800,
                     letterSpacing: 1,
@@ -136,10 +133,10 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Entre com sua conta Google para usar o MyCarApp.',
+            Text(
+              tr.loginHint,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white54, fontSize: 11),
+              style: const TextStyle(color: Colors.white54, fontSize: 11),
             ),
             const SizedBox(height: 8),
             const InstitutionalFooter(),

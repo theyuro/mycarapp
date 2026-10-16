@@ -10,6 +10,7 @@ import '../models/vehicle.dart';
 import 'fueling_storage_service.dart';
 import 'maintenance_storage_service.dart';
 import 'vehicle_storage_service.dart';
+import '../l10n/l10n.dart';
 
 class DataTransferService {
   final vehicleStorage = VehicleStorageService();
@@ -18,7 +19,7 @@ class DataTransferService {
 
   Future<File> exportVehicle(String format) async {
     final vehicle = await vehicleStorage.loadActiveVehicle();
-    if (vehicle == null) throw StateError('Nenhum veículo ativo.');
+    if (vehicle == null) throw StateError(tr.transferNoActiveVehicle);
     final fuelings = (await fuelingStorage.loadFuelings())
         .where((item) => item.vehicleId == vehicle.id)
         .toList();
@@ -60,8 +61,7 @@ class DataTransferService {
         ]);
       }
       final bytes = excel.encode();
-      if (bytes == null)
-        throw const FileSystemException('Falha ao gerar Excel.');
+      if (bytes == null) throw FileSystemException(tr.transferExcelError);
       final file = File(
         '${temporary.path}${Platform.pathSeparator}mycarapp_$safeName.xlsx',
       );
@@ -87,10 +87,10 @@ class DataTransferService {
         : await _readCsv(path);
     final manifest = rows.where((item) => item.type == 'manifest').firstOrNull;
     if (manifest?.data['format'] != 'mycarapp-transfer') {
-      throw const FormatException('Arquivo não reconhecido pelo MyCarApp.');
+      throw FormatException(tr.transferUnknownFile);
     }
     final vehicleRow = rows.where((item) => item.type == 'vehicle').firstOrNull;
-    if (vehicleRow == null) throw const FormatException('Veículo ausente.');
+    if (vehicleRow == null) throw FormatException(tr.transferMissingVehicle);
     final originalVehicle = Vehicle.fromJson(vehicleRow.data);
     final newVehicleId = '${DateTime.now().microsecondsSinceEpoch}';
     final importedVehicle = Vehicle(
@@ -141,14 +141,14 @@ class DataTransferService {
     final lines = await File(path).readAsLines();
     return lines.skip(1).where((line) => line.trim().isNotEmpty).map((line) {
       final comma = line.indexOf(',');
-      if (comma < 1) throw const FormatException('Linha CSV inválida.');
+      if (comma < 1) throw FormatException(tr.transferInvalidCsv);
       return _decodeRow(line.substring(0, comma), line.substring(comma + 1));
     }).toList();
   }
 
   Future<List<_TransferRow>> _readExcel(String path) async {
     final excel = Excel.decodeBytes(await File(path).readAsBytes());
-    if (excel.tables.isEmpty) throw const FormatException('Planilha vazia.');
+    if (excel.tables.isEmpty) throw FormatException(tr.transferEmptySheet);
     final table = excel.tables.values.first;
     return table.rows.skip(1).where((row) => row.length >= 2).map((row) {
       final type = row[0]?.value?.toString() ?? '';

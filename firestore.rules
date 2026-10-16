@@ -45,6 +45,19 @@ service cloud.firestore {
       allow create, update: if owns(uid) && isPremium(uid);
     }
 
+    // Backup automático do Premium: um documento por registro, com o JSON
+    // do registro em `payload`. Ler e apagar continuam liberados para o dono,
+    // para ninguém perder dados ao deixar de assinar.
+    match /users/{uid}/backupItems/{itemId} {
+      allow read, delete: if owns(uid);
+      allow create, update: if owns(uid) && isPremium(uid) &&
+        request.resource.data.keys().hasOnly(['collection', 'payload', 'updatedAt']) &&
+        request.resource.data.collection in
+          ['vehicles', 'fuelings', 'maintenances', 'expenses', 'establishments', 'documents'] &&
+        request.resource.data.payload is string &&
+        request.resource.data.payload.size() < 900000;
+    }
+
     match /referrals/{referredUid} {
       allow read: if owns(referredUid) ||
         (signedIn() && resource.data.referrerUid == request.auth.uid);

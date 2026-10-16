@@ -3,35 +3,41 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:in_app_review/in_app_review.dart';
 
-import '../models/vehicle.dart';
 import '../models/fueling_record.dart';
 import '../models/maintenance_record.dart';
+import '../models/vehicle.dart';
 import '../models/vehicle_expense.dart';
-import '../services/expense_storage_service.dart';
 import '../services/access_service.dart';
+import '../services/ads_config.dart';
 import '../services/ads_service.dart';
-import '../services/vehicle_storage_service.dart';
+import '../services/auto_backup_service.dart';
+import '../services/expense_storage_service.dart';
+import '../services/fueling_storage_service.dart';
 import '../services/maintenance_storage_service.dart';
 import '../services/notification_service.dart';
-import '../services/fueling_storage_service.dart';
+import '../services/premium_upsell_service.dart';
+import '../services/vehicle_storage_service.dart';
 import '../theme/app_colors.dart';
-import '../widgets/vehicle_type_icon.dart';
 import '../widgets/free_user_banner_ad.dart';
+import '../widgets/premium_upsell_banner.dart';
 import '../widgets/recommendation_banner.dart';
-import 'fueling_history_screen.dart';
-import 'fueling_form_screen.dart';
-import 'documents_screen.dart';
-import 'expenses_screen.dart';
-import 'data_transfer_screen.dart';
+import '../widgets/rewarded_ad_free.dart';
+import '../widgets/vehicle_type_icon.dart';
 import 'account_screen.dart';
+import 'data_transfer_screen.dart';
+import 'documents_screen.dart';
 import 'establishments_screen.dart';
+import 'expenses_screen.dart';
+import 'fueling_form_screen.dart';
+import 'fueling_history_screen.dart';
 import 'lifetime_purchase_screen.dart';
-import 'maintenance_screen.dart';
 import 'maintenance_form_screen.dart';
+import 'maintenance_screen.dart';
 import 'notifications_screen.dart';
 import 'reports_screen.dart';
-import 'vehicles_screen.dart';
 import 'support_screen.dart';
+import 'vehicles_screen.dart';
+import '../l10n/l10n.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -54,10 +60,65 @@ class _HomeScreenState extends State<HomeScreen> {
   List<MaintenanceRecord> maintenances = const [];
   List<VehicleExpense> expenses = const [];
 
+  /// A oferta de restaurar aparece no máximo uma vez por abertura do app.
+  static bool _restoreOffered = false;
+
   @override
   void initState() {
     super.initState();
-    loadActiveVehicle();
+    loadActiveVehicle().then((_) => _offerCloudRestore());
+  }
+
+  /// Celular novo (sem veículos) e dados na nuvem: oferece restaurar.
+  Future<void> _offerCloudRestore() async {
+    if (_restoreOffered || activeVehicle != null) return;
+    _restoreOffered = true;
+    final backup = AutoBackupService.instance;
+    final count = await backup.cloudItemCount();
+    if (count == 0 || !mounted) return;
+    final restore = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: const Icon(Icons.cloud_download_outlined),
+        title: Text(tr.homeCloudFoundTitle),
+        content: Text(tr.homeCloudFoundText(count)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(tr.notNowUpper),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(tr.restore),
+          ),
+        ],
+      ),
+    );
+    if (restore != true || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(tr.homeRestoring),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    try {
+      final restored = await backup.restore();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(tr.backupRestoredCount(restored)),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      await loadActiveVehicle();
+    } on Object {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(tr.homeRestoreLater),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Future<void> loadActiveVehicle() async {
@@ -95,18 +156,20 @@ class _HomeScreenState extends State<HomeScreen> {
     await notificationService.requestPermission();
     await notificationService.addUnique(
       key: 'update-2026-08-documents-maintenance',
-      title: 'MyCarApp atualizado',
-      message:
-          'Documentos em PDF, próximas manutenções e integração com a agenda já estão disponíveis.',
+      title: tr.newsDocsTitle,
+      message: tr.newsDocsText,
+      showSystemNotification: false,
+    );
+    await notificationService.addUnique(
+      key: 'update-2026-10-v1-3-4',
+      title: tr.news134Title,
+      message: tr.news134Text,
       showSystemNotification: false,
     );
     await notificationService.addUnique(
       key: 'update-2026-10-v1-3-3',
-      title: 'Nova versão do MyCarApp',
-      message:
-          'Guia de primeiro uso para cadastrar seu veículo passo a passo, '
-          'login mais simples e seguro com sua conta Google, '
-          'além de ajustes e melhorias de desempenho no sistema.',
+      title: tr.news133Title,
+      message: tr.news133Text,
       showSystemNotification: false,
     );
     if (active != null) {
@@ -131,8 +194,8 @@ class _HomeScreenState extends State<HomeScreen> {
         await notificationService.addUnique(
           key: 'maintenance-${record.id}-$details',
           title: closeByDate && targetDate.isBefore(now)
-              ? 'Manutenção vencida'
-              : 'Próxima manutenção',
+              ? tr.maintOverdueTitle
+              : tr.maintNext,
           message: '${record.service} • $details',
           category: 'maintenance',
         );
@@ -170,9 +233,8 @@ class _HomeScreenState extends State<HomeScreen> {
         if (average > 0 && traveled >= 0 && remaining <= capacity * .2) {
           await notificationService.addUnique(
             key: 'fuel-low-${last.id}',
-            title: 'Hora de abastecer',
-            message:
-                '${active.nickname} atingiu aproximadamente 20% da capacidade estimada do tanque.',
+            title: tr.fuelLowTitle,
+            message: tr.fuelLowText(active.nickname),
             category: 'fuelLow',
           );
         }
@@ -250,7 +312,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> openFuelingForm() async {
     final vehicle = activeVehicle;
     if (vehicle == null) {
-      _message('Cadastre um veículo primeiro.');
+      _message(tr.homeNeedVehicle);
       return;
     }
     final changed = await Navigator.of(context).push<bool>(
@@ -264,7 +326,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> openMaintenanceForm() async {
     final vehicle = activeVehicle;
     if (vehicle == null) {
-      _message('Cadastre um veículo primeiro.');
+      _message(tr.homeNeedVehicle);
       return;
     }
     final changed = await Navigator.of(context).push<bool>(
@@ -306,6 +368,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> showMoreMenu() async {
+    // Adianta o carregamento do vídeo premiado, para ele estar pronto se o
+    // usuário escolher "ficar sem anúncios em tela cheia".
+    // No teto do período sem anúncios outro vídeo não somaria tempo.
+    final adFreeActive = AdsService.instance.adFreeActive;
+    final adFreeAtLimit = AdsService.instance.adFreeAtLimit;
+    if (rewardedOfferAvailable && !adFreeAtLimit) {
+      AdsService.instance.loadRewarded();
+    }
     await showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
@@ -314,15 +384,38 @@ class _HomeScreenState extends State<HomeScreen> {
         shrinkWrap: true,
         padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
         children: [
-          const ListTile(
+          ListTile(
             title: Text(
-              'Mais opções',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+              tr.moreOptions,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
             ),
           ),
+          // Vídeo premiado: horas sem anúncios em tela cheia. Com o período
+          // ativo, mostra o tempo restante e permite somar outro vídeo; só
+          // fica desabilitado quando o período já está no teto.
+          if (rewardedOfferAvailable)
+            _MoreMenuTile(
+              icon: Icons.ondemand_video_rounded,
+              title: adFreeActive
+                  ? tr.adFreeMenuActive(adFreeRemainingHours())
+                  : tr.adFreeMenuTitle(AdsConfig.instance.rewardedAdFreeHours),
+              subtitle: !adFreeActive
+                  ? tr.adFreeMenuSubtitle
+                  : adFreeAtLimit
+                  ? tr.adFreeMenuActiveSubtitle
+                  : tr.adFreeMenuAddMore(
+                      AdsConfig.instance.rewardedAdFreeHours,
+                    ),
+              onTap: adFreeAtLimit
+                  ? null
+                  : () {
+                      Navigator.pop(sheetContext);
+                      watchRewardedForAdFree(context);
+                    },
+            ),
           _MoreMenuTile(
             icon: Icons.support_agent_rounded,
-            title: 'Ajuda, feedback e bugs',
+            title: tr.supportTitle,
             onTap: () => _closeAndOpen(
               sheetContext,
               () => Navigator.of(context).push<void>(
@@ -332,37 +425,37 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           _MoreMenuTile(
             icon: Icons.garage_rounded,
-            title: 'Meus veículos',
+            title: tr.vehiclesTitle,
             onTap: () => _closeAndOpen(sheetContext, openVehicles),
           ),
           _MoreMenuTile(
             icon: Icons.account_balance_wallet_outlined,
-            title: 'Despesas',
+            title: tr.expensesTitle,
             onTap: () => _closeAndOpen(sheetContext, () => openExpenses()),
           ),
           _MoreMenuTile(
             icon: Icons.bar_chart_rounded,
-            title: 'Relatórios',
+            title: tr.reportsTitle,
             onTap: () => _closeAndOpen(sheetContext, openReports),
           ),
           _MoreMenuTile(
             icon: Icons.place_outlined,
-            title: 'Meus locais',
+            title: tr.placesTitle,
             onTap: () => _closeAndOpen(sheetContext, openEstablishments),
           ),
           _MoreMenuTile(
             icon: Icons.description_outlined,
-            title: 'Documentos',
+            title: tr.docsTitle,
             onTap: () => _closeAndOpen(sheetContext, openDocuments),
           ),
           _MoreMenuTile(
             icon: Icons.import_export_rounded,
-            title: 'Exportar informações',
+            title: tr.exportTitle,
             onTap: () => _closeAndOpen(sheetContext, openDataTransfer),
           ),
           _MoreMenuTile(
             icon: Icons.star_outline_rounded,
-            title: 'Avaliar o app',
+            title: tr.rateApp,
             onTap: () {
               Navigator.pop(sheetContext);
               rateApp();
@@ -371,7 +464,7 @@ class _HomeScreenState extends State<HomeScreen> {
           if (AdsService.instance.privacyOptionsRequired)
             _MoreMenuTile(
               icon: Icons.privacy_tip_outlined,
-              title: 'Privacidade de anúncios',
+              title: tr.adsPrivacy,
               onTap: () {
                 Navigator.pop(sheetContext);
                 AdsService.instance.showPrivacyOptions().then((error) {
@@ -448,12 +541,12 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(Icons.workspace_premium_outlined),
           ),
         IconButton(
-          tooltip: 'Minha conta',
+          tooltip: tr.accountTitle,
           onPressed: openAccount,
           icon: const Icon(Icons.account_circle_outlined),
         ),
         IconButton(
-          tooltip: 'Notificações',
+          tooltip: tr.notifTitle,
           onPressed: openNotifications,
           icon: Stack(
             clipBehavior: Clip.none,
@@ -515,12 +608,13 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 14),
         const RecommendationBanner(),
+        const PremiumUpsellBanner(placement: UpsellPlacement.home),
       ],
     ),
     bottomNavigationBar: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const FreeUserBannerAd(),
+        const FreeUserBannerAd(placement: BannerPlacement.home),
         _HomeBottomBar(
           onHome: () {},
           onFuelings: openFuelingHistory,
@@ -533,8 +627,7 @@ class _HomeScreenState extends State<HomeScreen> {
   );
 }
 
-String _homeDate(DateTime value) =>
-    '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}/${value.year}';
+String _homeDate(DateTime value) => formatDate(value);
 
 class _BrandHero extends StatelessWidget {
   const _BrandHero({required this.vehicle, required this.onVehicleTap});
@@ -587,9 +680,9 @@ class _BrandHero extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'VEÍCULO ATIVO',
-                          style: TextStyle(
+                        Text(
+                          tr.activeVehicle,
+                          style: const TextStyle(
                             color: Colors.white54,
                             fontSize: 10,
                             fontWeight: FontWeight.w800,
@@ -598,7 +691,7 @@ class _BrandHero extends StatelessWidget {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          vehicle?.nickname ?? 'Selecione seu veículo',
+                          vehicle?.nickname ?? tr.selectVehicle,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -720,19 +813,19 @@ class _DashboardStats extends StatelessWidget {
       children: [
         _DashboardMetric(
           icon: Icons.account_balance_wallet_outlined,
-          label: 'Saída neste mês',
+          label: tr.homeSpentMonth,
           value: _dashboardMoney(fuelTotal + maintenanceTotal + expenseTotal),
         ),
         _DashboardMetric(
           icon: Icons.speed_rounded,
-          label: 'Último consumo',
+          label: tr.homeLastConsumption,
           value: consumption == null
               ? '-- km/L'
               : '${_dashboardDecimal(consumption)} km/L',
         ),
         _DashboardMetric(
           icon: Icons.local_gas_station_outlined,
-          label: 'Preço médio · ver por posto',
+          label: tr.homeAveragePriceStations,
           value: liters == 0
               ? '-- /L'
               : '${_dashboardMoney(fuelTotal / liters)}/L',
@@ -740,7 +833,7 @@ class _DashboardStats extends StatelessWidget {
         ),
         _DashboardMetric(
           icon: Icons.build_circle_outlined,
-          label: 'Próxima manutenção',
+          label: tr.maintNext,
           value: _nextMaintenance(maintenances, vehicle),
         ),
       ],
@@ -858,7 +951,7 @@ class _MonthlyCostCard extends StatelessWidget {
           Row(
             children: [
               IconButton(
-                tooltip: 'Mês anterior',
+                tooltip: tr.previousMonth,
                 onPressed: onPrevious,
                 icon: const Icon(Icons.chevron_left_rounded),
               ),
@@ -866,18 +959,21 @@ class _MonthlyCostCard extends StatelessWidget {
                 child: Column(
                   children: [
                     Text(
-                      '${_dashboardMonth(month.month)} ${month.year}',
+                      _dashboardMonth(month),
                       style: const TextStyle(fontWeight: FontWeight.w800),
                     ),
-                    const Text(
-                      'Gastos do mês',
-                      style: TextStyle(color: AppColors.muted, fontSize: 11),
+                    Text(
+                      tr.homeMonthSpending,
+                      style: const TextStyle(
+                        color: AppColors.muted,
+                        fontSize: 11,
+                      ),
                     ),
                   ],
                 ),
               ),
               IconButton(
-                tooltip: 'Próximo mês',
+                tooltip: tr.nextMonth,
                 onPressed: onNext,
                 icon: const Icon(Icons.chevron_right_rounded),
               ),
@@ -885,28 +981,25 @@ class _MonthlyCostCard extends StatelessWidget {
           ),
           const Divider(height: 10),
           _MonthlyCostRow(
-            label: 'Total do mês',
+            label: tr.homeMonthTotal,
             value: total,
             emphasized: true,
           ),
-          _MonthlyCostRow(label: 'Combustível', value: fuel),
-          _MonthlyCostRow(label: 'Manutenção', value: maintenance),
-          _MonthlyCostRow(label: 'Seguro e cooperativa', value: insurance),
-          _MonthlyCostRow(
-            label: 'Financiamento e consórcio',
-            value: installments,
-          ),
+          _MonthlyCostRow(label: tr.fuel, value: fuel),
+          _MonthlyCostRow(label: tr.maintenance, value: maintenance),
+          _MonthlyCostRow(label: tr.homeInsurance, value: insurance),
+          _MonthlyCostRow(label: tr.homeFinancing, value: installments),
           if (other > 0)
-            _MonthlyCostRow(label: 'Outras despesas', value: other),
+            _MonthlyCostRow(label: tr.homeOtherExpenses, value: other),
           const Spacer(),
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.swipe_rounded, size: 15, color: AppColors.muted),
-              SizedBox(width: 5),
+              const Icon(Icons.swipe_rounded, size: 15, color: AppColors.muted),
+              const SizedBox(width: 5),
               Text(
-                'Arraste para ver outros meses',
-                style: TextStyle(color: AppColors.muted, fontSize: 10),
+                tr.homeSwipeMonths,
+                style: const TextStyle(color: AppColors.muted, fontSize: 10),
               ),
             ],
           ),
@@ -971,45 +1064,42 @@ class _NewEntrySheet extends StatelessWidget {
     shrinkWrap: true,
     padding: const EdgeInsets.fromLTRB(18, 4, 18, 22),
     children: [
-      const Text(
-        'Novo lançamento',
-        style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800),
+      Text(
+        tr.homeNewEntry,
+        style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800),
       ),
-      const Text(
-        'O que você deseja registrar?',
-        style: TextStyle(color: AppColors.muted),
-      ),
+      Text(tr.homeWhatToRecord, style: const TextStyle(color: AppColors.muted)),
       const SizedBox(height: 14),
-      const _SheetSection('USO DO VEÍCULO'),
+      _SheetSection(tr.homeVehicleUse),
       _NewEntryTile(
         icon: Icons.local_gas_station_outlined,
-        title: 'Abastecimento',
-        subtitle: 'Litros, valor, posto e quilometragem',
+        title: tr.ocrFueling,
+        subtitle: tr.homeFuelingHint,
         onTap: onFueling,
       ),
       _NewEntryTile(
         icon: Icons.build_circle_outlined,
-        title: 'Manutenção',
-        subtitle: 'Serviço realizado ou próxima manutenção',
+        title: tr.maintenance,
+        subtitle: tr.homeMaintHint,
         onTap: onMaintenance,
       ),
-      const _SheetSection('DESPESAS DO VEÍCULO'),
+      _SheetSection(tr.homeVehicleExpenses),
       _NewEntryTile(
         icon: Icons.shield_outlined,
-        title: 'Seguro ou cooperativa',
-        subtitle: 'Proteção veicular e parcelas do seguro',
+        title: tr.homeInsuranceEntry,
+        subtitle: tr.homeInsuranceHint,
         onTap: onInsurance,
       ),
       _NewEntryTile(
         icon: Icons.account_balance_outlined,
-        title: 'Financiamento ou consórcio',
-        subtitle: 'Parcelas, vencimentos e andamento',
+        title: tr.homeFinancingEntry,
+        subtitle: tr.homeFinancingHint,
         onTap: onInstallment,
       ),
       _NewEntryTile(
         icon: Icons.receipt_long_outlined,
-        title: 'Outra despesa',
-        subtitle: 'Estacionamento, pedágio, lavagem e outros',
+        title: tr.expenseOther,
+        subtitle: tr.homeOtherHint,
         onTap: onOther,
       ),
     ],
@@ -1102,14 +1192,14 @@ String _nextMaintenance(List<MaintenanceRecord> records, Vehicle? vehicle) {
       final remaining = record.nextMileage! - vehicle.mileage;
       candidates.add((
         distance: remaining,
-        label: remaining <= 0 ? 'Vencida' : '$remaining km',
+        label: remaining <= 0 ? tr.maintOverdue : '$remaining km',
       ));
     }
     if (record.nextDate != null) {
       final remaining = record.nextDate!.difference(now).inDays;
       candidates.add((
         distance: remaining,
-        label: remaining <= 0 ? 'Vencida' : '$remaining dias',
+        label: remaining <= 0 ? tr.maintOverdue : tr.daysCount(remaining),
       ));
     }
   }
@@ -1118,24 +1208,12 @@ String _nextMaintenance(List<MaintenanceRecord> records, Vehicle? vehicle) {
   return candidates.first.label;
 }
 
-String _dashboardMoney(double value) =>
-    'R\$ ${value.toStringAsFixed(2).replaceAll('.', ',')}';
-String _dashboardDecimal(double value) =>
-    value.toStringAsFixed(2).replaceAll('.', ',');
-String _dashboardMonth(int month) => const [
-  'Janeiro',
-  'Fevereiro',
-  'Março',
-  'Abril',
-  'Maio',
-  'Junho',
-  'Julho',
-  'Agosto',
-  'Setembro',
-  'Outubro',
-  'Novembro',
-  'Dezembro',
-][month - 1];
+String _dashboardMoney(double value) => formatMoney(value);
+String _dashboardDecimal(double value) => formatDecimal(value);
+String _dashboardMonth(DateTime month) {
+  final text = formatMonthYear(month);
+  return text[0].toUpperCase() + text.substring(1);
+}
 
 class _HomeBottomBar extends StatelessWidget {
   const _HomeBottomBar({
@@ -1165,29 +1243,29 @@ class _HomeBottomBar extends StatelessWidget {
           children: [
             _BottomDestination(
               icon: Icons.home_rounded,
-              label: 'Início',
+              label: tr.navHome,
               selected: true,
               onTap: onHome,
             ),
             _BottomDestination(
               icon: Icons.local_gas_station_outlined,
-              label: 'Abastecimentos',
+              label: tr.navFuelings,
               onTap: onFuelings,
             ),
             _BottomDestination(
               icon: Icons.add_rounded,
-              label: 'Novo',
+              label: tr.navNew,
               emphasized: true,
               onTap: onNewEntry,
             ),
             _BottomDestination(
               icon: Icons.build_circle_outlined,
-              label: 'Manutenções',
+              label: tr.maintTitle,
               onTap: onMaintenance,
             ),
             _BottomDestination(
               icon: Icons.grid_view_rounded,
-              label: 'Mais',
+              label: tr.navMore,
               onTap: onMore,
             ),
           ],
@@ -1263,16 +1341,26 @@ class _MoreMenuTile extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.onTap,
+    this.subtitle,
   });
   final IconData icon;
   final String title;
-  final VoidCallback onTap;
+  final String? subtitle;
+  // Nulo deixa o item desabilitado (ex.: período sem anúncios já ativo).
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) => ListTile(
-    leading: Icon(icon, color: AppColors.blue),
+    enabled: onTap != null,
+    leading: Icon(
+      icon,
+      color: onTap == null ? AppColors.muted : AppColors.blue,
+    ),
     title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-    trailing: const Icon(Icons.chevron_right_rounded),
+    subtitle: subtitle == null
+        ? null
+        : Text(subtitle!, style: const TextStyle(fontSize: 12)),
+    trailing: onTap == null ? null : const Icon(Icons.chevron_right_rounded),
     onTap: onTap,
   );
 }

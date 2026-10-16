@@ -3,15 +3,16 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../models/promotion_eligibility.dart';
+import '../services/access_service.dart';
 import '../services/account_cloud_service.dart';
 import '../services/authentication_service.dart';
-import '../services/access_service.dart';
-import '../services/cloud_backup_service.dart';
+import '../services/auto_backup_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/institutional_footer.dart';
 import 'backup_screen.dart';
 import 'login_screen.dart';
 import 'support_screen.dart';
+import '../l10n/l10n.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
@@ -22,11 +23,9 @@ class AccountScreen extends StatefulWidget {
 
 class _AccountScreenState extends State<AccountScreen> {
   final cloud = AccountCloudService();
-  final backupService = CloudBackupService();
   final referralController = TextEditingController();
   String? ownCode;
   PromotionEligibility? eligibility;
-  List<BackupSummary> backups = const [];
   bool loading = true;
   bool applying = false;
   DateTime? premiumFreeUntil = AccessService.instance.premiumFreeUntil;
@@ -47,12 +46,10 @@ class _AccountScreenState extends State<AccountScreen> {
         cloud.ensureProfile(),
         cloud.getPromotionEligibility(),
       ]);
-      final backupList = await backupService.listBackupsSafely();
       if (!mounted) return;
       setState(() {
         ownCode = values[0] as String;
         eligibility = values[1] as PromotionEligibility;
-        backups = backupList;
         loading = false;
       });
     } catch (_) {
@@ -74,15 +71,9 @@ class _AccountScreenState extends State<AccountScreen> {
       await cloud.applyReferralCode(referralController.text);
       await AccessService.instance.refreshSubscriptionOffers();
       await load();
-      if (mounted)
-        message(
-          'Código aplicado! O benefício será ativado após o primeiro pagamento.',
-        );
+      if (mounted) message(tr.referralApplied);
     } on Object catch (_) {
-      if (mounted)
-        message(
-          'Não foi possível aplicar esse código. Verifique e tente novamente.',
-        );
+      if (mounted) message(tr.referralApplyError);
     } finally {
       if (mounted) setState(() => applying = false);
     }
@@ -113,9 +104,9 @@ class _AccountScreenState extends State<AccountScreen> {
       await cloud.updatePremiumFreeUntil(until);
       if (!mounted) return;
       setState(() => premiumFreeUntil = until);
-      message('Acesso Premium gratuito atualizado.');
+      message(tr.adminPremiumUpdated);
     } on Object catch (_) {
-      if (mounted) message('Não foi possível atualizar o período.');
+      if (mounted) message(tr.adminPremiumUpdateError);
     }
   }
 
@@ -132,7 +123,7 @@ class _AccountScreenState extends State<AccountScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.navy,
         foregroundColor: Colors.white,
-        title: const Text('Minha conta'),
+        title: Text(tr.accountTitle),
       ),
       bottomNavigationBar: const SafeArea(
         top: false,
@@ -153,12 +144,12 @@ class _AccountScreenState extends State<AccountScreen> {
                         color: AppColors.blue,
                       ),
                       const SizedBox(height: 16),
-                      const Text(
+                      Text(
                         AccessService.freeModeEnabled
-                            ? 'Entre para usar backup em nuvem e suporte'
-                            : 'Entre para usar indicações e descontos',
+                            ? tr.accountSignInBackup
+                            : tr.accountSignInReferral,
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w800,
                         ),
@@ -172,7 +163,7 @@ class _AccountScreenState extends State<AccountScreen> {
                               ),
                               (_) => false,
                             ),
-                        child: const Text('ENTRAR COM GOOGLE'),
+                        child: Text(tr.loginWithGoogle),
                       ),
                     ]
                   : [
@@ -187,7 +178,7 @@ class _AccountScreenState extends State<AccountScreen> {
                               : null,
                         ),
                         title: Text(
-                          user.displayName ?? 'Usuário',
+                          user.displayName ?? tr.accountUser,
                           style: const TextStyle(fontWeight: FontWeight.w800),
                         ),
                         subtitle: Text(user.email ?? ''),
@@ -199,13 +190,11 @@ class _AccountScreenState extends State<AccountScreen> {
                             Icons.support_agent_rounded,
                             color: AppColors.blue,
                           ),
-                          title: const Text(
-                            'Ajuda, feedback e bugs',
-                            style: TextStyle(fontWeight: FontWeight.w800),
+                          title: Text(
+                            tr.supportTitle,
+                            style: const TextStyle(fontWeight: FontWeight.w800),
                           ),
-                          subtitle: const Text(
-                            'Envie e acompanhe seus chamados',
-                          ),
+                          subtitle: Text(tr.supportSubtitle),
                           trailing: const Icon(Icons.chevron_right_rounded),
                           onTap: () => Navigator.of(context).push<void>(
                             MaterialPageRoute<void>(
@@ -215,23 +204,24 @@ class _AccountScreenState extends State<AccountScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _BackupCard(
-                        isPremium:
-                            AccessService.freeModeEnabled ||
-                            AccessService.instance.subscriptionActive,
-                        lastBackup: backups.isEmpty ? null : backups.first,
-                        onTap: openBackup,
+                      AnimatedBuilder(
+                        animation: AutoBackupService.instance,
+                        builder: (context, _) => _BackupCard(
+                          isPremium: AccessService.instance.cloudBackupEnabled,
+                          lastBackupAt: AutoBackupService.instance.lastBackupAt,
+                          onTap: openBackup,
+                        ),
                       ),
                       if (user.email?.toLowerCase() ==
                           'giles.softwares@gmail.com') ...[
                         const SizedBox(height: 12),
                         _AccountCard(
-                          title: 'Administração do teste',
+                          title: tr.adminTitle,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Premium gratuito até ${_date(premiumFreeUntil)}',
+                                tr.adminPremiumUntil(_date(premiumFreeUntil)),
                               ),
                               const SizedBox(height: 10),
                               SizedBox(
@@ -241,7 +231,7 @@ class _AccountScreenState extends State<AccountScreen> {
                                   icon: const Icon(
                                     Icons.edit_calendar_outlined,
                                   ),
-                                  label: const Text('ALTERAR DATA'),
+                                  label: Text(tr.adminChangeDate),
                                 ),
                               ),
                             ],
@@ -253,7 +243,7 @@ class _AccountScreenState extends State<AccountScreen> {
                       if (!AccessService.freeModeEnabled) ...[
                         const SizedBox(height: 18),
                         _AccountCard(
-                          title: 'Seu código de indicação',
+                          title: tr.referralYourCode,
                           child: Row(
                             children: [
                               Expanded(
@@ -267,29 +257,28 @@ class _AccountScreenState extends State<AccountScreen> {
                                 ),
                               ),
                               IconButton(
-                                tooltip: 'Copiar código',
+                                tooltip: tr.referralCopy,
                                 onPressed: ownCode == null
                                     ? null
                                     : () async {
                                         await Clipboard.setData(
                                           ClipboardData(text: ownCode!),
                                         );
-                                        if (mounted) message('Código copiado.');
+                                        if (mounted) message(tr.referralCopied);
                                       },
                                 icon: const Icon(Icons.copy_rounded),
                               ),
                               IconButton(
-                                tooltip: 'Convidar um amigo',
+                                tooltip: tr.referralInvite,
                                 onPressed: ownCode == null
                                     ? null
                                     : () => SharePlus.instance.share(
                                         ShareParams(
                                           subject: 'MyCarApp',
-                                          text:
-                                              'Uso o MyCarApp pra controlar os gastos do carro. '
-                                              'Baixa com meu código de indicação $ownCode e '
-                                              'ganha desconto na assinatura: '
-                                              'https://play.google.com/store/apps/details?id=com.gilesdesenvolvimento.mycarapp',
+                                          text: tr.referralShareText(
+                                            ownCode!,
+                                            'https://play.google.com/store/apps/details?id=com.gilesdesenvolvimento.mycarapp',
+                                          ),
                                         ),
                                       ),
                                 icon: const Icon(Icons.share_outlined),
@@ -299,14 +288,15 @@ class _AccountScreenState extends State<AccountScreen> {
                         ),
                         const SizedBox(height: 12),
                         _AccountCard(
-                          title: 'Recebeu um código?',
+                          title: tr.referralReceived,
                           child: Column(
                             children: [
                               TextField(
                                 controller: referralController,
-                                textCapitalization: TextCapitalization.characters,
-                                decoration: const InputDecoration(
-                                  labelText: 'Código de indicação',
+                                textCapitalization:
+                                    TextCapitalization.characters,
+                                decoration: InputDecoration(
+                                  labelText: tr.referralCodeLabel,
                                 ),
                               ),
                               const SizedBox(height: 12),
@@ -315,7 +305,9 @@ class _AccountScreenState extends State<AccountScreen> {
                                 child: FilledButton(
                                   onPressed: applying ? null : applyCode,
                                   child: Text(
-                                    applying ? 'APLICANDO...' : 'APLICAR CÓDIGO',
+                                    applying
+                                        ? tr.referralApplying
+                                        : tr.referralApply,
                                   ),
                                 ),
                               ),
@@ -325,7 +317,7 @@ class _AccountScreenState extends State<AccountScreen> {
                         if (eligibility?.bestOfferTag != null) ...[
                           const SizedBox(height: 12),
                           _AccountCard(
-                            title: 'Melhor oferta disponível',
+                            title: tr.bestOffer,
                             child: Text(
                               _offerName(eligibility!.bestOfferTag!),
                               style: const TextStyle(
@@ -349,7 +341,7 @@ class _AccountScreenState extends State<AccountScreen> {
                           );
                         },
                         icon: const Icon(Icons.logout_rounded),
-                        label: const Text('SAIR DA CONTA'),
+                        label: Text(tr.signOut),
                       ),
                     ],
             ),
@@ -360,12 +352,12 @@ class _AccountScreenState extends State<AccountScreen> {
 class _BackupCard extends StatelessWidget {
   const _BackupCard({
     required this.isPremium,
-    required this.lastBackup,
+    required this.lastBackupAt,
     required this.onTap,
   });
 
   final bool isPremium;
-  final BackupSummary? lastBackup;
+  final DateTime? lastBackupAt;
   final VoidCallback onTap;
 
   @override
@@ -382,43 +374,45 @@ class _BackupCard extends StatelessWidget {
             ),
             borderRadius: BorderRadius.circular(17),
           ),
-          child: const Row(
+          child: Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.cloud_upload_outlined,
                 color: AppColors.gold,
                 size: 28,
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Backup em nuvem é Premium',
-                      style: TextStyle(
+                      tr.backupIsPremium,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     Text(
-                      'Proteja seu histórico contra perda ao trocar de aparelho.',
-                      style: TextStyle(color: Colors.white70, fontSize: 11.5),
+                      tr.accountBackupPitch,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11.5,
+                      ),
                     ),
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right_rounded, color: Colors.white70),
+              const Icon(Icons.chevron_right_rounded, color: Colors.white70),
             ],
           ),
         ),
       );
     }
 
-    final backup = lastBackup;
-    final stale = backup == null
-        ? true
-        : DateTime.now().difference(backup.createdAt).inDays >= 7;
+    final backupAt = lastBackupAt;
+    final stale =
+        backupAt == null || DateTime.now().difference(backupAt).inDays >= 7;
     return Card(
       elevation: 0,
       child: ListTile(
@@ -426,16 +420,16 @@ class _BackupCard extends StatelessWidget {
           Icons.cloud_done_outlined,
           color: stale ? Colors.orange : Colors.green,
         ),
-        title: const Text(
-          'Backup e restauração',
-          style: TextStyle(fontWeight: FontWeight.w800),
+        title: Text(
+          tr.backupTitle,
+          style: const TextStyle(fontWeight: FontWeight.w800),
         ),
         subtitle: Text(
-          backup == null
-              ? 'Nenhum backup ainda'
+          backupAt == null
+              ? tr.backupAutoActive
               : stale
-              ? 'Último backup há ${DateTime.now().difference(backup.createdAt).inDays} dia(s)'
-              : 'Último backup em ${_shortDate(backup.createdAt)}',
+              ? tr.backupDaysAgo(DateTime.now().difference(backupAt).inDays)
+              : tr.backupLastOn(_shortDate(backupAt)),
         ),
         trailing: const Icon(Icons.chevron_right_rounded),
         onTap: onTap,
@@ -445,8 +439,7 @@ class _BackupCard extends StatelessWidget {
 }
 
 String _shortDate(DateTime value) =>
-    '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')} às '
-    '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+    tr.dateAtTime(formatDayMonth(value), formatTime(value));
 
 class _AccountCard extends StatelessWidget {
   const _AccountCard({required this.title, required this.child});
@@ -472,13 +465,12 @@ class _AccountCard extends StatelessWidget {
 }
 
 String _offerName(String tag) => switch (tag) {
-  'closed-test-3m-70' => '70% de desconto por 3 meses',
-  'closed-test-yr-70' => '70% de desconto no primeiro ano',
-  'first-1000-annual-pl' => '50% de desconto no primeiro ano',
-  'referral-3m-50' => '50% de desconto por 3 meses',
-  _ => 'Oferta especial MyCarApp',
+  'closed-test-3m-70' => tr.offerClosedTest3m,
+  'closed-test-yr-70' => tr.offerClosedTestYear,
+  'first-1000-annual-pl' => tr.offerFounders,
+  'referral-yr-30' => tr.offerReferral,
+  'referral-3m-50' => tr.offerReferralOld,
+  _ => tr.offerSpecial,
 };
 
-String _date(DateTime? value) => value == null
-    ? 'não definida'
-    : '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}/${value.year}';
+String _date(DateTime? value) => value == null ? tr.notSet : formatDate(value);

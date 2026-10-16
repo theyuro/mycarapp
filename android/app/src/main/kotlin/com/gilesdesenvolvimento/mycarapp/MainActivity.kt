@@ -23,7 +23,7 @@ class MainActivity : FlutterActivity() {
                 result.notImplemented()
                 return@setMethodCallHandler
             }
-            val title = call.argument<String>("title") ?: "MyCarApp Manutenção"
+            val title = call.argument<String>("title") ?: getString(R.string.calendar_event_title)
             val description = call.argument<String>("description") ?: ""
             val start = call.argument<Number>("date")?.toLong()
             if (start == null) {
@@ -66,7 +66,7 @@ class MainActivity : FlutterActivity() {
                 "scheduleMaintenance" -> {
                     val id = call.argument<String>("id") ?: System.currentTimeMillis().toString()
                     val date = call.argument<Number>("date")?.toLong()
-                    val message = call.argument<String>("message") ?: "Manutenção programada"
+                    val message = call.argument<String>("message") ?: getString(R.string.maintenance_scheduled)
                     if (date == null) {
                         result.error("INVALID_DATE", "Data não informada.", null)
                     } else {
@@ -111,7 +111,7 @@ class MainActivity : FlutterActivity() {
         val channelId = "mycarapp_alerts"
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             manager.createNotificationChannel(
-                NotificationChannel(channelId, "Alertas do MyCarApp", NotificationManager.IMPORTANCE_DEFAULT)
+                NotificationChannel(channelId, getString(R.string.notification_channel_alerts), NotificationManager.IMPORTANCE_DEFAULT)
             )
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
