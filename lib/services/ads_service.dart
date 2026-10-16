@@ -266,45 +266,24 @@ class AdsService extends ChangeNotifier {
     unawaited(ad.show());
   }
 
-  /// Retorna o motivo que impede o intersticial agora, ou nulo se todas as
-  /// regras de frequência foram cumpridas.
+  /// Retorna o motivo que impede o intersticial agora, ou nulo se ele pode
+  /// ser exibido. Só há duas regras: o contador de atividades e o período
+  /// sem anúncios ganho no vídeo premiado.
   ///
   /// Com [pendingActivities] > 0 avalia o momento em que a atividade em
-  /// andamento for salva (usado no pré-carregamento); o intervalo mínimo é
-  /// ignorado nesse caso, pois costuma passar enquanto o formulário é
-  /// preenchido.
+  /// andamento for salva (usado no pré-carregamento).
   String? _interstitialBlockedBy({int pendingActivities = 0}) {
     final config = AdsConfig.instance;
-    final now = DateTime.now();
-    _state.rollDay(now);
     final activities = _state.activitiesSinceInterstitial + pendingActivities;
     if (activities < config.interstitialActivitiesPerShow) {
       return 'contador $activities/${config.interstitialActivitiesPerShow}';
-    }
-    final last = _state.lastInterstitialAt;
-    if (pendingActivities == 0 &&
-        last != null &&
-        now.difference(last) < config.interstitialMinInterval) {
-      return 'intervalo mínimo';
-    }
-    if (_state.interstitialsToday >= config.interstitialMaxPerDay) {
-      return 'limite diário ${_state.interstitialsToday}/'
-          '${config.interstitialMaxPerDay}';
-    }
-    final firstOpen = _state.firstOpenAt ?? now;
-    if (now.difference(firstOpen).inDays < config.interstitialGraceDays) {
-      return 'carência de ${config.interstitialGraceDays} dias';
     }
     if (adFreeActive) return 'período sem anúncios em tela cheia';
     return null;
   }
 
   void _recordInterstitialShown() {
-    final now = DateTime.now();
-    _state.rollDay(now);
     _state.activitiesSinceInterstitial = 0;
-    _state.lastInterstitialAt = now;
-    _state.interstitialsToday++;
     unawaited(_saveState());
     _logEvent('ad_interstitial_shown');
   }
@@ -473,20 +452,10 @@ class AdsService extends ChangeNotifier {
         legacy = candidate;
         _state.activitiesSinceInterstitial =
             int.tryParse((await candidate.readAsString()).trim()) ?? 0;
-        // Quem já tinha o contador antigo usa o app há tempo: a carência de
-        // dias sem intersticial não vale para essa pessoa.
-        _state.firstOpenAt ??= DateTime.now().subtract(
-          const Duration(days: 365),
-        );
         changed = true;
       }
     } on Object catch (error) {
       debugPrint('Não foi possível ler o contador de anúncios: $error');
-    }
-    if (_state.firstOpenAt == null) {
-      // Usuário novo: a carência começa a contar agora.
-      _state.firstOpenAt = DateTime.now();
-      changed = true;
     }
     if (!changed) return;
     final saved = await _saveState();
@@ -542,8 +511,8 @@ class AdsService extends ChangeNotifier {
   Future<void> initialize() async {
     if (!supported || _initialized) return;
     _initialized = true;
-    // Lê o estado logo na abertura, para gravar a primeira abertura (base da
-    // carência) e já saber se há período sem anúncios ativo.
+    // Lê o estado logo na abertura, para já saber se há período sem anúncios
+    // ativo.
     unawaited(ensureStateLoaded().then((_) => notifyListeners()));
 
     await MobileAds.instance.initialize();
@@ -642,44 +611,20 @@ class AdsService extends ChangeNotifier {
 /// Estado dos anúncios persistido em `ads_state.json`.
 class _AdsState {
   int activitiesSinceInterstitial = 0;
-  DateTime? lastInterstitialAt;
-  int interstitialsToday = 0;
-  // Data local (aaaa-mm-dd) a que [interstitialsToday] se refere.
-  String? interstitialsDate;
-  DateTime? firstOpenAt;
   DateTime? adFreeUntil;
   DateTime? lastPremiumAfterAdAt;
 
-  /// Zera o contador diário quando a data local muda.
-  void rollDay(DateTime now) {
-    final today = _dayKey(now);
-    if (interstitialsDate == today) return;
-    interstitialsDate = today;
-    interstitialsToday = 0;
-  }
-
-  static String _dayKey(DateTime value) =>
-      '${value.year.toString().padLeft(4, '0')}-'
-      '${value.month.toString().padLeft(2, '0')}-'
-      '${value.day.toString().padLeft(2, '0')}';
-
+  // Chaves antigas (limite diário, intervalo, carência) que ainda existam no
+  // arquivo são ignoradas e somem na próxima gravação.
   void readJson(Map<String, dynamic> json) {
     activitiesSinceInterstitial =
         (json['activitiesSinceInterstitial'] as num?)?.toInt() ?? 0;
-    lastInterstitialAt = _date(json['lastInterstitialAt']);
-    interstitialsToday = (json['interstitialsToday'] as num?)?.toInt() ?? 0;
-    interstitialsDate = json['interstitialsDate'] as String?;
-    firstOpenAt = _date(json['firstOpenAt']);
     adFreeUntil = _date(json['adFreeUntil']);
     lastPremiumAfterAdAt = _date(json['lastPremiumAfterAdAt']);
   }
 
   Map<String, dynamic> toJson() => {
     'activitiesSinceInterstitial': activitiesSinceInterstitial,
-    'lastInterstitialAt': lastInterstitialAt?.toIso8601String(),
-    'interstitialsToday': interstitialsToday,
-    'interstitialsDate': interstitialsDate,
-    'firstOpenAt': firstOpenAt?.toIso8601String(),
     'adFreeUntil': adFreeUntil?.toIso8601String(),
     'lastPremiumAfterAdAt': lastPremiumAfterAdAt?.toIso8601String(),
   };

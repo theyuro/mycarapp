@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../models/maintenance_record.dart';
 import '../models/vehicle.dart';
-import '../services/ads_config.dart';
 import '../services/maintenance_storage_service.dart';
 import '../services/premium_upsell_service.dart';
 import '../services/vehicle_storage_service.dart';
@@ -166,13 +165,12 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
       ..sort((a, b) => b.date.compareTo(a.date));
     final upcoming = records.where((item) => !item.isCompleted).toList()
       ..sort((a, b) => a.date.compareTo(b.date));
-    // Anúncios nativos intercalados; as duas abas dividem o limite por tela.
+    // Anúncios nativos intercalados; a segunda aba continua a numeração das
+    // vagas para não repetir chaves.
     final completedEntries = withNativeAds(completed);
-    final usedAds = nativeAdCount(completedEntries);
     final upcomingEntries = withNativeAds(
       upcoming,
-      maxAds: AdsConfig.instance.nativeMaxPerScreen - usedAds,
-      firstSlot: usedAds,
+      firstSlot: nativeAdCount(completedEntries),
     );
     return DefaultTabController(
       length: 2,

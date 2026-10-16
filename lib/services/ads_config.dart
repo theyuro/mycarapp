@@ -16,33 +16,23 @@ class AdsConfig {
 
   // Chaves publicadas no Remote Config.
   static const _activitiesPerShow = 'interstitial_activities_per_show';
-  static const _minIntervalMinutes = 'interstitial_min_interval_minutes';
-  static const _maxPerDay = 'interstitial_max_per_day';
-  static const _graceDays = 'interstitial_grace_days';
   static const _premiumAfterAdEnabled = 'premium_after_ad_enabled';
   static const _premiumAfterAdIntervalDays = 'premium_after_ad_interval_days';
   static const _rewardedEnabled = 'rewarded_enabled';
   static const _rewardedAdFreeHours = 'rewarded_ad_free_hours';
   static const _nativeEnabled = 'native_enabled';
   static const _nativeEveryNItems = 'native_every_n_items';
-  static const _nativeMinItems = 'native_min_items';
-  static const _nativeMaxPerScreen = 'native_max_per_screen';
 
   /// Valores usados enquanto o Remote Config não respondeu, se ele falhar ou
   /// se o parâmetro não existir no console.
   static const defaults = <String, Object>{
     _activitiesPerShow: 1,
-    _minIntervalMinutes: 3,
-    _maxPerDay: 5,
-    _graceDays: 2,
     _premiumAfterAdEnabled: true,
     _premiumAfterAdIntervalDays: 7,
     _rewardedEnabled: true,
     _rewardedAdFreeHours: 3,
     _nativeEnabled: true,
-    _nativeEveryNItems: 7,
-    _nativeMinItems: 3,
-    _nativeMaxPerScreen: 3,
+    _nativeEveryNItems: 5,
   };
 
   bool _initialized = false;
@@ -101,19 +91,11 @@ class AdsConfig {
     return defaults[key]! as bool;
   }
 
-  /// Registros necessários para liberar um intersticial (mínimo 1).
+  /// Registros necessários para liberar um intersticial (mínimo 1). Não há
+  /// intervalo mínimo, limite diário nem carência: o único período sem
+  /// intersticial é o ganho no vídeo premiado.
   int get interstitialActivitiesPerShow =>
       math.max(1, _int(_activitiesPerShow));
-
-  /// Intervalo mínimo entre dois intersticiais.
-  Duration get interstitialMinInterval =>
-      Duration(minutes: math.max(0, _int(_minIntervalMinutes)));
-
-  /// Máximo de intersticiais por dia (data local).
-  int get interstitialMaxPerDay => math.max(0, _int(_maxPerDay));
-
-  /// Dias, contados da primeira abertura, sem nenhum intersticial.
-  int get interstitialGraceDays => math.max(0, _int(_graceDays));
 
   /// Liga/desliga o convite Premium depois do intersticial.
   bool get premiumAfterAdEnabled => _bool(_premiumAfterAdEnabled);
@@ -131,12 +113,6 @@ class AdsConfig {
   /// Liga/desliga os anúncios nativos nas listas.
   bool get nativeEnabled => _bool(_nativeEnabled);
 
-  /// Um nativo a cada N itens da lista (mínimo 1).
+  /// Um nativo a cada N itens da lista (mínimo 1), sem máximo por tela.
   int get nativeEveryNItems => math.max(1, _int(_nativeEveryNItems));
-
-  /// A lista precisa ter ao menos N itens para exibir nativos.
-  int get nativeMinItems => math.max(0, _int(_nativeMinItems));
-
-  /// Máximo de nativos por tela.
-  int get nativeMaxPerScreen => math.max(0, _int(_nativeMaxPerScreen));
 }

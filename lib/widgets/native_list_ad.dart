@@ -32,30 +32,20 @@ class NativeListAdSlot<T> extends NativeListEntry<T> {
 }
 
 /// Intercala vagas de anúncio nativo em [items]: uma depois de cada
-/// `native_every_n_items` itens, só se a lista tiver ao menos
-/// `native_min_items` e até `native_max_per_screen` vagas. [maxAds] permite
-/// dividir o limite entre várias listas da mesma tela; [firstSlot] numera as
-/// vagas sem repetir chaves entre elas.
+/// `native_every_n_items` itens, sem limite de vagas por tela. [firstSlot]
+/// numera as vagas sem repetir chaves entre listas da mesma tela.
 ///
 /// Se os nativos estiverem desligados no Remote Config, devolve só os itens.
 /// A decisão de exibir (Premium, consentimento) fica com o [NativeListAd].
-List<NativeListEntry<T>> withNativeAds<T>(
-  List<T> items, {
-  int? maxAds,
-  int firstSlot = 0,
-}) {
+List<NativeListEntry<T>> withNativeAds<T>(List<T> items, {int firstSlot = 0}) {
   final config = AdsConfig.instance;
-  final limit = maxAds ?? config.nativeMaxPerScreen;
-  final insertAds =
-      config.nativeEnabled &&
-      limit > 0 &&
-      items.length >= config.nativeMinItems;
+  final insertAds = config.nativeEnabled;
   final every = config.nativeEveryNItems;
   final entries = <NativeListEntry<T>>[];
   var ads = 0;
   for (var index = 0; index < items.length; index++) {
     entries.add(NativeListItem(items[index], index));
-    if (insertAds && (index + 1) % every == 0 && ads < limit) {
+    if (insertAds && (index + 1) % every == 0) {
       entries.add(NativeListAdSlot(firstSlot + ads));
       ads++;
     }
