@@ -197,6 +197,35 @@ class AdsService extends ChangeNotifier {
   /// anúncios) foi lido do disco.
   Future<void> ensureStateLoaded() => _stateLoaded ??= _loadState();
 
+  /// Chamado quando o usuário começa uma atividade principal (abre um
+  /// formulário de registro). Carrega o intersticial só se ele puder ser
+  /// exibido ao salvar: um anúncio carregado e nunca exibido conta como
+  /// solicitação correspondida sem impressão e derruba a taxa de exibição.
+  void prepareInterstitial() => unawaited(_prepareInterstitial());
+
+  Future<void> _prepareInterstitial() async {
+    if (!_shouldShowAds) return;
+    await ensureStateLoaded();
+    _discardExpiredInterstitial();
+    if (_interstitial != null || _loadingInterstitial) return;
+    final blockedBy = _interstitialBlockedBy(pendingActivities: 1);
+    if (blockedBy != null) {
+      debugPrint('Anúncios: intersticial não pré-carregado ($blockedBy).');
+      return;
+    }
+    _loadInterstitial();
+  }
+
+  void _discardExpiredInterstitial() {
+    final loadedAt = _interstitialLoadedAt;
+    if (_interstitial != null &&
+        loadedAt != null &&
+        DateTime.now().difference(loadedAt) > _interstitialMaxAge) {
+      _interstitial!.dispose();
+      _interstitial = null;
+    }
+  }
+
   /// Registra uma atividade principal concluída e, quando as regras de
   /// frequência permitem, exibe o intersticial.
   void registerMainActivity() => unawaited(_registerMainActivity());
@@ -208,21 +237,15 @@ class AdsService extends ChangeNotifier {
     unawaited(_saveState());
     final blockedBy = _interstitialBlockedBy();
     if (blockedBy != null) {
+      // Não carrega aqui: o próximo formulário aberto chama
+      // [prepareInterstitial], que decide se vale a pena.
       debugPrint('Anúncios: intersticial adiado ($blockedBy).');
-      _loadInterstitial();
       return;
     }
-    final loadedAt = _interstitialLoadedAt;
-    if (_interstitial != null &&
-        loadedAt != null &&
-        DateTime.now().difference(loadedAt) > _interstitialMaxAge) {
-      _interstitial!.dispose();
-      _interstitial = null;
-    }
+    _discardExpiredInterstitial();
     final ad = _interstitial;
     if (ad == null) {
-      // Ainda não carregou: tenta de novo na próxima atividade.
-      _loadInterstitial();
+      // Não carregou a tempo: o próximo formulário tenta de novo.
       return;
     }
     _interstitial = null;
@@ -230,7 +253,6 @@ class AdsService extends ChangeNotifier {
       onAdShowedFullScreenContent: (_) => _recordInterstitialShown(),
       onAdDismissedFullScreenContent: (ad) {
         ad.dispose();
-        _loadInterstitial();
         onInterstitialDismissed?.call();
       },
       onAdFailedToShowFullScreenContent: (ad, error) {
@@ -239,7 +261,6 @@ class AdsService extends ChangeNotifier {
           'code=${error.code} domain=${error.domain} ${error.message}',
         );
         ad.dispose();
-        _loadInterstitial();
       },
     );
     unawaited(ad.show());
@@ -247,17 +268,23 @@ class AdsService extends ChangeNotifier {
 
   /// Retorna o motivo que impede o intersticial agora, ou nulo se todas as
   /// regras de frequência foram cumpridas.
-  String? _interstitialBlockedBy() {
+  ///
+  /// Com [pendingActivities] > 0 avalia o momento em que a atividade em
+  /// andamento for salva (usado no pré-carregamento); o intervalo mínimo é
+  /// ignorado nesse caso, pois costuma passar enquanto o formulário é
+  /// preenchido.
+  String? _interstitialBlockedBy({int pendingActivities = 0}) {
     final config = AdsConfig.instance;
     final now = DateTime.now();
     _state.rollDay(now);
-    if (_state.activitiesSinceInterstitial <
-        config.interstitialActivitiesPerShow) {
-      return 'contador ${_state.activitiesSinceInterstitial}/'
-          '${config.interstitialActivitiesPerShow}';
+    final activities = _state.activitiesSinceInterstitial + pendingActivities;
+    if (activities < config.interstitialActivitiesPerShow) {
+      return 'contador $activities/${config.interstitialActivitiesPerShow}';
     }
     final last = _state.lastInterstitialAt;
-    if (last != null && now.difference(last) < config.interstitialMinInterval) {
+    if (pendingActivities == 0 &&
+        last != null &&
+        now.difference(last) < config.interstitialMinInterval) {
       return 'intervalo mínimo';
     }
     if (_state.interstitialsToday >= config.interstitialMaxPerDay) {
@@ -317,10 +344,11 @@ class AdsService extends ChangeNotifier {
     var earned = false;
     final completion = Completer<RewardedResult>();
     ad.fullScreenContentCallback = FullScreenContentCallback(
+      // Não recarrega depois de exibir: o vídeo só é pedido quando o usuário
+      // abre uma tela que oferece a recompensa (menu "Mais" ou convite).
       onAdDismissedFullScreenContent: (ad) {
         ad.dispose();
         _showingRewarded = false;
-        loadRewarded();
         if (!completion.isCompleted) {
           completion.complete(
             earned ? RewardedResult.earned : RewardedResult.notEarned,
@@ -334,7 +362,6 @@ class AdsService extends ChangeNotifier {
         );
         ad.dispose();
         _showingRewarded = false;
-        loadRewarded();
         if (!completion.isCompleted) {
           completion.complete(RewardedResult.unavailable);
         }
@@ -596,9 +623,10 @@ class AdsService extends ChangeNotifier {
     } on Object {
       // Firebase indisponível.
     }
+    // Nada é pré-carregado aqui: intersticial e vídeo premiado carregados na
+    // abertura do app quase nunca eram exibidos (o usuário abre, consulta e
+    // fecha), o que derrubava a taxa de exibição no AdMob.
     notifyListeners();
-    _loadInterstitial();
-    loadRewarded();
   }
 
   Future<String?> showPrivacyOptions() async {

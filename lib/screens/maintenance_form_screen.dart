@@ -81,6 +81,7 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
   void initState() {
     super.initState();
     final record = widget.record;
+    if (record == null) AdsService.instance.prepareInterstitial();
     isCompleted = record?.isCompleted ?? widget.initialCompleted;
     category = record?.category ?? categories.first;
     if (!categories.contains(category)) category = categories.last;

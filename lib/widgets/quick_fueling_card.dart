@@ -32,10 +32,20 @@ class _QuickFuelingCardState extends State<QuickFuelingCard> {
   void initState() {
     super.initState();
     loadVehicle();
+    litersController.addListener(_prepareInterstitial);
+  }
+
+  // O card fica na tela inicial: o intersticial só é pré-carregado quando o
+  // usuário começa a digitar, não a cada abertura do app.
+  void _prepareInterstitial() {
+    if (litersController.text.isEmpty) return;
+    litersController.removeListener(_prepareInterstitial);
+    AdsService.instance.prepareInterstitial();
   }
 
   @override
   void dispose() {
+    litersController.removeListener(_prepareInterstitial);
     litersController.dispose();
     priceController.dispose();
     super.dispose();
@@ -113,6 +123,10 @@ class _QuickFuelingCardState extends State<QuickFuelingCard> {
       priceController.clear();
       showMessage(tr.quickFuelingAdded);
       AdsService.instance.registerMainActivity();
+      // Volta a observar o campo para o próximo abastecimento rápido.
+      litersController
+        ..removeListener(_prepareInterstitial)
+        ..addListener(_prepareInterstitial);
     } catch (_) {
       if (mounted) showMessage(tr.fuelingSaveError);
     } finally {

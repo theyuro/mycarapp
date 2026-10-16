@@ -72,6 +72,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       message(tr.expenseNeedVehicle);
       return;
     }
+    if (expense == null) AdsService.instance.prepareInterstitial();
     final saved = await showModalBottomSheet<VehicleExpense>(
       context: context,
       isScrollControlled: true,

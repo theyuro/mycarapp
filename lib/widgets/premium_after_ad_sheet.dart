@@ -28,6 +28,9 @@ Future<void> showPremiumAfterAdSheet(BuildContext context) async {
     if (!context.mounted) return;
     await AdsService.instance.markPremiumAfterAdShown();
     if (!context.mounted) return;
+    // O convite oferece o vídeo premiado: carrega só agora, enquanto o
+    // usuário lê, em vez de deixar um vídeo carregado desde a abertura.
+    if (rewardedOfferAvailable) AdsService.instance.loadRewarded();
     final choice = await showModalBottomSheet<_AfterAdChoice>(
       context: context,
       backgroundColor: Colors.transparent,

@@ -70,6 +70,7 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
   void initState() {
     super.initState();
     final record = widget.record;
+    if (record == null) AdsService.instance.prepareInterstitial();
     date = record?.date ?? DateTime.now();
     fuelType = _initialFuelType(record?.fuelType ?? widget.vehicle.fuel);
     fullTank = record?.fullTank ?? false;
