@@ -5,6 +5,7 @@ import '../services/account_cloud_service.dart';
 import '../theme/app_colors.dart';
 import 'login_screen.dart';
 import '../l10n/l10n.dart';
+import '../widgets/responsive_sheet.dart';
 
 class SupportScreen extends StatefulWidget {
   const SupportScreen({super.key});
@@ -47,7 +48,7 @@ class _SupportScreenState extends State<SupportScreen> {
   }
 
   Future<void> openNewTicket() async {
-    final created = await showModalBottomSheet<bool>(
+    final created = await showResponsiveSheet<bool>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -61,6 +62,7 @@ class _SupportScreenState extends State<SupportScreen> {
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => _TicketDetailScreen(ticket: ticket, isAdmin: isAdmin),
+        settings: const RouteSettings(name: 'support_ticket'),
       ),
     );
     if (changed == true) await load();
@@ -91,7 +93,10 @@ class _SupportScreenState extends State<SupportScreen> {
         : cloud.currentUser == null
         ? _SignInRequired(
             onTap: () => Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+              MaterialPageRoute<void>(
+                builder: (_) => const LoginScreen(),
+                settings: const RouteSettings(name: 'login'),
+              ),
               (_) => false,
             ),
           )

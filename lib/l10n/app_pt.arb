@@ -19,29 +19,37 @@
   "upsellNoAdsText": "Assine o Premium e use o MyCarApp sem interrupções.",
   "upsellBackupTitle": "Seu histórico protegido",
   "upsellBackupText": "Backup automático na nuvem, com fotos e documentos.",
-  "upsellReportsTitle": "Novos relatórios",
-  "upsellReportsText": "Assinantes Premium recebem os novos relatórios do app.",
-  "upsellUpdatesTitle": "Atualizações exclusivas",
-  "upsellUpdatesText": "Novidades lançadas primeiro para quem é Premium.",
-  "upsellVehiclesTitle": "Fotos e dados do veículo seguros",
-  "upsellVehiclesText": "Com o Premium, tudo vai para a nuvem automaticamente.",
+  "upsellVehiclesTitle": "Veículos ilimitados",
+  "upsellVehiclesText": "Assinantes Premium cadastram quantos veículos quiserem.",
+  "upsellReceiptTitle": "Leitura automática da nota fiscal",
+  "upsellReceiptText": "Fotografe a nota e deixe o Premium preencher o abastecimento pra você.",
   "upsellAdsTitle": "Use sem anúncios",
   "upsellAdsText": "Assine o Premium e tire os anúncios do app.",
-  "upsellFuelingTitle": "Não perca seus abastecimentos",
-  "upsellFuelingText": "Backup automático na nuvem, inclusive dos comprovantes.",
-  "upsellMaintenanceTitle": "Guarde o histórico de manutenção",
-  "upsellMaintenanceText": "Com o backup automático, ele não se perde se o celular quebrar.",
-  "upsellExpensesTitle": "Novos relatórios no Premium",
-  "upsellExpensesText": "Assine e receba os novos relatórios e atualizações exclusivas.",
+  "upsellFuelingTitle": "Abastecimentos sem vídeo",
+  "upsellFuelingText": "Assinantes Premium registram todos os abastecimentos do mês sem assistir a vídeos.",
+  "upsellMaintenanceTitle": "Manutenções e despesas sem vídeo",
+  "upsellMaintenanceText": "Assinantes Premium registram sem precisar assistir a vídeos.",
+  "upsellExpensesTitle": "Relatórios por período",
+  "upsellExpensesText": "Assine e compare seus gastos em qualquer período, não só no padrão do app.",
   "afterAdTitle": "Cansou dos anúncios?",
   "afterAdSubtitle": "Assine o MyCarApp Premium",
-  "premiumPrices": "R$ 15/mês ou R$ 100/ano",
+  "afterAdPriceFrom": "a partir de {price}/mês",
+  "@afterAdPriceFrom": {
+    "placeholders": {
+      "price": {
+        "type": "Object"
+      }
+    }
+  },
+  "subscriptionPlansAvailable": "Planos mensal e anual",
   "afterAdSubscribe": "ASSINAR O PREMIUM",
   "notNow": "Agora não",
   "recoRatingText": "Gostando de acompanhar seus gastos? Conta pra gente na Play Store.",
   "recoReferralText": "Curtiu o MyCarApp? Indique um amigo e ganhe desconto na assinatura.",
   "recoRate": "AVALIAR",
   "recoRefer": "INDICAR",
+  "houseAdAuctionText": "Leilões de imóveis e veículos do ES em um só lugar.",
+  "houseAdAuctionCta": "VER LEILÕES",
   "attachmentNotFound": "O anexo não foi encontrado.",
   "attachmentOpenError": "Não foi possível abrir este anexo.",
   "attachmentRemove": "Remover anexo",
@@ -83,10 +91,24 @@
   "featureNoAdsText": "Assinantes Premium usam o MyCarApp sem nenhum anúncio.",
   "featureBackupTitle": "Backup automático na nuvem",
   "featureBackupText": "Tudo é salvo na sua conta automaticamente, inclusive fotos e documentos. Troque de celular sem perder nada.",
-  "featureReportsTitle": "Novos relatórios",
-  "featureReportsText": "Assinantes recebem os novos relatórios do MyCarApp.",
-  "featureUpdatesTitle": "Atualizações exclusivas",
-  "featureUpdatesText": "Novidades lançadas primeiro, ou só, para assinantes Premium.",
+  "featureVehiclesTitle": "Mais veículos",
+  "featureVehiclesText": "Assinantes Premium cadastram quantos veículos quiserem.",
+  "featureFuelingsTitle": "Abastecimentos ilimitados",
+  "featureFuelingsText": "Registre todos os abastecimentos do mês sem precisar assistir a vídeos.",
+  "featureMaintenanceTitle": "Manutenções e despesas sem limite",
+  "featureMaintenanceText": "Registre manutenções, despesas e alertas sem assistir a vídeos.",
+  "featureReceiptScanTitle": "Leitura de nota fiscal",
+  "featureReceiptScanText": "Fotografe a nota e deixe o MyCarApp preencher o abastecimento pra você.",
+  "featureStationRankingTitle": "Ranking completo de postos",
+  "featureStationRankingText": "Veja o ranking completo dos postos onde seu carro rende mais.",
+  "featurePeriodReportsTitle": "Relatórios por período",
+  "featurePeriodReportsText": "Compare gastos e consumo em qualquer período, não só no padrão do app.",
+  "featureExportTitle": "Exportação em CSV e Excel",
+  "featureExportText": "Exporte seus dados em CSV ou Excel sempre que quiser.",
+  "featurePdfTitle": "Exportação em PDF",
+  "featurePdfText": "Gere o PDF do relatório sem precisar assistir a um vídeo.",
+  "featureSyncTitle": "Sincronização entre aparelhos",
+  "featureSyncText": "Seus dados acompanham você ao trocar de celular.",
   "premiumYouArePremium": "Você é Premium",
   "premiumFreePlan": "Você está no plano gratuito",
   "premiumActive": "Sua assinatura do MyCarApp está ativa.",
@@ -107,6 +129,40 @@
   "premiumBackToApp": "VOLTAR AO APP",
   "benefitNoAds": "Sem anúncios",
   "benefitBackup": "Backup automático na nuvem, com fotos e documentos",
+  "benefitVehicles": "Veículos ilimitados",
+  "benefitMaintenanceNoVideo": "Manutenções e despesas sem vídeo",
+  "benefitReceiptScan": "Leitura automática da nota fiscal",
+  "benefitStationRanking": "Ranking completo de postos",
+  "benefitExport": "Exportação em CSV, Excel e PDF",
+  "subscriptionRestore": "Restaurar compra",
+  "subscriptionFreeTrialBadge": "7 DIAS GRÁTIS",
+  "subscriptionSaveBadge": "ECONOMIZE {percent}%",
+  "@subscriptionSaveBadge": {
+    "placeholders": {
+      "percent": {
+        "type": "Object"
+      }
+    }
+  },
+  "subscriptionBilledMonthly": "cobrado todo mês",
+  "subscriptionStartFreeTrial": "COMEÇAR 7 DIAS GRÁTIS",
+  "subscriptionSubscribeMonthly": "ASSINAR POR {price}/MÊS",
+  "@subscriptionSubscribeMonthly": {
+    "placeholders": {
+      "price": {
+        "type": "Object"
+      }
+    }
+  },
+  "subscriptionBillingTrial": "Grátis por 7 dias, depois {price} por ano.",
+  "@subscriptionBillingTrial": {
+    "placeholders": {
+      "price": {
+        "type": "Object"
+      }
+    }
+  },
+  "subscriptionBillingAuto": "Renovação automática. Cancele quando quiser na Play Store.",
   "planAnnual": "Plano anual",
   "planMonthly": "Plano mensal",
   "perYear": "{price}/ano",
@@ -314,7 +370,34 @@
   "offerFounders": "50% de desconto no primeiro ano",
   "offerReferral": "30% de desconto no primeiro ano",
   "offerReferralOld": "50% de desconto por 3 meses",
+  "offerYearlyTrial": "7 dias grátis no plano anual",
   "offerSpecial": "Oferta especial MyCarApp",
+  "watchAndSave": "ASSISTIR VÍDEO E SALVAR",
+  "freeLimitVehicleTitle": "Este veículo é somente consulta",
+  "freeLimitVehicleText": "No plano gratuito, só o primeiro veículo cadastrado aceita novos lançamentos. Assine o Premium para lançar em todos os seus veículos.",
+  "freeLimitFuelingTitle": "Limite de abastecimentos do mês",
+  "freeLimitFuelingText": "Você já registrou {count} abastecimento(s) gratuito(s) este mês. Assista a um vídeo para salvar mais um, ou assine o Premium para abastecimentos ilimitados.",
+  "@freeLimitFuelingText": {
+    "placeholders": {
+      "count": {
+        "type": "Object"
+      }
+    }
+  },
+  "freeLimitMaintenanceTitle": "Registro liberado por vídeo",
+  "freeLimitMaintenanceText": "No plano gratuito, cada manutenção nova é liberada assistindo a um vídeo. Assine o Premium para registrar sem vídeos.",
+  "freeLimitExpenseTitle": "Registro liberado por vídeo",
+  "freeLimitExpenseText": "No plano gratuito, cada despesa nova é liberada assistindo a um vídeo. Assine o Premium para registrar sem vídeos.",
+  "vehicleViewOnlyBadge": "Somente consulta no gratuito",
+  "stationNextUnlock": "O melhor posto volta a aparecer aqui em {date}. Assine o Premium para ver o ranking completo a qualquer momento.",
+  "@stationNextUnlock": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "stationSeeFullRanking": "VER RANKING COMPLETO (PREMIUM)",
   "notSet": "não definida",
   "exportSubject": "Exportação MyCarApp",
   "exportText": "Dados do veículo exportados pelo MyCarApp.",
@@ -688,8 +771,8 @@
   "fuelingMileageInvalid": "Informe uma quilometragem válida",
   "fuelingFullTankHint": "Necessário para calcular o consumo com precisão",
   "tankCapacity": "Capacidade total do tanque",
-  "tankCapacityHint": "Consulte o manual do veículo",
-  "tankCapacityRequired": "Informe a capacidade do tanque",
+  "tankCapacityVehicleHint": "Consulte o manual do veículo. Usada para calcular o consumo com tanque cheio",
+  "tankCapacityMissing": "Informe a capacidade do tanque no cadastro do veículo para calcular o consumo.",
   "fuelingGaugeFull": "O marcador indicou tanque cheio?",
   "fuelingGaugeFullHint": "Somente confirmações reais entram no consumo estimado",
   "optionalInfo": "Informações opcionais",
@@ -885,14 +968,6 @@
       }
     }
   },
-  "reportSmallSample": "{name} (amostra pequena)",
-  "@reportSmallSample": {
-    "placeholders": {
-      "name": {
-        "type": "Object"
-      }
-    }
-  },
   "reportBestDetail": "{cost}/km • {consumption} km/L • baseado em {count} abastecimento(s)",
   "@reportBestDetail": {
     "placeholders": {
@@ -923,7 +998,6 @@
       }
     }
   },
-  "smallSample": "Amostra pequena",
   "reportTotalCostPerKm": "Custo total por km",
   "reportTotalCostSubtitle": "Combustível, manutenções e despesas somados",
   "reportCostNeedTwo": "São necessários ao menos dois abastecimentos com quilometragem no período para calcular este relatório.",
@@ -1097,5 +1171,129 @@
         "type": "Object"
       }
     }
-  }
+  },
+  "pdfExport": "Exportar PDF",
+  "pdfFreeTitle": "Relatório em PDF",
+  "pdfFreeText": "No plano gratuito, cada relatório em PDF é liberado assistindo a um vídeo. Assine o Premium para gerar sem vídeos.",
+  "pdfWatchAndGenerate": "ASSISTIR VÍDEO E GERAR",
+  "pdfVideoNotEarned": "Assista ao vídeo até o fim para gerar o PDF.",
+  "pdfShareSubject": "Relatório MyCarApp",
+  "pdfShareText": "Relatório do veículo gerado pelo MyCarApp.",
+  "pdfTitle": "Relatório do veículo",
+  "pdfPeriod": "Período: {period}",
+  "@pdfPeriod": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "pdfFooter": "Gerado pelo MyCarApp em {date}",
+  "@pdfFooter": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "pdfVehicleSection": "Veículo",
+  "pdfSpendingSection": "Gastos",
+  "pdfLiters": "Litros abastecidos",
+  "pdfTotalAll": "Total (combustível + manutenção)",
+  "pdfMonthCol": "Mês",
+  "pdfDistance": "Distância no período",
+  "pdfExpenses": "Outras despesas",
+  "pdfBestStation": "Melhor posto",
+  "pdfStationCol": "Posto",
+  "pdfFuelCol": "Combustível",
+  "pdfFillUpsCol": "Abast.",
+  "pdfMaintenanceList": "Manutenções do período",
+  "pdfDateCol": "Data",
+  "pdfServiceCol": "Serviço",
+  "pdfWorkshopCol": "Oficina",
+  "pdfCostCol": "Valor",
+  "news140Title": "Chegou o MyCarApp Premium",
+  "news140Text": "Chegou o MyCarApp Premium: sem anúncios, veículos ilimitados, manutenções e despesas sem vídeo, leitura da nota fiscal, ranking completo de postos, relatórios por período, exportação e backup automático. O plano gratuito continua com o controle de consumo, e todos os seus registros seguem disponíveis.",
+  "surveyTitle": "Antes de você ir…",
+  "surveyText": "O que fez você não assinar agora? Leva 5 segundos e ajuda a melhorar o MyCarApp.",
+  "surveyTooExpensive": "Muito caro",
+  "surveyTooExpensiveHint": "O preço não cabe no meu orçamento agora",
+  "surveyStillExploring": "Ainda estou conhecendo o app",
+  "surveyStillExploringHint": "Quero usar mais antes de decidir",
+  "surveyDontNeed": "Não preciso desses recursos",
+  "surveyDontNeedHint": "O plano gratuito já me atende",
+  "surveyPreferOneTime": "Prefiro pagar uma vez só",
+  "surveyPreferOneTimeHint": "Não gosto de assinatura",
+  "surveyOther": "Outro motivo",
+  "surveyOtherHint": "Nenhuma das opções acima",
+  "surveySend": "ENVIAR RESPOSTA",
+  "surveyChooseOption": "ESCOLHA UMA OPÇÃO",
+  "surveySkip": "Pular",
+  "surveyThanks": "Obrigado pela resposta! Você continua no plano gratuito, com todos os seus registros disponíveis.",
+  "exitOfferBadge": "OFERTA ÚNICA PARA VOCÊ",
+  "exitOfferTitle": "Entendemos. Que tal {percent}% de desconto no Premium anual?",
+  "@exitOfferTitle": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "exitOfferTitleGeneric": "Entendemos. Que tal um desconto especial no Premium anual?",
+  "exitOfferSubtitle": "Válida só agora e uma única vez nesta conta.",
+  "exitOfferExpiresIn": "Expira em {time}",
+  "@exitOfferExpiresIn": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "exitOfferPlan": "Premium anual",
+  "exitOfferFrom": "De {price} por",
+  "@exitOfferFrom": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "exitOfferFirstYear": "no 1º ano",
+  "exitOfferPerMonth": "Equivale a {price} por mês",
+  "@exitOfferPerMonth": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "exitOfferButton": "QUERO POR {price} NO 1º ANO",
+  "@exitOfferButton": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "exitOfferRenewal": "Depois do 1º ano, renova por {price} por ano. Cancele quando quiser na Play Store.",
+  "@exitOfferRenewal": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "exitOfferNoThanks": "Não, obrigado",
+  "offerExitPercent": "{percent}% de desconto no 1º ano",
+  "@offerExitPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "offerExitGeneric": "Desconto especial no 1º ano",
+  "stationPreliminaryBadge": "Preliminar",
+  "stationPreliminaryNote": "Valor preliminar: fica definitivo a partir de 3 abastecimentos com tanque cheio neste posto.",
+  "stationConsumptionAlert": "Consumo muito diferente da sua média. Pode ser a qualidade do combustível ou um registro incompleto, como tanque não cheio. Confira os abastecimentos deste posto."
 }

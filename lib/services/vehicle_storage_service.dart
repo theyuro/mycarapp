@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/vehicle.dart';
@@ -9,6 +10,10 @@ import '../l10n/l10n.dart';
 
 class VehicleStorageService {
   static Future<void> _writeQueue = Future.value();
+
+  /// Quantidade de veículos salvos, sincronizada a cada leitura e gravação;
+  /// o Analytics acompanha para manter a propriedade `vehicles_count`.
+  static final vehicleCount = ValueNotifier<int>(0);
 
   Future<Directory> _rootDirectory() async {
     final documents = await getApplicationDocumentsDirectory();
@@ -35,16 +40,26 @@ class VehicleStorageService {
     if (!await file.exists() && await backup.exists()) {
       await backup.copy(file.path);
     }
-    if (!await file.exists()) return [];
+    if (!await file.exists()) {
+      vehicleCount.value = 0;
+      return [];
+    }
 
     try {
       final contents = await file.readAsString();
-      if (contents.trim().isEmpty) return [];
+      if (contents.trim().isEmpty) {
+        vehicleCount.value = 0;
+        return [];
+      }
       final decoded = jsonDecode(contents);
       if (decoded is! List<dynamic>) throw const FormatException();
-      return decoded
+      final vehicles = decoded
           .map((item) => Vehicle.fromJson(item as Map<String, dynamic>))
           .toList();
+      // Mantém o notificador em sincronia com o disco a cada leitura, não só
+      // na gravação (senão a abertura do app não reflete a contagem real).
+      vehicleCount.value = vehicles.length;
+      return vehicles;
     } on Object {
       throw FileSystemException(tr.storageVehiclesCorrupted);
     }
@@ -127,6 +142,20 @@ class VehicleStorageService {
     return savedVehicle;
   });
 
+  /// Atualiza a quilometragem do veículo quando um registro informa um valor
+  /// maior. Nunca reduz: registros antigos ou digitados a menos são ignorados.
+  /// Retorna o veículo atualizado, ou null se nada mudou.
+  Future<Vehicle?> raiseMileage(String vehicleId, int mileage) =>
+      _serialized(() async {
+        final vehicles = await loadVehicles();
+        final index = vehicles.indexWhere((item) => item.id == vehicleId);
+        if (index < 0 || mileage <= vehicles[index].mileage) return null;
+        final updated = vehicles[index].copyWith(mileage: mileage);
+        vehicles[index] = updated;
+        await _writeVehicles(vehicles);
+        return updated;
+      });
+
   Future<void> deleteVehicle(String vehicleId) => _serialized(() async {
     final vehicles = await loadVehicles();
     final activeId = await _readActiveId();
@@ -163,6 +192,7 @@ class VehicleStorageService {
 
   Future<void> _writeVehicles(List<Vehicle> vehicles) async {
     AutoBackupService.instance.markDirty();
+    vehicleCount.value = vehicles.length;
     final file = await _vehiclesFile();
     await _writeJsonSafely(
       file,

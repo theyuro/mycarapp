@@ -24,6 +24,20 @@ class AdsConfig {
   static const _nativeEveryNItems = 'native_every_n_items';
   static const _appOpenEnabled = 'app_open_enabled';
   static const _appOpenChancePercent = 'app_open_chance_percent';
+  // Carência para quem acabou de instalar: sem intersticial nem anúncio de
+  // abertura até salvar mais abastecimentos que este número.
+  static const _interstitialGraceRecords = 'interstitial_grace_records';
+
+  // Chaves do plano gratuito (ver FreePlanService), também publicadas no
+  // Remote Config.
+  static const _freeMaxVehicles = 'free_max_vehicles';
+  static const _freeFuelingsPerMonth = 'free_fuelings_per_month';
+  static const _freeStationUnlockDays = 'free_station_unlock_days';
+
+  // Relatório por posto: diferença (%) do consumo do posto para a média
+  // geral do veículo a partir da qual aparece o alerta de discrepância.
+  static const _stationConsumptionAlertPercent =
+      'station_consumption_alert_percent';
 
   /// Valores usados enquanto o Remote Config não respondeu, se ele falhar ou
   /// se o parâmetro não existir no console.
@@ -36,7 +50,14 @@ class AdsConfig {
     _nativeEnabled: true,
     _nativeEveryNItems: 5,
     _appOpenEnabled: true,
-    _appOpenChancePercent: 50,
+    // 25% (antes 50%): menos anúncios de abertura no gratuito.
+    _appOpenChancePercent: 25,
+    _interstitialGraceRecords: 2,
+    _freeMaxVehicles: 1,
+    _freeFuelingsPerMonth: 3,
+    // Melhor posto a cada 30 dias no gratuito (antes: pior posto a cada 7).
+    _freeStationUnlockDays: 30,
+    _stationConsumptionAlertPercent: 25,
   };
 
   bool _initialized = false;
@@ -96,8 +117,8 @@ class AdsConfig {
   }
 
   /// Registros necessários para liberar um intersticial (mínimo 1). Não há
-  /// intervalo mínimo, limite diário nem carência: o único período sem
-  /// intersticial é o ganho no vídeo premiado.
+  /// intervalo mínimo nem limite diário; além do período ganho no vídeo
+  /// premiado, só a carência inicial de [interstitialGraceRecords].
   int get interstitialActivitiesPerShow =>
       math.max(1, _int(_activitiesPerShow));
 
@@ -128,4 +149,24 @@ class AdsConfig {
   /// Chance (0 a 100) de um registro salvo sem intersticial deixar um
   /// anúncio de abertura pendente: assim ele não aparece sempre.
   int get appOpenChancePercent => _int(_appOpenChancePercent).clamp(0, 100);
+
+  /// Carência inicial: nenhum intersticial nem anúncio de abertura até o
+  /// usuário ter salvo mais abastecimentos que este número (padrão 2).
+  int get interstitialGraceRecords =>
+      math.max(0, _int(_interstitialGraceRecords));
+
+  /// Veículos cadastráveis no plano gratuito (ver FreePlanService).
+  int get freeMaxVehicles => math.max(1, _int(_freeMaxVehicles));
+
+  /// Abastecimentos gratuitos por mês antes de exigir vídeo premiado.
+  int get freeFuelingsPerMonth => math.max(0, _int(_freeFuelingsPerMonth));
+
+  /// Dias entre duas liberações do "melhor posto" (sem vídeo) no plano
+  /// gratuito.
+  int get freeStationUnlockDays => math.max(1, _int(_freeStationUnlockDays));
+
+  /// Alerta de consumo no relatório por posto: diferença percentual (acima ou
+  /// abaixo) da média geral do veículo que dispara o aviso (padrão 25).
+  int get stationConsumptionAlertPercent =>
+      math.max(1, _int(_stationConsumptionAlertPercent));
 }

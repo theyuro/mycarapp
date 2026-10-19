@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -8,9 +6,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
-import 'package:path_provider/path_provider.dart';
 
 import '../models/subscription_entitlement.dart';
+import 'analytics_service.dart';
 import '../l10n/l10n.dart';
 
 class SubscriptionOption {
@@ -20,8 +18,12 @@ class SubscriptionOption {
     required this.billingPeriod,
     required this.price,
     required this.renewalPrice,
+    required this.priceMicros,
+    required this.renewalMicros,
+    required this.currencyCode,
     required this.offerTags,
     this.offerId,
+    this.hasFreeTrial = false,
   });
 
   final ProductDetails product;
@@ -32,8 +34,28 @@ class SubscriptionOption {
   final String? offerId;
   final List<String> offerTags;
 
+  /// Preço atual e preço de renovação em micros (1/1.000.000 da unidade da
+  /// moeda), para calcular o equivalente mensal e a economia sem depender do
+  /// texto já formatado pela Play.
+  final int priceMicros;
+  final int renewalMicros;
+
+  /// Moeda devolvida pela Google Play para este plano (ex.: "BRL").
+  final String currencyCode;
+
+  /// Primeira fase de preço gratuita (oferta de teste grátis da Play).
+  final bool hasFreeTrial;
+
   bool get isAnnual => billingPeriod == 'P1Y';
   bool get isPromotional => offerId != null;
+
+  /// Desconto da primeira fase sobre a renovação, calculado dos micros da
+  /// Play (ex.: oferta de saída). `null` sem desconto ou sem preço.
+  int? get discountPercent {
+    if (renewalMicros <= 0 || priceMicros >= renewalMicros) return null;
+    final percent = ((1 - priceMicros / renewalMicros) * 100).round();
+    return percent > 0 ? percent : null;
+  }
   String get title => isAnnual ? tr.planAnnual : tr.planMonthly;
 
   String get priceDescription {
@@ -52,7 +74,6 @@ class AccessService extends ChangeNotifier {
 
   static final AccessService instance = AccessService._();
   static const subscriptionProductId = 'mycarapp_subscription';
-  static const trialDuration = Duration(days: 14);
 
   /// Modo gratuito: quando `true`, o app é 100% gratuito, com todos os
   /// recursos liberados e monetização apenas por anúncios (AdMob). A cobrança
@@ -71,8 +92,13 @@ class AccessService extends ChangeNotifier {
   StreamSubscription<User?>? _authSubscription;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>?
   _entitlementSubscription;
-  DateTime? _trialStartedAt;
-  DateTime? _lastSeenAt;
+
+  /// Restauração pedida pelo botão; a automática da abertura não gera
+  /// evento.
+  bool _restoreRequested = false;
+
+  /// Prazo para considerar "nada a restaurar" quando o botão é usado.
+  Timer? _restoreTimeout;
   bool _subscriptionActive = false;
   bool _betaPremiumActive = DateTime.now().isBefore(DateTime(2026, 8, 31));
   String? _boundUid;
@@ -81,6 +107,9 @@ class AccessService extends ChangeNotifier {
   SubscriptionEntitlement entitlement =
       const SubscriptionEntitlement.inactive();
   DateTime? premiumFreeUntil = DateTime(2026, 8, 31);
+
+  /// Opção em processo de compra, para os eventos do funil (Analytics).
+  SubscriptionOption? _purchaseOption;
 
   /// Build mínimo aceito pelo servidor (ver UpdateService); `null` enquanto
   /// não consultado.
@@ -111,40 +140,18 @@ class AccessService extends ChangeNotifier {
   bool get signedIn => _auth.currentUser != null;
   ProductDetails? get subscriptionProduct => selectedSubscription?.product;
 
-  Duration get trialRemaining {
-    final started = _trialStartedAt;
-    if (started == null) return Duration.zero;
-    final now = DateTime.now();
-    final safeNow = _lastSeenAt != null && now.isBefore(_lastSeenAt!)
-        ? _lastSeenAt!
-        : now;
-    final remaining = trialDuration - safeNow.difference(started);
-    return remaining.isNegative ? Duration.zero : remaining;
-  }
-
-  int get trialDaysRemaining {
-    final remaining = trialRemaining;
-    if (remaining == Duration.zero) return 0;
-    return (remaining.inHours / 24).ceil();
-  }
-
-  bool get trialActive => trialRemaining > Duration.zero;
-  bool get hasAccess => freeModeEnabled || subscriptionActive || trialActive;
-
   Future<void> initialize() async {
     if (_initialized) return;
     _initialized = true;
-    await _loadState();
-    final now = DateTime.now();
-    _trialStartedAt ??= now;
-    if (_lastSeenAt == null || now.isAfter(_lastSeenAt!)) _lastSeenAt = now;
-    await _saveState();
 
     _purchaseSubscription = _store.purchaseStream.listen(
       _handlePurchases,
       onError: (Object error) {
         purchasePending = false;
         storeMessage = tr.storeCommError;
+        // Erro no stream durante uma restauração pedida pelo botão:
+        // finaliza o pedido para não aguardar o prazo de 15s.
+        if (_restoreRequested) _finishRequestedRestore('error');
         notifyListeners();
       },
     );
@@ -187,6 +194,9 @@ class AccessService extends ChangeNotifier {
         );
     if (freeModeEnabled) return;
     await _loadPromotionEligibility();
+    // Mudança de usuário dispara uma restauração automática; não deve
+    // consumir um pedido pendente do botão.
+    _finishRequestedRestore(null);
     if (storeAvailable) await _store.restorePurchases();
   }
 
@@ -246,6 +256,9 @@ class AccessService extends ChangeNotifier {
         _refreshSubscriptionOptions();
         storeMessage = subscriptionOptions.isEmpty ? tr.storeNoPlans : null;
       }
+      // Restauração automática da conexão com a loja; não deve consumir um
+      // pedido pendente do botão.
+      _finishRequestedRestore(null);
       if (_auth.currentUser != null) await _store.restorePurchases();
     } on Object catch (error) {
       debugPrint('Falha ao conectar à Google Play: $error');
@@ -268,6 +281,9 @@ class AccessService extends ChangeNotifier {
             billingPeriod: '',
             price: product.price,
             renewalPrice: product.price,
+            priceMicros: (product.rawPrice * 1000000).round(),
+            renewalMicros: (product.rawPrice * 1000000).round(),
+            currencyCode: product.currencyCode,
             offerTags: const [],
           ),
         );
@@ -289,8 +305,12 @@ class AccessService extends ChangeNotifier {
           billingPeriod: renewalPhase.billingPeriod,
           price: firstPhase.formattedPrice,
           renewalPrice: renewalPhase.formattedPrice,
+          priceMicros: firstPhase.priceAmountMicros,
+          renewalMicros: renewalPhase.priceAmountMicros,
+          currencyCode: renewalPhase.priceCurrencyCode,
           offerId: details.offerId,
           offerTags: List.unmodifiable(details.offerTags),
+          hasFreeTrial: firstPhase.priceAmountMicros == 0,
         ),
       );
     }
@@ -319,9 +339,11 @@ class AccessService extends ChangeNotifier {
           option.basePlanId == previous.basePlanId &&
           option.offerId == previous.offerId,
     );
+    // Sem oferta preferida nem seleção anterior: pré-seleciona o anual sem
+    // oferta (plano padrão sugerido ao usuário).
     selectedSubscription ??= _firstWhereOrNull(
       options,
-      (option) => !option.isAnnual && !option.isPromotional,
+      (option) => option.isAnnual && !option.isPromotional,
     );
     selectedSubscription ??= _firstWhereOrNull(
       options,
@@ -354,6 +376,33 @@ class AccessService extends ChangeNotifier {
 
   Future<void> refreshSubscriptionOffers() => _loadPromotionEligibility();
 
+  /// Tag da oferta de saída na Play (60% no 1º ano do anual), liberada pelo
+  /// servidor só durante a janela concedida por [claimExitOffer].
+  static const exitOfferTag = 'exitlag';
+
+  /// Opção da oferta de saída, quando a Play a devolveu e o servidor a
+  /// autorizou (dentro da janela de 10 minutos).
+  SubscriptionOption? get exitOfferOption => _firstWhereOrNull(
+    subscriptionOptions,
+    (option) => option.offerTags.contains(exitOfferTag),
+  );
+
+  /// Pede ao servidor a oferta de saída (uma única vez por conta). Devolve o
+  /// fim da janela informado pelo servidor, ou `null` quando negada, sem
+  /// login ou em caso de erro.
+  Future<DateTime?> claimExitOffer() async {
+    if (_auth.currentUser == null) return null;
+    try {
+      final result = await _functions.httpsCallable('claimExitOffer').call();
+      final data = Map<String, dynamic>.from(result.data as Map);
+      if (data['granted'] != true) return null;
+      return DateTime.tryParse(data['expiresAt'] as String? ?? '')?.toLocal();
+    } on Object catch (error) {
+      debugPrint('Não foi possível pedir a oferta de saída: $error');
+      return null;
+    }
+  }
+
   Future<void> buySubscription() async {
     final user = _auth.currentUser;
     final option = selectedSubscription;
@@ -366,6 +415,7 @@ class AccessService extends ChangeNotifier {
     purchasePending = true;
     storeMessage = null;
     notifyListeners();
+    _purchaseOption = option;
     try {
       final started = await _store.buyNonConsumable(
         purchaseParam: PurchaseParam(
@@ -373,15 +423,28 @@ class AccessService extends ChangeNotifier {
           applicationUserName: user.uid,
         ),
       );
-      if (!started) {
+      if (started) {
+        // Abriu a tela de pagamento da Google Play.
+        AnalyticsService.event('purchase_start', {'plan': option.basePlanId});
+      } else {
         purchasePending = false;
         storeMessage = tr.storePurchaseNotStarted;
+        AnalyticsService.event('purchase_error', {
+          'plan': option.basePlanId,
+          'result': 'not_started',
+        });
+        _purchaseOption = null;
         notifyListeners();
       }
     } on Object catch (error) {
       debugPrint('Falha ao iniciar assinatura: $error');
       purchasePending = false;
       storeMessage = tr.storePurchaseStartError;
+      AnalyticsService.event('purchase_error', {
+        'plan': option.basePlanId,
+        'result': 'start_failed',
+      });
+      _purchaseOption = null;
       notifyListeners();
     }
   }
@@ -389,6 +452,7 @@ class AccessService extends ChangeNotifier {
   Future<void> restorePurchases() async {
     if (_auth.currentUser == null) {
       storeMessage = tr.storeSignInToRestore;
+      AnalyticsService.event('purchase_restore', {'result': 'not_signed_in'});
       notifyListeners();
       return;
     }
@@ -397,6 +461,13 @@ class AccessService extends ChangeNotifier {
     storeMessage = tr.storeSearching;
     notifyListeners();
     try {
+      _restoreRequested = true;
+      // Se a loja não devolver nenhuma compra, considera "nada a
+      // restaurar" depois desse prazo.
+      _restoreTimeout?.cancel();
+      _restoreTimeout = Timer(const Duration(seconds: 15), () {
+        if (_restoreRequested) _finishRequestedRestore('not_found');
+      });
       await _store.restorePurchases();
       storeMessage = _subscriptionActive
           ? tr.storeRestored
@@ -404,9 +475,22 @@ class AccessService extends ChangeNotifier {
     } on Object catch (error) {
       debugPrint('Falha ao restaurar assinatura: $error');
       storeMessage = tr.storeRestoreError;
+      _finishRequestedRestore('error');
     } finally {
       purchasePending = false;
       notifyListeners();
+    }
+  }
+
+  /// Finaliza um pedido de restauração feito pelo botão: cancela o prazo de
+  /// espera, zera a flag e, quando [result] não é nulo, registra o único
+  /// evento `purchase_restore` exigido para esse pedido.
+  void _finishRequestedRestore(String? result) {
+    _restoreTimeout?.cancel();
+    _restoreTimeout = null;
+    _restoreRequested = false;
+    if (result != null) {
+      AnalyticsService.event('purchase_restore', {'result': result});
     }
   }
 
@@ -416,7 +500,20 @@ class AccessService extends ChangeNotifier {
       switch (purchase.status) {
         case PurchaseStatus.purchased:
         case PurchaseStatus.restored:
-          await _verifyAndComplete(purchase);
+          // restorePurchases() roda em toda abertura do app: só é uma
+          // compra nova quando o status é "purchased".
+          final isRequestedRestore =
+              purchase.status == PurchaseStatus.restored && _restoreRequested;
+          if (isRequestedRestore) {
+            // A validação no servidor pode levar mais de 15s; cancela o
+            // prazo para não disparar "not_found" enquanto ela corre.
+            _restoreTimeout?.cancel();
+          }
+          await _verifyAndComplete(
+            purchase,
+            isNewPurchase: purchase.status == PurchaseStatus.purchased,
+            isRequestedRestore: isRequestedRestore,
+          );
           break;
         case PurchaseStatus.pending:
           purchasePending = true;
@@ -425,27 +522,66 @@ class AccessService extends ChangeNotifier {
         case PurchaseStatus.error:
           purchasePending = false;
           storeMessage = purchase.error?.message ?? tr.storeNotCompleted;
+          if (_restoreRequested) {
+            // Erro da loja numa restauração pedida pelo botão: não é uma
+            // compra, então não gera evento de funil de compra.
+            _finishRequestedRestore('error');
+          } else {
+            AnalyticsService.event('purchase_error', {
+              'plan': _purchaseOption?.basePlanId,
+              'result': 'store_error',
+            });
+            _purchaseOption = null;
+          }
           break;
         case PurchaseStatus.canceled:
           purchasePending = false;
           storeMessage = tr.storeCanceled;
+          AnalyticsService.event('purchase_cancel', {
+            'plan': _purchaseOption?.basePlanId,
+          });
+          _purchaseOption = null;
           break;
       }
     }
     notifyListeners();
   }
 
-  Future<void> _verifyAndComplete(PurchaseDetails purchase) async {
+  /// Confirma a compra no servidor. Os eventos do funil só são registrados
+  /// para [isNewPurchase]: a restauração roda em toda abertura do app e,
+  /// sem essa condição, geraria uma `purchase_complete` falsa a cada vez.
+  Future<void> _verifyAndComplete(
+    PurchaseDetails purchase, {
+    required bool isNewPurchase,
+    bool isRequestedRestore = false,
+  }) async {
+    final option = _purchaseOption;
     final user = _auth.currentUser;
     if (user == null) {
       purchasePending = false;
       storeMessage = tr.storeSameAccount;
+      if (isNewPurchase) {
+        AnalyticsService.event('purchase_error', {
+          'plan': option?.basePlanId,
+          'result': 'not_signed_in',
+        });
+        _purchaseOption = null;
+      }
+      if (isRequestedRestore) _finishRequestedRestore('error');
       return;
     }
     final token = purchase.verificationData.serverVerificationData.trim();
     if (token.isEmpty) {
       purchasePending = false;
       storeMessage = tr.storeNoVerificationData;
+      if (isNewPurchase) {
+        AnalyticsService.event('purchase_error', {
+          'plan': option?.basePlanId,
+          'result': 'no_verification_data',
+        });
+        _purchaseOption = null;
+      }
+      if (isRequestedRestore) _finishRequestedRestore('error');
       return;
     }
 
@@ -464,64 +600,41 @@ class AccessService extends ChangeNotifier {
       if (entitlement.active && purchase.pendingCompletePurchase) {
         await _store.completePurchase(purchase);
       }
+      if (isRequestedRestore) {
+        // Só conta a restauração pedida pelo botão, já com a confirmação
+        // do servidor.
+        _finishRequestedRestore(entitlement.active ? 'restored' : 'not_active');
+      }
+      if (isNewPurchase) {
+        if (entitlement.active) {
+          // Só conta como compra concluída com a confirmação do servidor.
+          AnalyticsService.event('purchase_complete', {
+            'plan': option?.basePlanId,
+            'offer_tag': option == null || option.offerTags.isEmpty
+                ? null
+                : option.offerTags.first,
+            'is_trial': option?.hasFreeTrial ?? false,
+          });
+        } else {
+          AnalyticsService.event('purchase_error', {
+            'plan': option?.basePlanId,
+            'result': 'not_active',
+          });
+        }
+        _purchaseOption = null;
+      }
     } on Object catch (error) {
       debugPrint('Falha ao validar assinatura: $error');
       purchasePending = false;
       storeMessage = tr.storeValidationError;
-    }
-  }
-
-  Future<File> _stateFile() async {
-    final documents = await getApplicationDocumentsDirectory();
-    final directory = Directory(
-      '${documents.path}${Platform.pathSeparator}MyCarApp',
-    );
-    if (!await directory.exists()) await directory.create(recursive: true);
-    return File('${directory.path}${Platform.pathSeparator}access.json');
-  }
-
-  Future<void> _loadState() async {
-    final file = await _stateFile();
-    if (!await file.exists()) return;
-    try {
-      final json =
-          jsonDecode(await file.readAsString()) as Map<String, dynamic>;
-      _trialStartedAt = json['trialStartedAt'] == null
-          ? null
-          : DateTime.parse(json['trialStartedAt'] as String);
-      _lastSeenAt = json['lastSeenAt'] == null
-          ? null
-          : DateTime.parse(json['lastSeenAt'] as String);
-      // Estados Premium antigos eram locais e não são mais considerados.
-      _subscriptionActive = false;
-    } on Object {
-      _trialStartedAt = DateTime.now();
-      _lastSeenAt = DateTime.now();
-      _subscriptionActive = false;
-    }
-  }
-
-  Future<void> _saveState() async {
-    final file = await _stateFile();
-    final temporary = File('${file.path}.tmp');
-    final backup = File('${file.path}.bak');
-    await temporary.writeAsString(
-      jsonEncode({
-        'trialStartedAt': _trialStartedAt?.toIso8601String(),
-        'lastSeenAt': _lastSeenAt?.toIso8601String(),
-      }),
-      flush: true,
-    );
-    if (await backup.exists()) await backup.delete();
-    if (await file.exists()) await file.rename(backup.path);
-    try {
-      await temporary.rename(file.path);
-      if (await backup.exists()) await backup.delete();
-    } catch (_) {
-      if (!await file.exists() && await backup.exists()) {
-        await backup.rename(file.path);
+      if (isNewPurchase) {
+        AnalyticsService.event('purchase_error', {
+          'plan': option?.basePlanId,
+          'result': 'validation_failed',
+        });
+        _purchaseOption = null;
       }
-      rethrow;
+      if (isRequestedRestore) _finishRequestedRestore('error');
     }
   }
 
@@ -530,6 +643,7 @@ class AccessService extends ChangeNotifier {
     _purchaseSubscription?.cancel();
     _authSubscription?.cancel();
     _entitlementSubscription?.cancel();
+    _restoreTimeout?.cancel();
     super.dispose();
   }
 }

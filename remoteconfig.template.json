@@ -7,7 +7,14 @@
           "defaultValue": {
             "value": "1"
           },
-          "description": "Registros salvos necessários para liberar um intersticial (mínimo 1). Sem intervalo mínimo, limite diário nem carência.",
+          "description": "Registros salvos necessários para liberar um intersticial (mínimo 1). Sem intervalo mínimo nem limite diário; a carência inicial é a de interstitial_grace_records.",
+          "valueType": "NUMBER"
+        },
+        "interstitial_grace_records": {
+          "defaultValue": {
+            "value": "2"
+          },
+          "description": "Carência inicial: nenhum intersticial nem anúncio de abertura até o usuário ter salvo mais abastecimentos que este número.",
           "valueType": "NUMBER"
         },
         "app_open_enabled": {
@@ -19,7 +26,7 @@
         },
         "app_open_chance_percent": {
           "defaultValue": {
-            "value": "50"
+            "value": "25"
           },
           "description": "Chance (0 a 100) de um registro salvo sem intersticial deixar um anúncio de abertura pendente.",
           "valueType": "NUMBER"
@@ -64,6 +71,44 @@
             "value": "5"
           },
           "description": "Um nativo a cada N itens da lista, sem máximo por tela.",
+          "valueType": "NUMBER"
+        }
+      }
+    },
+    "Plano gratuito": {
+      "description": "Limites do plano gratuito (lib/services/free_plan_service.dart). Sem valor publicado, o app usa os padrões do código.",
+      "parameters": {
+        "free_max_vehicles": {
+          "defaultValue": {
+            "value": "1"
+          },
+          "description": "Veículos cadastráveis no plano gratuito.",
+          "valueType": "NUMBER"
+        },
+        "free_fuelings_per_month": {
+          "defaultValue": {
+            "value": "3"
+          },
+          "description": "Abastecimentos gratuitos por mês; acima disso, cada novo abastecimento é liberado por vídeo premiado.",
+          "valueType": "NUMBER"
+        },
+        "free_station_unlock_days": {
+          "defaultValue": {
+            "value": "30"
+          },
+          "description": "Dias entre duas liberações do melhor posto (sem vídeo) no plano gratuito; liberado, fica visível até o app ser fechado. O ranking completo é só Premium.",
+          "valueType": "NUMBER"
+        }
+      }
+    },
+    "Relatórios": {
+      "description": "Parâmetros dos relatórios (lib/screens/reports_screen.dart, lidos via lib/services/ads_config.dart). Sem valor publicado, o app usa os padrões do código.",
+      "parameters": {
+        "station_consumption_alert_percent": {
+          "defaultValue": {
+            "value": "25"
+          },
+          "description": "Diferença (%) do consumo de um posto, acima ou abaixo da média geral do veículo, a partir da qual o relatório por posto mostra o alerta de discrepância.",
           "valueType": "NUMBER"
         }
       }

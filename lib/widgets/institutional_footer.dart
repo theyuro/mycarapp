@@ -42,7 +42,11 @@ class InstitutionalFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     final baseColor = dark ? Colors.white54 : AppColors.muted;
     final linkColor = dark ? AppColors.goldLight : AppColors.blue;
+    // heightFactor: 1 faz o Center ter só a altura do link. Sem ele, no
+    // bottomNavigationBar da tela Minha conta o rodapé ocupava a tela toda
+    // e escondia o conteúdo da conta.
     return Center(
+      heightFactor: 1,
       child: Material(
         color: Colors.transparent,
         child: InkWell(

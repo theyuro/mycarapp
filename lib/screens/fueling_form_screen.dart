@@ -9,17 +9,25 @@ import '../models/fueling_record.dart';
 import '../models/record_attachment.dart';
 import '../models/vehicle.dart';
 import '../services/ads_service.dart';
+import '../services/app_review_service.dart';
+import '../services/analytics_service.dart';
 import '../services/establishment_storage_service.dart';
+import '../services/free_plan_service.dart';
 import '../services/fueling_storage_service.dart';
 import '../services/image_pick_service.dart';
 import '../services/notification_service.dart';
 import '../services/receipt_ocr_service.dart';
+import '../services/vehicle_storage_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/establishment_field.dart';
 import '../widgets/receipt_attachments_field.dart';
 import '../widgets/vehicle_type_icon.dart';
+import 'lifetime_purchase_screen.dart';
 import '../l10n/l10n.dart';
 import '../l10n/labels.dart';
+
+/// Resposta do diálogo de limite do gratuito (vídeo premiado ou Premium).
+enum _LimitChoice { watch, premium, cancel }
 
 class FuelingFormScreen extends StatefulWidget {
   const FuelingFormScreen({super.key, required this.vehicle, this.record});
@@ -37,8 +45,8 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
   final totalPrice = TextEditingController();
   final mileage = TextEditingController();
   final notes = TextEditingController();
-  final tankCapacity = TextEditingController();
   final storage = FuelingStorageService();
+  final vehicleStorage = VehicleStorageService();
   final notificationService = NotificationService();
   final receiptOcr = ReceiptOcrService();
   final establishmentStorage = EstablishmentStorageService();
@@ -46,6 +54,8 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
   late DateTime date;
   late String fuelType;
   bool fullTank = false;
+  // Vem do cadastro do veículo; registros antigos mantêm a capacidade salva.
+  double? tankCapacityLiters;
   bool gaugeMarkedFull = false;
   bool saving = false;
   bool scanningReceipt = false;
@@ -70,7 +80,11 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
   void initState() {
     super.initState();
     final record = widget.record;
-    if (record == null) AdsService.instance.prepareInterstitial();
+    if (record == null) {
+      AdsService.instance.prepareInterstitial();
+      // Gratuito acima da cota do mês: deixa o vídeo premiado carregando.
+      unawaited(_preloadRewardedIfNeeded());
+    }
     date = record?.date ?? DateTime.now();
     fuelType = _initialFuelType(record?.fuelType ?? widget.vehicle.fuel);
     fullTank = record?.fullTank ?? false;
@@ -83,13 +97,24 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
       stationText = record.station ?? '';
       establishmentId = record.establishmentId;
       notes.text = record.notes ?? '';
-      tankCapacity.text = record.tankCapacityLiters == null
-          ? ''
-          : _editableNumber(record.tankCapacityLiters!);
     } else {
       mileage.text = widget.vehicle.mileage.toString();
     }
+    tankCapacityLiters =
+        widget.vehicle.tankCapacityLiters ?? record?.tankCapacityLiters;
+    if (tankCapacityLiters == null) unawaited(_loadLegacyTankCapacity());
     unawaited(_loadStations());
+  }
+
+  Future<void> _loadLegacyTankCapacity() async {
+    try {
+      final capacity = await storage.lastTankCapacity(widget.vehicle.id);
+      if (mounted && capacity != null) {
+        setState(() => tankCapacityLiters = capacity);
+      }
+    } on Object {
+      // Sem histórico: o consumo só é calculado após informar no cadastro.
+    }
   }
 
   Future<void> _loadStations() async {
@@ -158,6 +183,10 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
 
   Future<void> save() async {
     if (!formKey.currentState!.validate()) return;
+    // Regras do gratuito: só para abastecimento novo, nunca para editar um
+    // já salvo.
+    if (widget.record == null && !await _checkFreeLimits()) return;
+    if (!mounted) return;
     setState(() => saving = true);
     final now = DateTime.now();
     final record = FuelingRecord(
@@ -171,7 +200,7 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
       station: stationText.trim().isEmpty ? null : stationText.trim(),
       establishmentId: establishmentId,
       fullTank: fullTank,
-      tankCapacityLiters: fullTank ? _parseNumber(tankCapacity.text) : null,
+      tankCapacityLiters: fullTank ? tankCapacityLiters : null,
       gaugeMarkedFull: fullTank && gaugeMarkedFull,
       notes: notes.text.trim().isEmpty ? null : notes.text.trim(),
       attachments: attachments,
@@ -179,6 +208,10 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
 
     try {
       await storage.saveFueling(record);
+      final recordMileage = record.mileage;
+      if (recordMileage != null) {
+        await vehicleStorage.raiseMileage(widget.vehicle.id, recordMileage);
+      }
       final capacity = record.tankCapacityLiters;
       if (capacity != null && record.liters > capacity) {
         await notificationService.addUnique(
@@ -191,7 +224,10 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
           category: 'overfill',
         );
       }
-      if (widget.record == null) AdsService.instance.registerMainActivity();
+      if (widget.record == null) {
+        AdsService.instance.registerMainActivity();
+        AppReviewService.instance.registerEvent();
+      }
       if (mounted) Navigator.of(context).pop(true);
     } catch (_) {
       if (!mounted) return;
@@ -206,7 +242,119 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
     }
   }
 
+  /// Pré-carrega o vídeo premiado quando o abastecimento novo vai passar da
+  /// cota gratuita do mês (mesma contagem de [_checkFreeLimits]).
+  Future<void> _preloadRewardedIfNeeded() async {
+    final plan = FreePlanService.instance;
+    if (!plan.perUseNeedsRewarded) return;
+    try {
+      final fuelings = await storage.loadFuelings();
+      final countThisMonth = plan.countInCurrentMonth(
+        fuelings.map((item) => item.date),
+      );
+      plan.preloadRewardedIf(plan.fuelingNeedsRewarded(countThisMonth));
+    } on Object {
+      // Sem leitura dos abastecimentos: o vídeo carrega na hora, se pedido.
+    }
+  }
+
+  /// Regras do plano gratuito para um abastecimento novo: o veículo precisa
+  /// aceitar lançamentos novos e, acima da cota mensal, só com vídeo
+  /// premiado. Devolve `true` quando pode salvar.
+  Future<bool> _checkFreeLimits() async {
+    final vehicles = await vehicleStorage.loadVehicles();
+    if (!mounted) return false;
+    if (!FreePlanService.instance.canRegisterForVehicle(
+      vehicles,
+      widget.vehicle.id,
+    )) {
+      await _showVehicleLockedDialog();
+      return false;
+    }
+    final fuelings = await storage.loadFuelings();
+    if (!mounted) return false;
+    final countThisMonth = FreePlanService.instance.countInCurrentMonth(
+      fuelings.map((item) => item.date),
+    );
+    if (FreePlanService.instance.fuelingWithinFreeQuota(countThisMonth)) {
+      return true;
+    }
+    return _showFuelingLimitDialog(countThisMonth);
+  }
+
+  Future<void> _showVehicleLockedDialog() async {
+    final seePremium = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(tr.freeLimitVehicleTitle),
+        content: Text(tr.freeLimitVehicleText),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(tr.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(tr.learnAboutPremium),
+          ),
+        ],
+      ),
+    );
+    if (seePremium == true && mounted) {
+      await openPremium(context, PremiumFeature.vehicles, 'limit_vehicles');
+    }
+  }
+
+  Future<bool> _showFuelingLimitDialog(int countThisMonth) async {
+    final choice = await showDialog<_LimitChoice>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(tr.freeLimitFuelingTitle),
+        content: Text(tr.freeLimitFuelingText(countThisMonth)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, _LimitChoice.cancel),
+            child: Text(tr.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, _LimitChoice.premium),
+            child: Text(tr.learnAboutPremium),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, _LimitChoice.watch),
+            child: Text(tr.watchAndSave),
+          ),
+        ],
+      ),
+    );
+    if (choice == _LimitChoice.premium) {
+      if (mounted) {
+        await openPremium(context, PremiumFeature.fuelings, 'limit_fuelings');
+      }
+      return false;
+    }
+    if (choice == _LimitChoice.watch) {
+      final earned = await FreePlanService.instance.unlockFuelingWithRewarded();
+      if (mounted && !earned) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(tr.rewardedNotEarned),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return earned;
+    }
+    return false;
+  }
+
   Future<void> scanReceipt() async {
+    if (!FreePlanService.instance.receiptScanAllowed) {
+      await openPremium(context, PremiumFeature.receiptScan, 'fueling_form');
+      return;
+    }
+    // Toque em "ler nota fiscal" (antes de abrir a câmera).
+    AnalyticsService.tap('scan_receipt', screen: 'fueling_form');
     final photo = await ImagePickService.pick(
       source: ImageSource.camera,
       imageQuality: 86,
@@ -311,7 +459,6 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
     totalPrice.dispose();
     mileage.dispose();
     notes.dispose();
-    tankCapacity.dispose();
     super.dispose();
   }
 
@@ -430,29 +577,29 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
                   }),
                 ),
                 if (fullTank) ...[
-                  const SizedBox(height: 6),
-                  TextFormField(
-                    controller: tankCapacity,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
+                  if (tankCapacityLiters == null) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(
+                          Icons.info_outline_rounded,
+                          size: 18,
+                          color: AppColors.muted,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            tr.tankCapacityMissing,
+                            style: const TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
-                    ],
-                    decoration: InputDecoration(
-                      labelText: tr.tankCapacity,
-                      suffixText: 'L',
-                      helperText: tr.tankCapacityHint,
-                    ),
-                    validator: (value) {
-                      if (!fullTank) return null;
-                      final capacity = _parseNumber(value ?? '');
-                      if (capacity == null || capacity <= 0) {
-                        return tr.tankCapacityRequired;
-                      }
-                      return null;
-                    },
-                  ),
+                  ],
                   const SizedBox(height: 6),
                   CheckboxListTile(
                     contentPadding: EdgeInsets.zero,

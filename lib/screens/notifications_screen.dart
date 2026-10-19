@@ -4,6 +4,7 @@ import '../models/app_notification.dart';
 import '../services/notification_service.dart';
 import '../theme/app_colors.dart';
 import '../l10n/l10n.dart';
+import '../widgets/responsive_sheet.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -42,7 +43,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Future<void> openPreferences() async {
     var current = preferences;
-    await showModalBottomSheet<void>(
+    await showResponsiveSheet<void>(
       context: context,
       showDragHandle: true,
       isScrollControlled: true,

@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import '../models/fueling_record.dart';
 import '../models/vehicle.dart';
 import '../services/ads_service.dart';
+import '../services/app_review_service.dart';
+import '../services/analytics_service.dart';
 import '../services/fueling_storage_service.dart';
 import '../services/vehicle_storage_service.dart';
 import '../services/notification_service.dart';
@@ -93,20 +95,9 @@ class _QuickFuelingCardState extends State<QuickFuelingCard> {
 
     try {
       await fuelingStorage.addFueling(record);
-      final previous = await fuelingStorage.loadFuelings();
-      final capacities =
-          previous
-              .where(
-                (item) =>
-                    item.vehicleId == vehicle!.id &&
-                    item.id != record.id &&
-                    item.tankCapacityLiters != null,
-              )
-              .toList()
-            ..sort((a, b) => b.date.compareTo(a.date));
-      final capacity = capacities.isEmpty
-          ? null
-          : capacities.first.tankCapacityLiters;
+      final capacity =
+          vehicle!.tankCapacityLiters ??
+          await fuelingStorage.lastTankCapacity(vehicle!.id);
       if (capacity != null && liters > capacity) {
         await notificationService.addUnique(
           key: 'fuel-overfill-${record.id}',
@@ -123,6 +114,7 @@ class _QuickFuelingCardState extends State<QuickFuelingCard> {
       priceController.clear();
       showMessage(tr.quickFuelingAdded);
       AdsService.instance.registerMainActivity();
+      AppReviewService.instance.registerEvent();
       // Volta a observar o campo para o próximo abastecimento rápido.
       litersController
         ..removeListener(_prepareInterstitial)
@@ -143,10 +135,13 @@ class _QuickFuelingCardState extends State<QuickFuelingCard> {
     final saved = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => FuelingFormScreen(vehicle: activeVehicle),
+        settings: const RouteSettings(name: 'fueling_form'),
       ),
     );
     if (saved == true && mounted) {
       showMessage(tr.fuelingAdded);
+      // O abastecimento pode ter atualizado a quilometragem do veículo.
+      await loadVehicle();
     }
   }
 
@@ -285,7 +280,16 @@ class _QuickFuelingCardState extends State<QuickFuelingCard> {
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
-            onPressed: loadingVehicle ? null : openCompleteFueling,
+            onPressed: loadingVehicle
+                ? null
+                : () {
+                    AnalyticsService.tap(
+                      'new_fueling',
+                      screen: 'home',
+                      params: {'source': 'quick_card'},
+                    );
+                    openCompleteFueling();
+                  },
             icon: const Icon(Icons.post_add_rounded),
             label: Text(tr.fullFueling),
             style: OutlinedButton.styleFrom(

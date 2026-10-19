@@ -9,6 +9,7 @@ import 'screens/presentation_screen.dart';
 import 'services/access_service.dart';
 import 'services/ads_config.dart';
 import 'services/ads_service.dart';
+import 'services/analytics_service.dart';
 import 'services/auto_backup_service.dart';
 import 'services/firebase_bootstrap.dart';
 import 'services/update_service.dart';
@@ -23,6 +24,8 @@ Future<void> main() async {
   await FirebaseBootstrap.initialize();
   await initializeDateFormatting();
   await AccessService.instance.initialize();
+  // Propriedades do usuário no Analytics (plano, veículos, dias de uso).
+  unawaited(AnalyticsService.instance.initialize());
   AutoBackupService.instance.start();
   unawaited(UpdateService.instance.start());
   AdsService.instance.onInterstitialDismissed = () {
@@ -42,6 +45,8 @@ class MyCarApp extends StatelessWidget {
   Widget build(BuildContext context) => MaterialApp(
     title: 'MyCarApp',
     navigatorKey: _navigatorKey,
+    // Registra o screen_view de cada rota nomeada (RouteSettings.name).
+    navigatorObservers: [AnalyticsService.observer()],
     supportedLocales: supportedAppLocales,
     localizationsDelegates: const [
       AppLocalizations.delegate,

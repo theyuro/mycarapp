@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../services/analytics_service.dart';
 import '../services/authentication_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_logo.dart';
@@ -32,11 +33,16 @@ class _PresentationScreenState extends State<PresentationScreen> {
     final signedIn = AuthenticationService.instance.currentUser != null;
     final Widget next = signedIn ? const HomeScreen() : const LoginScreen();
     if (!mounted) return;
+    // Registra manualmente para evitar o screen_view duplicado que o
+    // observador geraria a partir do RouteSettings.name abaixo.
+    AnalyticsService.screen(signedIn ? 'home' : 'login');
     Navigator.of(context).pushReplacement(
       PageRouteBuilder<void>(
         pageBuilder: (_, animation, _) =>
             FadeTransition(opacity: animation, child: next),
         transitionDuration: const Duration(milliseconds: 650),
+        // Nome da rota para o screen_view do Analytics.
+        settings: RouteSettings(name: signedIn ? 'home' : 'login'),
       ),
     );
   }

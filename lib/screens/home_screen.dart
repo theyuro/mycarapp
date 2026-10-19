@@ -1,7 +1,7 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:in_app_review/in_app_review.dart';
 
 import '../models/fueling_record.dart';
 import '../models/maintenance_record.dart';
@@ -10,9 +10,12 @@ import '../models/vehicle_expense.dart';
 import '../services/access_service.dart';
 import '../services/ads_config.dart';
 import '../services/ads_service.dart';
+import '../services/analytics_service.dart';
+import '../services/app_review_service.dart';
 import '../services/auto_backup_service.dart';
 import '../services/expense_storage_service.dart';
 import '../services/fueling_storage_service.dart';
+import '../services/free_plan_service.dart';
 import '../services/maintenance_storage_service.dart';
 import '../services/notification_service.dart';
 import '../services/premium_upsell_service.dart';
@@ -38,6 +41,7 @@ import 'reports_screen.dart';
 import 'support_screen.dart';
 import 'vehicles_screen.dart';
 import '../l10n/l10n.dart';
+import '../widgets/responsive_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -66,6 +70,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    // Lê do disco a última liberação por vídeo do pior posto, para que as
+    // regras do gratuito já estejam disponíveis quando as telas precisarem.
+    unawaited(FreePlanService.instance.initialize());
     loadActiveVehicle().then((_) => _offerCloudRestore());
   }
 
@@ -160,12 +167,16 @@ class _HomeScreenState extends State<HomeScreen> {
       message: tr.newsDocsText,
       showSystemNotification: false,
     );
+    // Novidade da próxima versão (1.4.0): lançamento do Premium.
     await notificationService.addUnique(
-      key: 'update-2026-10-v1-3-4',
-      title: tr.news134Title,
-      message: tr.news134Text,
+      key: 'update-2026-10-v1-4-0',
+      title: tr.news140Title,
+      message: tr.news140Text,
       showSystemNotification: false,
     );
+    // A novidade da 1.3.4 ("vários veículos… agora são gratuitos") não é
+    // mais criada: contradiz o plano gratuito da 1.4.0. Quem já a recebeu
+    // continua com a notificação salva (key 'update-2026-10-v1-3-4').
     await notificationService.addUnique(
       key: 'update-2026-10-v1-3-3',
       title: tr.news133Title,
@@ -250,7 +261,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> openNotifications() async {
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(builder: (_) => const NotificationsScreen()),
+      MaterialPageRoute<void>(
+        builder: (_) => const NotificationsScreen(),
+        settings: const RouteSettings(name: 'notifications'),
+      ),
     );
     final notifications = await notificationService.loadNotifications();
     if (mounted) {
@@ -264,7 +278,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> openVehicles() async {
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(builder: (_) => const VehiclesScreen()),
+      MaterialPageRoute<void>(
+        builder: (_) => const VehiclesScreen(),
+        settings: const RouteSettings(name: 'vehicles'),
+      ),
     );
     if (!mounted) return;
     await loadActiveVehicle();
@@ -272,31 +289,46 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> openFuelingHistory() async {
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(builder: (_) => const FuelingHistoryScreen()),
+      MaterialPageRoute<void>(
+        builder: (_) => const FuelingHistoryScreen(),
+        settings: const RouteSettings(name: 'fueling_history'),
+      ),
     );
   }
 
   Future<void> openMaintenances() async {
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(builder: (_) => const MaintenanceScreen()),
+      MaterialPageRoute<void>(
+        builder: (_) => const MaintenanceScreen(),
+        settings: const RouteSettings(name: 'maintenance'),
+      ),
     );
   }
 
   Future<void> openDocuments() async {
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(builder: (_) => const DocumentsScreen()),
+      MaterialPageRoute<void>(
+        builder: (_) => const DocumentsScreen(),
+        settings: const RouteSettings(name: 'documents'),
+      ),
     );
   }
 
   Future<void> openReports() async {
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(builder: (_) => const ReportsScreen()),
+      MaterialPageRoute<void>(
+        builder: (_) => const ReportsScreen(),
+        settings: const RouteSettings(name: 'reports'),
+      ),
     );
   }
 
   Future<void> openEstablishments() async {
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(builder: (_) => const EstablishmentsScreen()),
+      MaterialPageRoute<void>(
+        builder: (_) => const EstablishmentsScreen(),
+        settings: const RouteSettings(name: 'establishments'),
+      ),
     );
   }
 
@@ -304,6 +336,7 @@ class _HomeScreenState extends State<HomeScreen> {
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (_) => ExpensesScreen(initialCategory: category),
+        settings: const RouteSettings(name: 'expenses'),
       ),
     );
     if (mounted) await refreshDashboardData(activeVehicle);
@@ -318,6 +351,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => FuelingFormScreen(vehicle: vehicle),
+        settings: const RouteSettings(name: 'fueling_form'),
       ),
     );
     if (changed == true && mounted) await loadActiveVehicle();
@@ -332,30 +366,43 @@ class _HomeScreenState extends State<HomeScreen> {
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => MaintenanceFormScreen(vehicle: vehicle),
+        settings: const RouteSettings(name: 'maintenance_form'),
       ),
     );
     if (changed == true && mounted) await loadActiveVehicle();
   }
 
   Future<void> showNewEntryDialog() async {
-    await showModalBottomSheet<void>(
+    await showResponsiveSheet<void>(
       context: context,
       useSafeArea: true,
       showDragHandle: true,
       builder: (sheetContext) => _NewEntrySheet(
         onFueling: () {
+          AnalyticsService.tap('new_fueling', screen: 'home');
           Navigator.pop(sheetContext);
           openFuelingForm();
         },
         onMaintenance: () {
+          AnalyticsService.tap('new_maintenance', screen: 'home');
           Navigator.pop(sheetContext);
           openMaintenanceForm();
         },
         onInsurance: () {
+          AnalyticsService.tap(
+            'new_expense',
+            screen: 'home',
+            params: {'source': 'insurance'},
+          );
           Navigator.pop(sheetContext);
           openExpenses(category: VehicleExpenseCategory.insurance);
         },
         onInstallment: () {
+          AnalyticsService.tap(
+            'new_expense',
+            screen: 'home',
+            params: {'source': 'financing'},
+          );
           Navigator.pop(sheetContext);
           openExpenses(category: VehicleExpenseCategory.financing);
         },
@@ -376,7 +423,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (rewardedOfferAvailable && !adFreeAtLimit) {
       AdsService.instance.loadRewarded();
     }
-    await showModalBottomSheet<void>(
+    await showResponsiveSheet<void>(
       context: context,
       useSafeArea: true,
       showDragHandle: true,
@@ -419,7 +466,10 @@ class _HomeScreenState extends State<HomeScreen> {
             onTap: () => _closeAndOpen(
               sheetContext,
               () => Navigator.of(context).push<void>(
-                MaterialPageRoute<void>(builder: (_) => const SupportScreen()),
+                MaterialPageRoute<void>(
+                  builder: (_) => const SupportScreen(),
+                  settings: const RouteSettings(name: 'support'),
+                ),
               ),
             ),
           ),
@@ -494,33 +544,39 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> openDataTransfer() async {
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(builder: (_) => const DataTransferScreen()),
+      MaterialPageRoute<void>(
+        builder: (_) => const DataTransferScreen(),
+        settings: const RouteSettings(name: 'data_transfer'),
+      ),
     );
     if (mounted) await loadActiveVehicle();
   }
 
-  Future<void> rateApp() async {
-    try {
-      final review = InAppReview.instance;
-      if (await review.isAvailable()) {
-        await review.requestReview();
-      } else {
-        await review.openStoreListing();
-      }
-    } on Object {
-      // API da loja indisponível: não bloquear o usuário por isso.
-    }
-  }
+  // Botão: abre direto a página da Play (a janela de avaliação dentro do
+  // app pode não aparecer; ver AppReviewService).
+  Future<void> rateApp() => AppReviewService.instance.openStoreListing();
 
   Future<void> openSubscription() async {
+    // Ícone Premium da barra superior.
+    AnalyticsService.tap(
+      'open_subscription',
+      screen: 'home',
+      params: {'source': 'app_bar'},
+    );
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(builder: (_) => const SubscriptionScreen()),
+      MaterialPageRoute<void>(
+        builder: (_) => const SubscriptionScreen(),
+        settings: const RouteSettings(name: 'subscription'),
+      ),
     );
   }
 
   Future<void> openAccount() async {
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(builder: (_) => const AccountScreen()),
+      MaterialPageRoute<void>(
+        builder: (_) => const AccountScreen(),
+        settings: const RouteSettings(name: 'account'),
+      ),
     );
   }
 
@@ -803,40 +859,44 @@ class _DashboardStats extends StatelessWidget {
         .where((item) => item.occursIn(month))
         .fold<double>(0, (sum, item) => sum + item.amount);
     final consumption = _lastConsumption(fuelings);
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 10,
-      crossAxisSpacing: 10,
-      childAspectRatio: 1.7,
-      children: [
-        _DashboardMetric(
-          icon: Icons.account_balance_wallet_outlined,
-          label: tr.homeSpentMonth,
-          value: _dashboardMoney(fuelTotal + maintenanceTotal + expenseTotal),
+    return LayoutBuilder(
+      builder: (context, constraints) => GridView(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: constraints.maxWidth >= 600 ? 4 : 2,
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          mainAxisExtent: 96,
         ),
-        _DashboardMetric(
-          icon: Icons.speed_rounded,
-          label: tr.homeLastConsumption,
-          value: consumption == null
-              ? '-- km/L'
-              : '${_dashboardDecimal(consumption)} km/L',
-        ),
-        _DashboardMetric(
-          icon: Icons.local_gas_station_outlined,
-          label: tr.homeAveragePriceStations,
-          value: liters == 0
-              ? '-- /L'
-              : '${_dashboardMoney(fuelTotal / liters)}/L',
-          onTap: onViewByStation,
-        ),
-        _DashboardMetric(
-          icon: Icons.build_circle_outlined,
-          label: tr.maintNext,
-          value: _nextMaintenance(maintenances, vehicle),
-        ),
-      ],
+        children: [
+          _DashboardMetric(
+            icon: Icons.account_balance_wallet_outlined,
+            label: tr.homeSpentMonth,
+            value: _dashboardMoney(fuelTotal + maintenanceTotal + expenseTotal),
+          ),
+          _DashboardMetric(
+            icon: Icons.speed_rounded,
+            label: tr.homeLastConsumption,
+            value: consumption == null
+                ? '-- km/L'
+                : '${_dashboardDecimal(consumption)} km/L',
+          ),
+          _DashboardMetric(
+            icon: Icons.local_gas_station_outlined,
+            label: tr.homeAveragePriceStations,
+            value: liters == 0
+                ? '-- /L'
+                : '${_dashboardMoney(fuelTotal / liters)}/L',
+            onTap: onViewByStation,
+          ),
+          _DashboardMetric(
+            icon: Icons.build_circle_outlined,
+            label: tr.maintNext,
+            value: _nextMaintenance(maintenances, vehicle),
+          ),
+        ],
+      ),
     );
   }
 }

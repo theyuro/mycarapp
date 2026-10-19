@@ -58,9 +58,12 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   Future<void> openBackup() async {
-    await Navigator.of(
-      context,
-    ).push<void>(MaterialPageRoute<void>(builder: (_) => const BackupScreen()));
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => const BackupScreen(),
+        settings: const RouteSettings(name: 'backup'),
+      ),
+    );
     if (mounted) await load();
   }
 
@@ -160,6 +163,7 @@ class _AccountScreenState extends State<AccountScreen> {
                             Navigator.of(context).pushAndRemoveUntil(
                               MaterialPageRoute<void>(
                                 builder: (_) => const LoginScreen(),
+                                settings: const RouteSettings(name: 'login'),
                               ),
                               (_) => false,
                             ),
@@ -199,6 +203,7 @@ class _AccountScreenState extends State<AccountScreen> {
                           onTap: () => Navigator.of(context).push<void>(
                             MaterialPageRoute<void>(
                               builder: (_) => const SupportScreen(),
+                              settings: const RouteSettings(name: 'support'),
                             ),
                           ),
                         ),
@@ -336,6 +341,7 @@ class _AccountScreenState extends State<AccountScreen> {
                           Navigator.of(context).pushAndRemoveUntil(
                             MaterialPageRoute<void>(
                               builder: (_) => const LoginScreen(),
+                              settings: const RouteSettings(name: 'login'),
                             ),
                             (_) => false,
                           );
@@ -470,7 +476,18 @@ String _offerName(String tag) => switch (tag) {
   'first-1000-annual-pl' => tr.offerFounders,
   'referral-yr-30' => tr.offerReferral,
   'referral-3m-50' => tr.offerReferralOld,
+  'yearly-7daysfree' => tr.offerYearlyTrial,
+  // Oferta de saída: o percentual sai do ProductDetails da Play; sem a
+  // opção carregada, um texto sem número.
+  AccessService.exitOfferTag => _exitOfferName(),
   _ => tr.offerSpecial,
 };
+
+String _exitOfferName() {
+  final percent = AccessService.instance.exitOfferOption?.discountPercent;
+  return percent == null
+      ? tr.offerExitGeneric
+      : tr.offerExitPercent(percent);
+}
 
 String _date(DateTime? value) => value == null ? tr.notSet : formatDate(value);

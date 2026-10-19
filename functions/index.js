@@ -19,7 +19,6 @@ const db = getFirestore();
 const region = "southamerica-east1";
 const packageName = "com.gilesdesenvolvimento.mycarapp";
 const subscriptionProductId = "mycarapp_subscription";
-const founderLimit = 1000;
 const adminEmail = "giles.softwares@gmail.com";
 const defaultPremiumFreeUntil = new Date("2026-08-31T03:00:00.000Z");
 
@@ -328,13 +327,18 @@ exports.getPromotionEligibility = onCall(
     {enforceAppCheck: true}, async (request) => {
       const uid = requireAuth(request);
       await ensureProfile(uid, request.auth.token);
-      const [userSnapshot, counterSnapshot] = await Promise.all([
-        db.collection("users").doc(uid).get(),
-        db.collection("counters").doc("subscribers").get(),
-      ]);
+      const userSnapshot = await db.collection("users").doc(uid).get();
       const user = userSnapshot.data() || {};
-      const subscriberCount = counterSnapshot.data()?.total || 0;
       const availableOfferTags = [];
+
+      // Oferta de saída (60% no 1º ano do anual): só durante os 10 minutos
+      // concedidos por claimExitOffer e só para quem nunca pagou. Fica em
+      // primeiro para ser a oferta preferida enquanto a janela estiver aberta.
+      const exitOfferExpiresAt = user.exitOfferExpiresAt?.toDate?.();
+      if (!user.firstPaidAt && exitOfferExpiresAt &&
+          exitOfferExpiresAt.getTime() > Date.now()) {
+        availableOfferTags.push(exitOfferTag);
+      }
 
       if (user.testerEligible === true) {
         availableOfferTags.push("closed-test-yr-70", "closed-test-3m-70");
@@ -344,15 +348,59 @@ exports.getPromotionEligibility = onCall(
         // 30% no primeiro ano do plano anual (oferta da Play Console).
         availableOfferTags.push("referral-yr-30");
       }
-      if (!user.firstPaidAt && subscriberCount < founderLimit) {
-        availableOfferTags.push("first-1000-annual-pl");
-      }
+      // 7 dias grátis no plano anual; a própria Play só mostra essa oferta
+      // para quem nunca teve a assinatura, então aqui ela fica disponível
+      // para todos (a oferta de fundador foi desativada na Play).
+      availableOfferTags.push("yearly-7daysfree");
 
       return {
         availableOfferTags,
         bestOfferTag: availableOfferTags[0] || null,
-        founderSpotsRemaining: Math.max(0, founderLimit - subscriberCount),
+        // Oferta de fundador desativada; mantido em 0 só para não quebrar
+        // versões antigas do app que ainda leem este campo.
+        founderSpotsRemaining: 0,
       };
+    });
+
+// Oferta de saída do questionário ("Muito caro"): uma única vez por conta,
+// por 10 minutos, só para contas com menos de 30 dias e que nunca pagaram.
+const exitOfferTag = "exitlag";
+const exitOfferWindowMs = 10 * 60 * 1000;
+const exitOfferMaxAccountAgeMs = 30 * 24 * 60 * 60 * 1000;
+
+exports.claimExitOffer = onCall(
+    {enforceAppCheck: true}, async (request) => {
+      const uid = requireAuth(request);
+      await ensureProfile(uid, request.auth.token);
+      const userRef = db.collection("users").doc(uid);
+
+      // Data de criação da conta: a do perfil; se faltar, a do Firebase Auth.
+      let authCreatedAt = null;
+      try {
+        const authUser = await getAuth().getUser(uid);
+        authCreatedAt = new Date(authUser.metadata.creationTime);
+      } catch (error) {
+        console.warn("claimExitOffer: sem data de criação no Auth", error);
+      }
+
+      return db.runTransaction(async (transaction) => {
+        const snapshot = await transaction.get(userRef);
+        const user = snapshot.data() || {};
+        const createdAt = user.createdAt?.toDate?.() || authCreatedAt;
+        const now = Date.now();
+        if (user.firstPaidAt || user.exitOfferClaimedAt || !createdAt ||
+            Number.isNaN(createdAt.getTime()) ||
+            now - createdAt.getTime() > exitOfferMaxAccountAgeMs) {
+          return {granted: false};
+        }
+        const expiresAt = new Date(now + exitOfferWindowMs);
+        transaction.set(userRef, {
+          exitOfferClaimedAt: FieldValue.serverTimestamp(),
+          exitOfferExpiresAt: expiresAt,
+          updatedAt: FieldValue.serverTimestamp(),
+        }, {merge: true});
+        return {granted: true, expiresAt: expiresAt.toISOString()};
+      });
     });
 
 async function fetchGooglePlaySubscription(purchaseToken) {
@@ -386,7 +434,6 @@ async function persistSubscription(uid, purchaseToken, subscription) {
   const values = subscriptionValues(subscription);
   const userRef = db.collection("users").doc(uid);
   const entitlementRef = db.collection("entitlements").doc(uid);
-  const counterRef = db.collection("counters").doc("subscribers");
   const referralRef = db.collection("referrals").doc(uid);
   const tokenHash = createHash("sha256").update(purchaseToken).digest("hex");
   const tokenRef = db.collection("purchaseTokens").doc(tokenHash);
@@ -401,17 +448,15 @@ async function persistSubscription(uid, purchaseToken, subscription) {
   }
 
   const persistedValues = await db.runTransaction(async (transaction) => {
-    const [userSnapshot, counterSnapshot, referralSnapshot, tokenSnapshot,
+    const [userSnapshot, referralSnapshot, tokenSnapshot,
       entitlementSnapshot] =
       await Promise.all([
         transaction.get(userRef),
-        transaction.get(counterRef),
         transaction.get(referralRef),
         transaction.get(tokenRef),
         transaction.get(entitlementRef),
       ]);
     const user = userSnapshot.data() || {};
-    const counter = counterSnapshot.data()?.total || 0;
     const tokenOwner = tokenSnapshot.data()?.uid;
     if (tokenOwner && tokenOwner !== uid) {
       throw new HttpsError(
@@ -444,17 +489,16 @@ async function persistSubscription(uid, purchaseToken, subscription) {
       }, {merge: true});
     }
 
-    if (values.active && !user.firstPaidAt) {
-      const nextNumber = counter + 1;
-      transaction.set(counterRef, {total: nextNumber}, {merge: true});
+    // firstPaidAt e crédito de indicação só na primeira cobrança real (fora
+    // do período de teste grátis), nunca durante o freeTrial.
+    if (values.active && !values.inFreeTrial && !user.firstPaidAt) {
       transaction.set(userRef, {
         firstPaidAt: FieldValue.serverTimestamp(),
-        founderNumber: nextNumber <= founderLimit ? nextNumber : null,
         updatedAt: FieldValue.serverTimestamp(),
       }, {merge: true});
     }
 
-    if (values.active && referralSnapshot.exists &&
+    if (values.active && !values.inFreeTrial && referralSnapshot.exists &&
         referralSnapshot.data().status === "pending_payment") {
       const referrerUid = referralSnapshot.data().referrerUid;
       transaction.set(referralRef, {
@@ -474,6 +518,7 @@ async function persistSubscription(uid, purchaseToken, subscription) {
         productId: current.productId || subscriptionProductId,
         basePlanId: current.basePlanId || null,
         offerId: current.offerId || null,
+        inFreeTrial: Boolean(current.inFreeTrial),
         expiryTime: currentExpiry,
         expiresAt: currentExpiry,
         autoRenewing: Boolean(current.autoRenewing),

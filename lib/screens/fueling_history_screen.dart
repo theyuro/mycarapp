@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/fueling_record.dart';
 import '../models/vehicle.dart';
 import '../services/fueling_storage_service.dart';
+import '../services/analytics_service.dart';
 import '../services/premium_upsell_service.dart';
 import '../services/vehicle_storage_service.dart';
 import '../theme/app_colors.dart';
@@ -96,6 +97,7 @@ class _FuelingHistoryScreenState extends State<FuelingHistoryScreen> {
       MaterialPageRoute<bool>(
         builder: (_) =>
             FuelingFormScreen(vehicle: currentVehicle, record: record),
+        settings: const RouteSettings(name: 'fueling_form'),
       ),
     );
     if (changed == true) {
@@ -165,7 +167,12 @@ class _FuelingHistoryScreenState extends State<FuelingHistoryScreen> {
         child: FreeUserBannerAd(placement: BannerPlacement.fuelingHistory),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: vehicle == null ? null : () => openForm(),
+        onPressed: vehicle == null
+            ? null
+            : () {
+                AnalyticsService.tap('new_fueling', screen: 'fueling_history');
+                openForm();
+              },
         backgroundColor: AppColors.gold,
         foregroundColor: AppColors.navy,
         icon: const Icon(Icons.add),
@@ -178,7 +185,17 @@ class _FuelingHistoryScreenState extends State<FuelingHistoryScreen> {
           : RefreshIndicator(
               onRefresh: loadHistory,
               child: records.isEmpty
-                  ? _EmptyHistory(vehicle: vehicle!, onAdd: () => openForm())
+                  ? _EmptyHistory(
+                      vehicle: vehicle!,
+                      onAdd: () {
+                        AnalyticsService.tap(
+                          'new_fueling',
+                          screen: 'fueling_history',
+                          params: {'source': 'empty_state'},
+                        );
+                        openForm();
+                      },
+                    )
                   : ListView.builder(
                       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
                       itemCount: entries.length + 2,
@@ -296,35 +313,39 @@ class _HistorySummary extends StatelessWidget {
     );
     final averagePrice = totalLiters == 0 ? 0.0 : totalSpent / totalLiters;
 
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 10,
-      crossAxisSpacing: 10,
-      childAspectRatio: 1.8,
-      children: [
-        _SummaryTile(
-          label: tr.historySpentMonth,
-          value: _currency(monthTotal),
-          icon: Icons.payments_outlined,
+    return LayoutBuilder(
+      builder: (context, constraints) => GridView(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: constraints.maxWidth >= 600 ? 4 : 2,
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          mainAxisExtent: 88,
         ),
-        _SummaryTile(
-          label: tr.averagePrice,
-          value: '${_currency(averagePrice)}/L',
-          icon: Icons.show_chart_rounded,
-        ),
-        _SummaryTile(
-          label: tr.historyTotalLiters,
-          value: '${_decimal(totalLiters)} L',
-          icon: Icons.local_gas_station_outlined,
-        ),
-        _SummaryTile(
-          label: tr.historyRecords,
-          value: '${records.length}',
-          icon: Icons.receipt_long_outlined,
-        ),
-      ],
+        children: [
+          _SummaryTile(
+            label: tr.historySpentMonth,
+            value: _currency(monthTotal),
+            icon: Icons.payments_outlined,
+          ),
+          _SummaryTile(
+            label: tr.averagePrice,
+            value: '${_currency(averagePrice)}/L',
+            icon: Icons.show_chart_rounded,
+          ),
+          _SummaryTile(
+            label: tr.historyTotalLiters,
+            value: '${_decimal(totalLiters)} L',
+            icon: Icons.local_gas_station_outlined,
+          ),
+          _SummaryTile(
+            label: tr.historyRecords,
+            value: '${records.length}',
+            icon: Icons.receipt_long_outlined,
+          ),
+        ],
+      ),
     );
   }
 }

@@ -7,17 +7,25 @@ import '../models/establishment.dart';
 import '../models/maintenance_record.dart';
 import '../models/record_attachment.dart';
 import '../models/vehicle.dart';
+import '../services/access_service.dart';
 import '../services/ads_service.dart';
+import '../services/app_review_service.dart';
 import '../services/establishment_storage_service.dart';
+import '../services/free_plan_service.dart';
 import '../services/maintenance_storage_service.dart';
 import '../services/calendar_service.dart';
 import '../services/notification_service.dart';
+import '../services/vehicle_storage_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/vehicle_type_icon.dart';
 import '../widgets/establishment_field.dart';
 import '../widgets/receipt_attachments_field.dart';
+import 'lifetime_purchase_screen.dart';
 import '../l10n/l10n.dart';
 import '../l10n/labels.dart';
+
+/// Resposta do diálogo de limite do gratuito (vídeo premiado ou Premium).
+enum _LimitChoice { watch, premium, cancel }
 
 class MaintenanceFormScreen extends StatefulWidget {
   const MaintenanceFormScreen({
@@ -62,6 +70,7 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
   final calendar = CalendarService();
   final notificationService = NotificationService();
   final establishmentStorage = EstablishmentStorageService();
+  final vehicleStorage = VehicleStorageService();
 
   late String category;
   late DateTime date;
@@ -81,7 +90,13 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
   void initState() {
     super.initState();
     final record = widget.record;
-    if (record == null) AdsService.instance.prepareInterstitial();
+    if (record == null) {
+      AdsService.instance.prepareInterstitial();
+      // Gratuito: toda manutenção nova pede vídeo; já deixa carregando.
+      FreePlanService.instance.preloadRewardedIf(
+        FreePlanService.instance.perUseNeedsRewarded,
+      );
+    }
     isCompleted = record?.isCompleted ?? widget.initialCompleted;
     category = record?.category ?? categories.first;
     if (!categories.contains(category)) category = categories.last;
@@ -173,6 +188,10 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
 
   Future<void> save() async {
     if (!formKey.currentState!.validate()) return;
+    // Regras do gratuito: só para registro novo, nunca para editar um já
+    // salvo.
+    if (widget.record == null && !await _checkFreeLimits()) return;
+    if (!mounted) return;
     setState(() => saving = true);
     final now = DateTime.now();
     final record = MaintenanceRecord(
@@ -232,7 +251,10 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
         debugPrint('Erro ao abrir agenda: $error\n$stackTrace');
       }
     }
-    if (widget.record == null) AdsService.instance.registerMainActivity();
+    if (widget.record == null) {
+      AdsService.instance.registerMainActivity();
+      AppReviewService.instance.registerEvent();
+    }
     if (!mounted) return;
     if (reminderWarning) {
       ScaffoldMessenger.of(
@@ -240,6 +262,94 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
       ).showSnackBar(SnackBar(content: Text(tr.maintSavedCalendarError)));
     }
     Navigator.of(context).pop(true);
+  }
+
+  /// Regras do plano gratuito para uma manutenção nova: o veículo precisa
+  /// aceitar lançamentos novos e, sem Premium, cada registro novo é liberado
+  /// por vídeo premiado. Devolve `true` quando pode salvar.
+  Future<bool> _checkFreeLimits() async {
+    final vehicles = await vehicleStorage.loadVehicles();
+    if (!mounted) return false;
+    if (!FreePlanService.instance.canRegisterForVehicle(
+      vehicles,
+      widget.vehicle.id,
+    )) {
+      await _showVehicleLockedDialog();
+      return false;
+    }
+    if (AccessService.instance.premiumUnlocked) return true;
+    return _showMaintenanceLimitDialog();
+  }
+
+  Future<void> _showVehicleLockedDialog() async {
+    final seePremium = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(tr.freeLimitVehicleTitle),
+        content: Text(tr.freeLimitVehicleText),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(tr.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(tr.learnAboutPremium),
+          ),
+        ],
+      ),
+    );
+    if (seePremium == true && mounted) {
+      await openPremium(context, PremiumFeature.vehicles, 'limit_vehicles');
+    }
+  }
+
+  Future<bool> _showMaintenanceLimitDialog() async {
+    final choice = await showDialog<_LimitChoice>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(tr.freeLimitMaintenanceTitle),
+        content: Text(tr.freeLimitMaintenanceText),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, _LimitChoice.cancel),
+            child: Text(tr.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, _LimitChoice.premium),
+            child: Text(tr.learnAboutPremium),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, _LimitChoice.watch),
+            child: Text(tr.watchAndSave),
+          ),
+        ],
+      ),
+    );
+    if (choice == _LimitChoice.premium) {
+      if (mounted) {
+        await openPremium(
+          context,
+          PremiumFeature.maintenance,
+          'limit_maintenance',
+        );
+      }
+      return false;
+    }
+    if (choice == _LimitChoice.watch) {
+      final earned =
+          await FreePlanService.instance.unlockMaintenanceWithRewarded();
+      if (mounted && !earned) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(tr.rewardedNotEarned),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return earned;
+    }
+    return false;
   }
 
   @override

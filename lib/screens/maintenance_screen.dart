@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/maintenance_record.dart';
 import '../models/vehicle.dart';
 import '../services/maintenance_storage_service.dart';
+import '../services/analytics_service.dart';
 import '../services/premium_upsell_service.dart';
 import '../services/vehicle_storage_service.dart';
 import '../theme/app_colors.dart';
@@ -13,6 +14,7 @@ import '../widgets/vehicle_type_icon.dart';
 import 'maintenance_form_screen.dart';
 import '../l10n/l10n.dart';
 import '../l10n/labels.dart';
+import '../widgets/responsive_sheet.dart';
 
 class MaintenanceScreen extends StatefulWidget {
   const MaintenanceScreen({super.key});
@@ -71,6 +73,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
           record: record,
           initialCompleted: completed,
         ),
+        settings: const RouteSettings(name: 'maintenance_form'),
       ),
     );
     if (changed == true) {
@@ -119,7 +122,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
   );
 
   void chooseMaintenanceType() {
-    showModalBottomSheet<void>(
+    showResponsiveSheet<void>(
       context: context,
       showDragHandle: true,
       builder: (sheetContext) => SafeArea(
@@ -195,7 +198,15 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
           child: FreeUserBannerAd(placement: BannerPlacement.maintenance),
         ),
         floatingActionButton: FloatingActionButton.extended(
-          onPressed: vehicle == null ? null : chooseMaintenanceType,
+          onPressed: vehicle == null
+              ? null
+              : () {
+                  AnalyticsService.tap(
+                    'new_maintenance',
+                    screen: 'maintenance',
+                  );
+                  chooseMaintenanceType();
+                },
           backgroundColor: AppColors.gold,
           foregroundColor: AppColors.navy,
           icon: const Icon(Icons.add),

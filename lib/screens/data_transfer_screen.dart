@@ -2,8 +2,11 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../services/analytics_service.dart';
 import '../services/data_transfer_service.dart';
+import '../services/free_plan_service.dart';
 import '../theme/app_colors.dart';
+import 'lifetime_purchase_screen.dart';
 import '../l10n/l10n.dart';
 
 class DataTransferScreen extends StatefulWidget {
@@ -18,6 +21,13 @@ class _DataTransferScreenState extends State<DataTransferScreen> {
   bool working = false;
 
   Future<void> export(String format) async {
+    // Exportação em CSV/Excel é Premium; a importação continua livre.
+    if (!FreePlanService.instance.exportAllowed) {
+      await openPremium(context, PremiumFeature.export, 'limit_export');
+      return;
+    }
+    // format é fixo no código ('csv' ou 'xlsx').
+    AnalyticsService.tap('export_$format', screen: 'data_transfer');
     setState(() => working = true);
     try {
       final file = await transfer.exportVehicle(format);

@@ -212,41 +212,29 @@ abstract class AppLocalizations {
   /// **'Backup automático na nuvem, com fotos e documentos.'**
   String get upsellBackupText;
 
-  /// No description provided for @upsellReportsTitle.
-  ///
-  /// In pt, this message translates to:
-  /// **'Novos relatórios'**
-  String get upsellReportsTitle;
-
-  /// No description provided for @upsellReportsText.
-  ///
-  /// In pt, this message translates to:
-  /// **'Assinantes Premium recebem os novos relatórios do app.'**
-  String get upsellReportsText;
-
-  /// No description provided for @upsellUpdatesTitle.
-  ///
-  /// In pt, this message translates to:
-  /// **'Atualizações exclusivas'**
-  String get upsellUpdatesTitle;
-
-  /// No description provided for @upsellUpdatesText.
-  ///
-  /// In pt, this message translates to:
-  /// **'Novidades lançadas primeiro para quem é Premium.'**
-  String get upsellUpdatesText;
-
   /// No description provided for @upsellVehiclesTitle.
   ///
   /// In pt, this message translates to:
-  /// **'Fotos e dados do veículo seguros'**
+  /// **'Veículos ilimitados'**
   String get upsellVehiclesTitle;
 
   /// No description provided for @upsellVehiclesText.
   ///
   /// In pt, this message translates to:
-  /// **'Com o Premium, tudo vai para a nuvem automaticamente.'**
+  /// **'Assinantes Premium cadastram quantos veículos quiserem.'**
   String get upsellVehiclesText;
+
+  /// No description provided for @upsellReceiptTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Leitura automática da nota fiscal'**
+  String get upsellReceiptTitle;
+
+  /// No description provided for @upsellReceiptText.
+  ///
+  /// In pt, this message translates to:
+  /// **'Fotografe a nota e deixe o Premium preencher o abastecimento pra você.'**
+  String get upsellReceiptText;
 
   /// No description provided for @upsellAdsTitle.
   ///
@@ -263,37 +251,37 @@ abstract class AppLocalizations {
   /// No description provided for @upsellFuelingTitle.
   ///
   /// In pt, this message translates to:
-  /// **'Não perca seus abastecimentos'**
+  /// **'Abastecimentos sem vídeo'**
   String get upsellFuelingTitle;
 
   /// No description provided for @upsellFuelingText.
   ///
   /// In pt, this message translates to:
-  /// **'Backup automático na nuvem, inclusive dos comprovantes.'**
+  /// **'Assinantes Premium registram todos os abastecimentos do mês sem assistir a vídeos.'**
   String get upsellFuelingText;
 
   /// No description provided for @upsellMaintenanceTitle.
   ///
   /// In pt, this message translates to:
-  /// **'Guarde o histórico de manutenção'**
+  /// **'Manutenções e despesas sem vídeo'**
   String get upsellMaintenanceTitle;
 
   /// No description provided for @upsellMaintenanceText.
   ///
   /// In pt, this message translates to:
-  /// **'Com o backup automático, ele não se perde se o celular quebrar.'**
+  /// **'Assinantes Premium registram sem precisar assistir a vídeos.'**
   String get upsellMaintenanceText;
 
   /// No description provided for @upsellExpensesTitle.
   ///
   /// In pt, this message translates to:
-  /// **'Novos relatórios no Premium'**
+  /// **'Relatórios por período'**
   String get upsellExpensesTitle;
 
   /// No description provided for @upsellExpensesText.
   ///
   /// In pt, this message translates to:
-  /// **'Assine e receba os novos relatórios e atualizações exclusivas.'**
+  /// **'Assine e compare seus gastos em qualquer período, não só no padrão do app.'**
   String get upsellExpensesText;
 
   /// No description provided for @afterAdTitle.
@@ -308,11 +296,17 @@ abstract class AppLocalizations {
   /// **'Assine o MyCarApp Premium'**
   String get afterAdSubtitle;
 
-  /// No description provided for @premiumPrices.
+  /// No description provided for @afterAdPriceFrom.
   ///
   /// In pt, this message translates to:
-  /// **'R\$ 15/mês ou R\$ 100/ano'**
-  String get premiumPrices;
+  /// **'a partir de {price}/mês'**
+  String afterAdPriceFrom(Object price);
+
+  /// No description provided for @subscriptionPlansAvailable.
+  ///
+  /// In pt, this message translates to:
+  /// **'Planos mensal e anual'**
+  String get subscriptionPlansAvailable;
 
   /// No description provided for @afterAdSubscribe.
   ///
@@ -349,6 +343,18 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'INDICAR'**
   String get recoRefer;
+
+  /// No description provided for @houseAdAuctionText.
+  ///
+  /// In pt, this message translates to:
+  /// **'Leilões de imóveis e veículos do ES em um só lugar.'**
+  String get houseAdAuctionText;
+
+  /// No description provided for @houseAdAuctionCta.
+  ///
+  /// In pt, this message translates to:
+  /// **'VER LEILÕES'**
+  String get houseAdAuctionCta;
 
   /// No description provided for @attachmentNotFound.
   ///
@@ -494,29 +500,113 @@ abstract class AppLocalizations {
   /// **'Tudo é salvo na sua conta automaticamente, inclusive fotos e documentos. Troque de celular sem perder nada.'**
   String get featureBackupText;
 
-  /// No description provided for @featureReportsTitle.
+  /// No description provided for @featureVehiclesTitle.
   ///
   /// In pt, this message translates to:
-  /// **'Novos relatórios'**
-  String get featureReportsTitle;
+  /// **'Mais veículos'**
+  String get featureVehiclesTitle;
 
-  /// No description provided for @featureReportsText.
+  /// No description provided for @featureVehiclesText.
   ///
   /// In pt, this message translates to:
-  /// **'Assinantes recebem os novos relatórios do MyCarApp.'**
-  String get featureReportsText;
+  /// **'Assinantes Premium cadastram quantos veículos quiserem.'**
+  String get featureVehiclesText;
 
-  /// No description provided for @featureUpdatesTitle.
+  /// No description provided for @featureFuelingsTitle.
   ///
   /// In pt, this message translates to:
-  /// **'Atualizações exclusivas'**
-  String get featureUpdatesTitle;
+  /// **'Abastecimentos ilimitados'**
+  String get featureFuelingsTitle;
 
-  /// No description provided for @featureUpdatesText.
+  /// No description provided for @featureFuelingsText.
   ///
   /// In pt, this message translates to:
-  /// **'Novidades lançadas primeiro, ou só, para assinantes Premium.'**
-  String get featureUpdatesText;
+  /// **'Registre todos os abastecimentos do mês sem precisar assistir a vídeos.'**
+  String get featureFuelingsText;
+
+  /// No description provided for @featureMaintenanceTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Manutenções e despesas sem limite'**
+  String get featureMaintenanceTitle;
+
+  /// No description provided for @featureMaintenanceText.
+  ///
+  /// In pt, this message translates to:
+  /// **'Registre manutenções, despesas e alertas sem assistir a vídeos.'**
+  String get featureMaintenanceText;
+
+  /// No description provided for @featureReceiptScanTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Leitura de nota fiscal'**
+  String get featureReceiptScanTitle;
+
+  /// No description provided for @featureReceiptScanText.
+  ///
+  /// In pt, this message translates to:
+  /// **'Fotografe a nota e deixe o MyCarApp preencher o abastecimento pra você.'**
+  String get featureReceiptScanText;
+
+  /// No description provided for @featureStationRankingTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ranking completo de postos'**
+  String get featureStationRankingTitle;
+
+  /// No description provided for @featureStationRankingText.
+  ///
+  /// In pt, this message translates to:
+  /// **'Veja o ranking completo dos postos onde seu carro rende mais.'**
+  String get featureStationRankingText;
+
+  /// No description provided for @featurePeriodReportsTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Relatórios por período'**
+  String get featurePeriodReportsTitle;
+
+  /// No description provided for @featurePeriodReportsText.
+  ///
+  /// In pt, this message translates to:
+  /// **'Compare gastos e consumo em qualquer período, não só no padrão do app.'**
+  String get featurePeriodReportsText;
+
+  /// No description provided for @featureExportTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Exportação em CSV e Excel'**
+  String get featureExportTitle;
+
+  /// No description provided for @featureExportText.
+  ///
+  /// In pt, this message translates to:
+  /// **'Exporte seus dados em CSV ou Excel sempre que quiser.'**
+  String get featureExportText;
+
+  /// No description provided for @featurePdfTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Exportação em PDF'**
+  String get featurePdfTitle;
+
+  /// No description provided for @featurePdfText.
+  ///
+  /// In pt, this message translates to:
+  /// **'Gere o PDF do relatório sem precisar assistir a um vídeo.'**
+  String get featurePdfText;
+
+  /// No description provided for @featureSyncTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sincronização entre aparelhos'**
+  String get featureSyncTitle;
+
+  /// No description provided for @featureSyncText.
+  ///
+  /// In pt, this message translates to:
+  /// **'Seus dados acompanham você ao trocar de celular.'**
+  String get featureSyncText;
 
   /// No description provided for @premiumYouArePremium.
   ///
@@ -595,6 +685,84 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Backup automático na nuvem, com fotos e documentos'**
   String get benefitBackup;
+
+  /// No description provided for @benefitVehicles.
+  ///
+  /// In pt, this message translates to:
+  /// **'Veículos ilimitados'**
+  String get benefitVehicles;
+
+  /// No description provided for @benefitMaintenanceNoVideo.
+  ///
+  /// In pt, this message translates to:
+  /// **'Manutenções e despesas sem vídeo'**
+  String get benefitMaintenanceNoVideo;
+
+  /// No description provided for @benefitReceiptScan.
+  ///
+  /// In pt, this message translates to:
+  /// **'Leitura automática da nota fiscal'**
+  String get benefitReceiptScan;
+
+  /// No description provided for @benefitStationRanking.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ranking completo de postos'**
+  String get benefitStationRanking;
+
+  /// No description provided for @benefitExport.
+  ///
+  /// In pt, this message translates to:
+  /// **'Exportação em CSV, Excel e PDF'**
+  String get benefitExport;
+
+  /// No description provided for @subscriptionRestore.
+  ///
+  /// In pt, this message translates to:
+  /// **'Restaurar compra'**
+  String get subscriptionRestore;
+
+  /// No description provided for @subscriptionFreeTrialBadge.
+  ///
+  /// In pt, this message translates to:
+  /// **'7 DIAS GRÁTIS'**
+  String get subscriptionFreeTrialBadge;
+
+  /// No description provided for @subscriptionSaveBadge.
+  ///
+  /// In pt, this message translates to:
+  /// **'ECONOMIZE {percent}%'**
+  String subscriptionSaveBadge(Object percent);
+
+  /// No description provided for @subscriptionBilledMonthly.
+  ///
+  /// In pt, this message translates to:
+  /// **'cobrado todo mês'**
+  String get subscriptionBilledMonthly;
+
+  /// No description provided for @subscriptionStartFreeTrial.
+  ///
+  /// In pt, this message translates to:
+  /// **'COMEÇAR 7 DIAS GRÁTIS'**
+  String get subscriptionStartFreeTrial;
+
+  /// No description provided for @subscriptionSubscribeMonthly.
+  ///
+  /// In pt, this message translates to:
+  /// **'ASSINAR POR {price}/MÊS'**
+  String subscriptionSubscribeMonthly(Object price);
+
+  /// No description provided for @subscriptionBillingTrial.
+  ///
+  /// In pt, this message translates to:
+  /// **'Grátis por 7 dias, depois {price} por ano.'**
+  String subscriptionBillingTrial(Object price);
+
+  /// No description provided for @subscriptionBillingAuto.
+  ///
+  /// In pt, this message translates to:
+  /// **'Renovação automática. Cancele quando quiser na Play Store.'**
+  String get subscriptionBillingAuto;
 
   /// No description provided for @planAnnual.
   ///
@@ -1160,11 +1328,89 @@ abstract class AppLocalizations {
   /// **'50% de desconto por 3 meses'**
   String get offerReferralOld;
 
+  /// No description provided for @offerYearlyTrial.
+  ///
+  /// In pt, this message translates to:
+  /// **'7 dias grátis no plano anual'**
+  String get offerYearlyTrial;
+
   /// No description provided for @offerSpecial.
   ///
   /// In pt, this message translates to:
   /// **'Oferta especial MyCarApp'**
   String get offerSpecial;
+
+  /// No description provided for @watchAndSave.
+  ///
+  /// In pt, this message translates to:
+  /// **'ASSISTIR VÍDEO E SALVAR'**
+  String get watchAndSave;
+
+  /// No description provided for @freeLimitVehicleTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Este veículo é somente consulta'**
+  String get freeLimitVehicleTitle;
+
+  /// No description provided for @freeLimitVehicleText.
+  ///
+  /// In pt, this message translates to:
+  /// **'No plano gratuito, só o primeiro veículo cadastrado aceita novos lançamentos. Assine o Premium para lançar em todos os seus veículos.'**
+  String get freeLimitVehicleText;
+
+  /// No description provided for @freeLimitFuelingTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Limite de abastecimentos do mês'**
+  String get freeLimitFuelingTitle;
+
+  /// No description provided for @freeLimitFuelingText.
+  ///
+  /// In pt, this message translates to:
+  /// **'Você já registrou {count} abastecimento(s) gratuito(s) este mês. Assista a um vídeo para salvar mais um, ou assine o Premium para abastecimentos ilimitados.'**
+  String freeLimitFuelingText(Object count);
+
+  /// No description provided for @freeLimitMaintenanceTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Registro liberado por vídeo'**
+  String get freeLimitMaintenanceTitle;
+
+  /// No description provided for @freeLimitMaintenanceText.
+  ///
+  /// In pt, this message translates to:
+  /// **'No plano gratuito, cada manutenção nova é liberada assistindo a um vídeo. Assine o Premium para registrar sem vídeos.'**
+  String get freeLimitMaintenanceText;
+
+  /// No description provided for @freeLimitExpenseTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Registro liberado por vídeo'**
+  String get freeLimitExpenseTitle;
+
+  /// No description provided for @freeLimitExpenseText.
+  ///
+  /// In pt, this message translates to:
+  /// **'No plano gratuito, cada despesa nova é liberada assistindo a um vídeo. Assine o Premium para registrar sem vídeos.'**
+  String get freeLimitExpenseText;
+
+  /// No description provided for @vehicleViewOnlyBadge.
+  ///
+  /// In pt, this message translates to:
+  /// **'Somente consulta no gratuito'**
+  String get vehicleViewOnlyBadge;
+
+  /// No description provided for @stationNextUnlock.
+  ///
+  /// In pt, this message translates to:
+  /// **'O melhor posto volta a aparecer aqui em {date}. Assine o Premium para ver o ranking completo a qualquer momento.'**
+  String stationNextUnlock(String date);
+
+  /// No description provided for @stationSeeFullRanking.
+  ///
+  /// In pt, this message translates to:
+  /// **'VER RANKING COMPLETO (PREMIUM)'**
+  String get stationSeeFullRanking;
 
   /// No description provided for @notSet.
   ///
@@ -2702,17 +2948,17 @@ abstract class AppLocalizations {
   /// **'Capacidade total do tanque'**
   String get tankCapacity;
 
-  /// No description provided for @tankCapacityHint.
+  /// No description provided for @tankCapacityVehicleHint.
   ///
   /// In pt, this message translates to:
-  /// **'Consulte o manual do veículo'**
-  String get tankCapacityHint;
+  /// **'Consulte o manual do veículo. Usada para calcular o consumo com tanque cheio'**
+  String get tankCapacityVehicleHint;
 
-  /// No description provided for @tankCapacityRequired.
+  /// No description provided for @tankCapacityMissing.
   ///
   /// In pt, this message translates to:
-  /// **'Informe a capacidade do tanque'**
-  String get tankCapacityRequired;
+  /// **'Informe a capacidade do tanque no cadastro do veículo para calcular o consumo.'**
+  String get tankCapacityMissing;
 
   /// No description provided for @fuelingGaugeFull.
   ///
@@ -3428,12 +3674,6 @@ abstract class AppLocalizations {
   /// **'Seu melhor custo por km: {name}'**
   String reportBestStation(Object name);
 
-  /// No description provided for @reportSmallSample.
-  ///
-  /// In pt, this message translates to:
-  /// **'{name} (amostra pequena)'**
-  String reportSmallSample(Object name);
-
   /// No description provided for @reportBestDetail.
   ///
   /// In pt, this message translates to:
@@ -3451,12 +3691,6 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'{value}% vs. média'**
   String reportVsAverage(Object value);
-
-  /// No description provided for @smallSample.
-  ///
-  /// In pt, this message translates to:
-  /// **'Amostra pequena'**
-  String get smallSample;
 
   /// No description provided for @reportTotalCostPerKm.
   ///
@@ -3931,6 +4165,372 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Pronto! Sem anúncios em tela cheia por {hours}h. Os banners continuam.'**
   String rewardedEarned(Object hours);
+
+  /// No description provided for @pdfExport.
+  ///
+  /// In pt, this message translates to:
+  /// **'Exportar PDF'**
+  String get pdfExport;
+
+  /// No description provided for @pdfFreeTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Relatório em PDF'**
+  String get pdfFreeTitle;
+
+  /// No description provided for @pdfFreeText.
+  ///
+  /// In pt, this message translates to:
+  /// **'No plano gratuito, cada relatório em PDF é liberado assistindo a um vídeo. Assine o Premium para gerar sem vídeos.'**
+  String get pdfFreeText;
+
+  /// No description provided for @pdfWatchAndGenerate.
+  ///
+  /// In pt, this message translates to:
+  /// **'ASSISTIR VÍDEO E GERAR'**
+  String get pdfWatchAndGenerate;
+
+  /// No description provided for @pdfVideoNotEarned.
+  ///
+  /// In pt, this message translates to:
+  /// **'Assista ao vídeo até o fim para gerar o PDF.'**
+  String get pdfVideoNotEarned;
+
+  /// No description provided for @pdfShareSubject.
+  ///
+  /// In pt, this message translates to:
+  /// **'Relatório MyCarApp'**
+  String get pdfShareSubject;
+
+  /// No description provided for @pdfShareText.
+  ///
+  /// In pt, this message translates to:
+  /// **'Relatório do veículo gerado pelo MyCarApp.'**
+  String get pdfShareText;
+
+  /// No description provided for @pdfTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Relatório do veículo'**
+  String get pdfTitle;
+
+  /// No description provided for @pdfPeriod.
+  ///
+  /// In pt, this message translates to:
+  /// **'Período: {period}'**
+  String pdfPeriod(String period);
+
+  /// No description provided for @pdfFooter.
+  ///
+  /// In pt, this message translates to:
+  /// **'Gerado pelo MyCarApp em {date}'**
+  String pdfFooter(String date);
+
+  /// No description provided for @pdfVehicleSection.
+  ///
+  /// In pt, this message translates to:
+  /// **'Veículo'**
+  String get pdfVehicleSection;
+
+  /// No description provided for @pdfSpendingSection.
+  ///
+  /// In pt, this message translates to:
+  /// **'Gastos'**
+  String get pdfSpendingSection;
+
+  /// No description provided for @pdfLiters.
+  ///
+  /// In pt, this message translates to:
+  /// **'Litros abastecidos'**
+  String get pdfLiters;
+
+  /// No description provided for @pdfTotalAll.
+  ///
+  /// In pt, this message translates to:
+  /// **'Total (combustível + manutenção)'**
+  String get pdfTotalAll;
+
+  /// No description provided for @pdfMonthCol.
+  ///
+  /// In pt, this message translates to:
+  /// **'Mês'**
+  String get pdfMonthCol;
+
+  /// No description provided for @pdfDistance.
+  ///
+  /// In pt, this message translates to:
+  /// **'Distância no período'**
+  String get pdfDistance;
+
+  /// No description provided for @pdfExpenses.
+  ///
+  /// In pt, this message translates to:
+  /// **'Outras despesas'**
+  String get pdfExpenses;
+
+  /// No description provided for @pdfBestStation.
+  ///
+  /// In pt, this message translates to:
+  /// **'Melhor posto'**
+  String get pdfBestStation;
+
+  /// No description provided for @pdfStationCol.
+  ///
+  /// In pt, this message translates to:
+  /// **'Posto'**
+  String get pdfStationCol;
+
+  /// No description provided for @pdfFuelCol.
+  ///
+  /// In pt, this message translates to:
+  /// **'Combustível'**
+  String get pdfFuelCol;
+
+  /// No description provided for @pdfFillUpsCol.
+  ///
+  /// In pt, this message translates to:
+  /// **'Abast.'**
+  String get pdfFillUpsCol;
+
+  /// No description provided for @pdfMaintenanceList.
+  ///
+  /// In pt, this message translates to:
+  /// **'Manutenções do período'**
+  String get pdfMaintenanceList;
+
+  /// No description provided for @pdfDateCol.
+  ///
+  /// In pt, this message translates to:
+  /// **'Data'**
+  String get pdfDateCol;
+
+  /// No description provided for @pdfServiceCol.
+  ///
+  /// In pt, this message translates to:
+  /// **'Serviço'**
+  String get pdfServiceCol;
+
+  /// No description provided for @pdfWorkshopCol.
+  ///
+  /// In pt, this message translates to:
+  /// **'Oficina'**
+  String get pdfWorkshopCol;
+
+  /// No description provided for @pdfCostCol.
+  ///
+  /// In pt, this message translates to:
+  /// **'Valor'**
+  String get pdfCostCol;
+
+  /// No description provided for @news140Title.
+  ///
+  /// In pt, this message translates to:
+  /// **'Chegou o MyCarApp Premium'**
+  String get news140Title;
+
+  /// No description provided for @news140Text.
+  ///
+  /// In pt, this message translates to:
+  /// **'Chegou o MyCarApp Premium: sem anúncios, veículos ilimitados, manutenções e despesas sem vídeo, leitura da nota fiscal, ranking completo de postos, relatórios por período, exportação e backup automático. O plano gratuito continua com o controle de consumo, e todos os seus registros seguem disponíveis.'**
+  String get news140Text;
+
+  /// No description provided for @surveyTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Antes de você ir…'**
+  String get surveyTitle;
+
+  /// No description provided for @surveyText.
+  ///
+  /// In pt, this message translates to:
+  /// **'O que fez você não assinar agora? Leva 5 segundos e ajuda a melhorar o MyCarApp.'**
+  String get surveyText;
+
+  /// No description provided for @surveyTooExpensive.
+  ///
+  /// In pt, this message translates to:
+  /// **'Muito caro'**
+  String get surveyTooExpensive;
+
+  /// No description provided for @surveyTooExpensiveHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'O preço não cabe no meu orçamento agora'**
+  String get surveyTooExpensiveHint;
+
+  /// No description provided for @surveyStillExploring.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ainda estou conhecendo o app'**
+  String get surveyStillExploring;
+
+  /// No description provided for @surveyStillExploringHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Quero usar mais antes de decidir'**
+  String get surveyStillExploringHint;
+
+  /// No description provided for @surveyDontNeed.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não preciso desses recursos'**
+  String get surveyDontNeed;
+
+  /// No description provided for @surveyDontNeedHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'O plano gratuito já me atende'**
+  String get surveyDontNeedHint;
+
+  /// No description provided for @surveyPreferOneTime.
+  ///
+  /// In pt, this message translates to:
+  /// **'Prefiro pagar uma vez só'**
+  String get surveyPreferOneTime;
+
+  /// No description provided for @surveyPreferOneTimeHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não gosto de assinatura'**
+  String get surveyPreferOneTimeHint;
+
+  /// No description provided for @surveyOther.
+  ///
+  /// In pt, this message translates to:
+  /// **'Outro motivo'**
+  String get surveyOther;
+
+  /// No description provided for @surveyOtherHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhuma das opções acima'**
+  String get surveyOtherHint;
+
+  /// No description provided for @surveySend.
+  ///
+  /// In pt, this message translates to:
+  /// **'ENVIAR RESPOSTA'**
+  String get surveySend;
+
+  /// No description provided for @surveyChooseOption.
+  ///
+  /// In pt, this message translates to:
+  /// **'ESCOLHA UMA OPÇÃO'**
+  String get surveyChooseOption;
+
+  /// No description provided for @surveySkip.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pular'**
+  String get surveySkip;
+
+  /// No description provided for @surveyThanks.
+  ///
+  /// In pt, this message translates to:
+  /// **'Obrigado pela resposta! Você continua no plano gratuito, com todos os seus registros disponíveis.'**
+  String get surveyThanks;
+
+  /// No description provided for @exitOfferBadge.
+  ///
+  /// In pt, this message translates to:
+  /// **'OFERTA ÚNICA PARA VOCÊ'**
+  String get exitOfferBadge;
+
+  /// No description provided for @exitOfferTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Entendemos. Que tal {percent}% de desconto no Premium anual?'**
+  String exitOfferTitle(int percent);
+
+  /// No description provided for @exitOfferTitleGeneric.
+  ///
+  /// In pt, this message translates to:
+  /// **'Entendemos. Que tal um desconto especial no Premium anual?'**
+  String get exitOfferTitleGeneric;
+
+  /// No description provided for @exitOfferSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Válida só agora e uma única vez nesta conta.'**
+  String get exitOfferSubtitle;
+
+  /// No description provided for @exitOfferExpiresIn.
+  ///
+  /// In pt, this message translates to:
+  /// **'Expira em {time}'**
+  String exitOfferExpiresIn(String time);
+
+  /// No description provided for @exitOfferPlan.
+  ///
+  /// In pt, this message translates to:
+  /// **'Premium anual'**
+  String get exitOfferPlan;
+
+  /// No description provided for @exitOfferFrom.
+  ///
+  /// In pt, this message translates to:
+  /// **'De {price} por'**
+  String exitOfferFrom(String price);
+
+  /// No description provided for @exitOfferFirstYear.
+  ///
+  /// In pt, this message translates to:
+  /// **'no 1º ano'**
+  String get exitOfferFirstYear;
+
+  /// No description provided for @exitOfferPerMonth.
+  ///
+  /// In pt, this message translates to:
+  /// **'Equivale a {price} por mês'**
+  String exitOfferPerMonth(String price);
+
+  /// No description provided for @exitOfferButton.
+  ///
+  /// In pt, this message translates to:
+  /// **'QUERO POR {price} NO 1º ANO'**
+  String exitOfferButton(String price);
+
+  /// No description provided for @exitOfferRenewal.
+  ///
+  /// In pt, this message translates to:
+  /// **'Depois do 1º ano, renova por {price} por ano. Cancele quando quiser na Play Store.'**
+  String exitOfferRenewal(String price);
+
+  /// No description provided for @exitOfferNoThanks.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não, obrigado'**
+  String get exitOfferNoThanks;
+
+  /// No description provided for @offerExitPercent.
+  ///
+  /// In pt, this message translates to:
+  /// **'{percent}% de desconto no 1º ano'**
+  String offerExitPercent(int percent);
+
+  /// No description provided for @offerExitGeneric.
+  ///
+  /// In pt, this message translates to:
+  /// **'Desconto especial no 1º ano'**
+  String get offerExitGeneric;
+
+  /// No description provided for @stationPreliminaryBadge.
+  ///
+  /// In pt, this message translates to:
+  /// **'Preliminar'**
+  String get stationPreliminaryBadge;
+
+  /// No description provided for @stationPreliminaryNote.
+  ///
+  /// In pt, this message translates to:
+  /// **'Valor preliminar: fica definitivo a partir de 3 abastecimentos com tanque cheio neste posto.'**
+  String get stationPreliminaryNote;
+
+  /// No description provided for @stationConsumptionAlert.
+  ///
+  /// In pt, this message translates to:
+  /// **'Consumo muito diferente da sua média. Pode ser a qualidade do combustível ou um registro incompleto, como tanque não cheio. Confira os abastecimentos deste posto.'**
+  String get stationConsumptionAlert;
 }
 
 class _AppLocalizationsDelegate

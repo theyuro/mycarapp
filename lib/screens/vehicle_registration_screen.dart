@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/vehicle.dart';
+import '../services/app_review_service.dart';
+import '../services/fueling_storage_service.dart';
 import '../services/image_pick_service.dart';
 import '../services/vehicle_storage_service.dart';
 import '../theme/app_colors.dart';
@@ -414,6 +416,7 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
   final mileage = TextEditingController();
   final customBrand = TextEditingController();
   final customModel = TextEditingController();
+  final tankCapacity = TextEditingController();
   final documents = <DocumentYear>[];
   final photos = <VehiclePhoto>[];
   final storage = VehicleStorageService();
@@ -444,6 +447,12 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
     nickname.text = vehicle.nickname;
     vehicleType = vehicle.vehicleType;
     mileage.text = vehicle.mileage.toString();
+    final capacity = vehicle.tankCapacityLiters;
+    if (capacity != null) {
+      tankCapacity.text = formatInput(capacity);
+    } else {
+      _loadLegacyTankCapacity(vehicle.id);
+    }
     if (models.containsKey(vehicle.brand)) {
       brand = vehicle.brand;
       if (models[brand]!.contains(vehicle.model)) {
@@ -480,8 +489,26 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
     mileage.dispose();
     customBrand.dispose();
     customModel.dispose();
+    tankCapacity.dispose();
     super.dispose();
   }
+
+  // Veículos antigos não têm a capacidade no cadastro: sugere a última
+  // informada nos abastecimentos.
+  Future<void> _loadLegacyTankCapacity(String vehicleId) async {
+    try {
+      final capacity = await FuelingStorageService().lastTankCapacity(
+        vehicleId,
+      );
+      if (!mounted || capacity == null || tankCapacity.text.isNotEmpty) return;
+      tankCapacity.text = formatInput(capacity);
+    } on Object {
+      // Sem histórico legível: o campo fica vazio para o usuário preencher.
+    }
+  }
+
+  double? _parseNumber(String value) =>
+      double.tryParse(value.trim().replaceAll(',', '.'));
 
   String? requiredField(Object? value) =>
       value == null || value.toString().trim().isEmpty
@@ -528,10 +555,13 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
       documents: documents,
       photos: photos,
       vehicleType: vehicleType,
+      tankCapacityLiters: _parseNumber(tankCapacity.text),
     );
 
     try {
       await storage.saveVehicle(vehicle);
+      // Veículo novo conta para o pedido automático de avaliação.
+      if (existing == null) AppReviewService.instance.registerEvent();
       if (!mounted) return;
       Navigator.of(context).pop(true);
     } on FileSystemException catch (error) {
@@ -763,6 +793,29 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
                       suffixText: 'km',
                     ),
                     validator: requiredField,
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: tankCapacity,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
+                    ],
+                    decoration: InputDecoration(
+                      labelText: tr.tankCapacity,
+                      suffixText: 'L',
+                      helperText: tr.tankCapacityVehicleHint,
+                      helperMaxLines: 2,
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) return null;
+                      final capacity = _parseNumber(value);
+                      return capacity == null || capacity <= 0
+                          ? tr.invalidValue
+                          : null;
+                    },
                   ),
                 ],
               ),

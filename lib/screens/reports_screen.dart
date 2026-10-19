@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../models/establishment.dart';
 import '../models/fueling_record.dart';
 import '../models/maintenance_record.dart';
 import '../models/vehicle.dart';
 import '../models/vehicle_expense.dart';
+import '../services/ads_config.dart';
+import '../services/analytics_service.dart';
 import '../services/establishment_storage_service.dart';
 import '../services/expense_storage_service.dart';
+import '../services/free_plan_service.dart';
 import '../services/fueling_storage_service.dart';
 import '../services/maintenance_storage_service.dart';
+import '../services/pdf_report_service.dart';
 import '../services/vehicle_storage_service.dart';
 import '../theme/app_colors.dart';
+import 'lifetime_purchase_screen.dart';
 import '../l10n/l10n.dart';
 import '../l10n/labels.dart';
 
@@ -39,10 +45,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
   _StationPeriod stationPeriod = _StationPeriod.all;
   _StationPeriod workshopPeriod = _StationPeriod.all;
   _StationPeriod overallPeriod = _StationPeriod.sixMonths;
+  // Geração do PDF em andamento (desabilita o botão).
+  bool exportingPdf = false;
 
   @override
   void initState() {
     super.initState();
+    // Gratuito: o PDF pede vídeo a cada exportação; já deixa carregando.
+    FreePlanService.instance.preloadRewardedIf(
+      FreePlanService.instance.perUseNeedsRewarded,
+    );
     load();
   }
 
@@ -74,6 +86,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   (item) => item.vehicleId == active.id && item.isCompleted,
                 )
                 .toList();
+      // Gratuito: na abertura do relatório, libera o melhor posto se já
+      // passou o intervalo (FreePlanService.stationUnlockDays). Só tenta
+      // quando há ao menos um posto atribuído, para não gastar a janela de
+      // 30 dias de quem ainda não tem dados de posto.
+      if (calculated.any((item) => item.stationKey != null)) {
+        await FreePlanService.instance.unlockBestStationIfDue();
+      }
       if (!mounted) return;
       setState(() {
         vehicle = active;
@@ -188,6 +207,223 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return null;
   }
 
+  /// Troca de período dos relatórios de combustível e manutenção: livre no
+  /// período padrão (1 mês); qualquer outro período é Premium
+  /// (`periodReportsAllowed`).
+  void _changeReportPeriod(
+    _ReportPeriod value,
+    _ReportPeriod current,
+    ValueChanged<_ReportPeriod> apply, {
+    required String source,
+  }) {
+    if (value == current) return;
+    if (value != _ReportPeriod.oneMonth &&
+        !FreePlanService.instance.periodReportsAllowed) {
+      openPremium(context, PremiumFeature.periodReports, 'limit_period_reports');
+      return;
+    }
+    AnalyticsService.tap(
+      'report_period',
+      screen: 'reports',
+      params: {'source': source, 'period': value.name},
+    );
+    apply(value);
+  }
+
+  /// Botão "Exportar PDF": o Premium gera direto; no gratuito, diálogo com
+  /// "Assistir vídeo e gerar" (vídeo premiado a cada exportação) e
+  /// "Conhecer o Premium" (PremiumFeature.pdf).
+  Future<void> _exportPdf() async {
+    AnalyticsService.tap('export_pdf', screen: 'reports');
+    if (vehicle == null) {
+      _showSnack(tr.reportNeedVehicle);
+      return;
+    }
+    if (!FreePlanService.instance.pdfAllowed) {
+      final choice = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(tr.pdfFreeTitle),
+          content: Text(tr.pdfFreeText),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'premium'),
+              child: Text(tr.learnAboutPremium),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, 'video'),
+              child: Text(tr.pdfWatchAndGenerate),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || choice == null) return;
+      if (choice == 'premium') {
+        openPremium(context, PremiumFeature.pdf, 'limit_pdf');
+        return;
+      }
+      setState(() => exportingPdf = true);
+      final earned = await FreePlanService.instance.unlockPdfExport();
+      if (!mounted) return;
+      if (!earned) {
+        setState(() => exportingPdf = false);
+        _showSnack(tr.pdfVideoNotEarned);
+        return;
+      }
+    }
+    setState(() => exportingPdf = true);
+    try {
+      final file = await PdfReportService().build(_pdfData());
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path, mimeType: 'application/pdf')],
+          subject: tr.pdfShareSubject,
+          text: tr.pdfShareText,
+        ),
+      );
+    } on Object catch (error) {
+      debugPrint('Falha ao gerar o PDF do relatório: $error');
+      if (mounted) _showSnack(tr.exportError);
+    } finally {
+      if (mounted) setState(() => exportingPdf = false);
+    }
+  }
+
+  void _showSnack(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+    );
+  }
+
+  /// Monta os dados do PDF com os mesmos cálculos dos cards da tela. O
+  /// período é o selecionado no relatório de combustível (no gratuito,
+  /// sempre o padrão de 1 mês); a parte de postos usa o período do card de
+  /// postos, para mostrar o mesmo posto que a tela. No gratuito, só o melhor
+  /// posto entra, e só quando liberado na sessão; senão, a seção fica de fora.
+  PdfReportData _pdfData() {
+    final current = vehicle!;
+    final months = fuelPeriod.months;
+    final start = _periodStart(months);
+    final periodFuelings = _inLastMonths(fuelings, months, (item) => item.date);
+    final periodMaintenances = _inLastMonths(
+      maintenances,
+      months,
+      (item) => item.date,
+    );
+    final average = _overallConsumption(results, start);
+
+    // Gastos por mês: combustível e manutenção somados na mesma linha.
+    final monthRows = <String, PdfMonthRow>{};
+    final monthDates = <String, DateTime>{};
+    for (final item in _monthlyFuelExpenses(periodFuelings)) {
+      final key = '${item.year}-${item.month}';
+      monthDates[key] = item.date;
+      monthRows[key] = PdfMonthRow(
+        label: item.label,
+        fuel: item.total,
+        maintenance: 0,
+      );
+    }
+    for (final item in _monthlyMaintenanceExpenses(periodMaintenances)) {
+      final key = '${item.year}-${item.month}';
+      monthDates[key] = item.date;
+      final existing = monthRows[key];
+      monthRows[key] = PdfMonthRow(
+        label: item.label,
+        fuel: existing?.fuel ?? 0,
+        maintenance: item.total,
+      );
+    }
+    final sortedMonths = monthRows.keys.toList()
+      ..sort((a, b) => monthDates[b]!.compareTo(monthDates[a]!));
+
+    final cost = _costPerKmSummary(fuelings, maintenances, expenses, start);
+
+    final byCost = _byCostPerKm(
+      _aggregateStations(results, fuelings, stationPeriod.startDate()),
+    );
+    final premiumStations = FreePlanService.instance.stationRankingAllowed;
+    final bestStation = _bestStation(byCost);
+    final stations = premiumStations
+        ? byCost
+        : FreePlanService.instance.bestStationUnlocked && bestStation != null
+        ? [bestStation]
+        : const <_StationAggregate>[];
+
+    final sortedMaintenances = [...periodMaintenances]
+      ..sort((a, b) => b.date.compareTo(a.date));
+
+    return PdfReportData(
+      vehicleName: current.nickname,
+      vehicleDetails: _vehicleDetails(current),
+      periodLabel: fuelPeriod.label,
+      averageConsumption: average == 0 ? null : average,
+      confirmedFillUps: periodFuelings.where(_isStrictFull).length,
+      fuelTotal: periodFuelings.fold<double>(
+        0,
+        (sum, item) => sum + item.totalPrice,
+      ),
+      fuelLiters: periodFuelings.fold<double>(
+        0,
+        (sum, item) => sum + item.liters,
+      ),
+      maintenanceTotal: periodMaintenances.fold<double>(
+        0,
+        (sum, item) => sum + item.totalCost,
+      ),
+      months: [for (final key in sortedMonths) monthRows[key]!],
+      costPerKm: cost.costPerKm,
+      distance: cost.distance,
+      expenseTotal: cost.expenseTotal,
+      annualProjection: cost.annualProjection,
+      stations: [
+        for (final item in stations)
+          PdfStationRow(
+            name: item.name,
+            fuelType: valueLabel(item.fuelType),
+            consumption: item.consumption,
+            costPerKm: item.costPerKm,
+            fillUps: item.fillUpsCount,
+            // Selo "Preliminar" e alerta de discrepância, como na tela.
+            preliminary: item.preliminary,
+            consumptionAlert: item.consumptionAlert,
+          ),
+      ],
+      stationsPeriodLabel: stationPeriod.label,
+      onlyBestStation: !premiumStations,
+      maintenances: [
+        for (final item in sortedMaintenances)
+          PdfMaintenanceRow(
+            date: item.date,
+            category: item.category,
+            workshop: item.establishmentId != null ||
+                    (item.workshop?.trim().isNotEmpty ?? false)
+                ? _workshopName(item, establishments)
+                : '--',
+            cost: item.totalCost,
+          ),
+      ],
+    );
+  }
+
+  /// Linhas curtas com os dados do veículo para o PDF; campos vazios ficam
+  /// de fora.
+  List<String> _vehicleDetails(Vehicle current) {
+    final Object? brand = current.brand;
+    final Object? model = current.model;
+    final Object? year = current.year;
+    final Object? fuel = current.fuel;
+    final Object? mileage = current.mileage;
+    final name = [brand, model, year]
+        .where((item) => item != null && '$item'.trim().isNotEmpty)
+        .join(' ');
+    return [
+      if (name.isNotEmpty) name,
+      if (fuel is String && fuel.trim().isNotEmpty) valueLabel(fuel),
+      if (mileage is num) '${formatInteger(mileage)} km',
+    ];
+  }
+
   bool _isStrictFull(FuelingRecord record) =>
       record.fullTank &&
       record.gaugeMarkedFull &&
@@ -201,6 +437,23 @@ class _ReportsScreenState extends State<ReportsScreen> {
       backgroundColor: AppColors.navy,
       foregroundColor: Colors.white,
       title: Text(tr.reportsTitle),
+      actions: [
+        // Relatório em PDF (Premium direto; gratuito por vídeo).
+        IconButton(
+          tooltip: tr.pdfExport,
+          onPressed: loading || exportingPdf ? null : _exportPdf,
+          icon: exportingPdf
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Icon(Icons.picture_as_pdf_outlined),
+        ),
+      ],
     ),
     body: loading
         ? const Center(child: CircularProgressIndicator())
@@ -218,7 +471,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     records: fuelings,
                     period: fuelPeriod,
                     onPeriodChanged: (value) =>
-                        setState(() => fuelPeriod = value),
+                        _changeReportPeriod(value, fuelPeriod, (period) {
+                          setState(() => fuelPeriod = period);
+                        }, source: 'fuel'),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -230,7 +485,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     records: maintenances,
                     period: maintenancePeriod,
                     onPeriodChanged: (value) =>
-                        setState(() => maintenancePeriod = value),
+                        _changeReportPeriod(value, maintenancePeriod, (period) {
+                          setState(() => maintenancePeriod = period);
+                        }, source: 'maintenance'),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -245,8 +502,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   maintenances: maintenances,
                   expenses: expenses,
                   period: overallPeriod,
-                  onPeriodChanged: (value) =>
-                      setState(() => overallPeriod = value),
+                  onPeriodChanged: (value) {
+                    if (value != overallPeriod) {
+                      AnalyticsService.tap(
+                        'report_period',
+                        screen: 'reports',
+                        params: {
+                          'source': 'cost_per_km',
+                          'period': value.name,
+                        },
+                      );
+                    }
+                    setState(() => overallPeriod = value);
+                  },
                 ),
                 const SizedBox(height: 16),
                 _StationReportCard(
@@ -255,8 +523,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   fuelings: fuelings,
                   establishments: establishments,
                   period: stationPeriod,
-                  onPeriodChanged: (value) =>
-                      setState(() => stationPeriod = value),
+                  onPeriodChanged: (value) {
+                    if (value != stationPeriod) {
+                      AnalyticsService.tap(
+                        'report_period',
+                        screen: 'reports',
+                        params: {'source': 'stations', 'period': value.name},
+                      );
+                    }
+                    setState(() => stationPeriod = value);
+                  },
                 ),
                 const SizedBox(height: 16),
                 _WorkshopReportCard(
@@ -264,8 +540,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   fuelings: fuelings,
                   establishments: establishments,
                   period: workshopPeriod,
-                  onPeriodChanged: (value) =>
-                      setState(() => workshopPeriod = value),
+                  onPeriodChanged: (value) {
+                    if (value != workshopPeriod) {
+                      AnalyticsService.tap(
+                        'report_period',
+                        screen: 'reports',
+                        params: {'source': 'workshops', 'period': value.name},
+                      );
+                    }
+                    setState(() => workshopPeriod = value);
+                  },
                 ),
               ],
             ),
@@ -424,28 +708,13 @@ class _FuelExpenseReport extends StatelessWidget {
   final _ReportPeriod period;
   final ValueChanged<_ReportPeriod> onPeriodChanged;
 
-  List<FuelingRecord> get filtered {
-    final months = period.months;
-    if (months == null) return records;
-    final now = DateTime.now();
-    final start = DateTime(now.year, now.month - months + 1);
-    return records.where((item) => !item.date.isBefore(start)).toList();
-  }
+  // Filtro e agrupamento movidos para funções de topo, reaproveitadas pelo
+  // relatório em PDF (ver _ReportsScreenState._pdfData).
+  List<FuelingRecord> get filtered =>
+      _inLastMonths(records, period.months, (item) => item.date);
 
-  List<_MonthlyFuelExpense> monthly(List<FuelingRecord> source) {
-    final grouped = <String, _MonthlyFuelExpense>{};
-    for (final record in source) {
-      final key = '${record.date.year}-${record.date.month}';
-      final month = grouped.putIfAbsent(
-        key,
-        () => _MonthlyFuelExpense(record.date.year, record.date.month),
-      );
-      month.total += record.totalPrice;
-      month.liters += record.liters;
-      month.fillUps++;
-    }
-    return grouped.values.toList()..sort((a, b) => b.date.compareTo(a.date));
-  }
+  List<_MonthlyFuelExpense> monthly(List<FuelingRecord> source) =>
+      _monthlyFuelExpenses(source);
 
   @override
   Widget build(BuildContext context) {
@@ -538,27 +807,13 @@ class _MaintenanceExpenseReport extends StatelessWidget {
   final _ReportPeriod period;
   final ValueChanged<_ReportPeriod> onPeriodChanged;
 
-  List<MaintenanceRecord> get filtered {
-    final months = period.months;
-    if (months == null) return records;
-    final now = DateTime.now();
-    final start = DateTime(now.year, now.month - months + 1);
-    return records.where((item) => !item.date.isBefore(start)).toList();
-  }
+  // Filtro e agrupamento movidos para funções de topo, reaproveitadas pelo
+  // relatório em PDF (ver _ReportsScreenState._pdfData).
+  List<MaintenanceRecord> get filtered =>
+      _inLastMonths(records, period.months, (item) => item.date);
 
-  List<_MonthlyMaintenanceExpense> monthly(List<MaintenanceRecord> source) {
-    final grouped = <String, _MonthlyMaintenanceExpense>{};
-    for (final record in source) {
-      final key = '${record.date.year}-${record.date.month}';
-      final month = grouped.putIfAbsent(
-        key,
-        () => _MonthlyMaintenanceExpense(record.date.year, record.date.month),
-      );
-      month.total += record.totalCost;
-      month.maintenances++;
-    }
-    return grouped.values.toList()..sort((a, b) => b.date.compareTo(a.date));
-  }
+  List<_MonthlyMaintenanceExpense> monthly(List<MaintenanceRecord> source) =>
+      _monthlyMaintenanceExpenses(source);
 
   @override
   Widget build(BuildContext context) {
@@ -796,6 +1051,60 @@ class _MonthlyFuelExpense {
   DateTime get date => DateTime(year, month);
   double get pricePerLiter => liters == 0 ? 0 : total / liters;
   String get label => _monthLabel(date);
+}
+
+/// Início do período de [months] meses civis (inclui o mês atual); `null`
+/// quando o período é "tudo".
+DateTime? _periodStart(int? months) {
+  if (months == null) return null;
+  final now = DateTime.now();
+  return DateTime(now.year, now.month - months + 1);
+}
+
+/// Mantém só os itens dos últimos [months] meses civis (`null` = tudo).
+/// Extraído dos relatórios de combustível e manutenção para ser reaproveitado
+/// no PDF.
+List<T> _inLastMonths<T>(
+  List<T> source,
+  int? months,
+  DateTime Function(T item) dateOf,
+) {
+  final start = _periodStart(months);
+  if (start == null) return source;
+  return source.where((item) => !dateOf(item).isBefore(start)).toList();
+}
+
+/// Gastos com combustível agrupados por mês, do mais recente ao mais antigo.
+List<_MonthlyFuelExpense> _monthlyFuelExpenses(List<FuelingRecord> source) {
+  final grouped = <String, _MonthlyFuelExpense>{};
+  for (final record in source) {
+    final key = '${record.date.year}-${record.date.month}';
+    final month = grouped.putIfAbsent(
+      key,
+      () => _MonthlyFuelExpense(record.date.year, record.date.month),
+    );
+    month.total += record.totalPrice;
+    month.liters += record.liters;
+    month.fillUps++;
+  }
+  return grouped.values.toList()..sort((a, b) => b.date.compareTo(a.date));
+}
+
+/// Gastos com manutenção agrupados por mês, do mais recente ao mais antigo.
+List<_MonthlyMaintenanceExpense> _monthlyMaintenanceExpenses(
+  List<MaintenanceRecord> source,
+) {
+  final grouped = <String, _MonthlyMaintenanceExpense>{};
+  for (final record in source) {
+    final key = '${record.date.year}-${record.date.month}';
+    final month = grouped.putIfAbsent(
+      key,
+      () => _MonthlyMaintenanceExpense(record.date.year, record.date.month),
+    );
+    month.total += record.totalCost;
+    month.maintenances++;
+  }
+  return grouped.values.toList()..sort((a, b) => b.date.compareTo(a.date));
 }
 
 String _monthLabel(DateTime date) {
@@ -1147,79 +1456,48 @@ class _StationReportCard extends StatefulWidget {
 
 class _StationReportCardState extends State<_StationReportCard> {
   _StationSort sort = _StationSort.costPerKm;
+  // O antigo desbloqueio do pior posto por vídeo foi removido: no gratuito,
+  // o melhor posto é liberado sem vídeo na abertura do relatório (ver
+  // ReportsScreen.load e FreePlanService.unlockBestStationIfDue).
 
-  String? _baseKeyFor(FuelingRecord record) {
-    final establishmentId = record.establishmentId;
-    if (establishmentId != null) return 'est:$establishmentId';
-    final text = record.station?.trim();
-    if (text == null || text.isEmpty) return null;
-    final normalized = _normalizeStation(text);
-    return normalized.isEmpty ? null : normalized;
-  }
-
-  List<_StationAggregate> _aggregate() {
-    final start = widget.period.startDate();
-    final grouped = <String, _StationAggregate>{};
-
-    for (final result in widget.results) {
-      if (start != null && result.end.date.isBefore(start)) continue;
-      final stationKey = result.stationKey;
-      final stationName = result.stationName;
-      final fuelType = result.fuelType;
-      if (stationKey == null || stationName == null || fuelType == null) {
-        continue;
-      }
-      final key = '$stationKey|${fuelType.toLowerCase()}';
-      final aggregate = grouped.putIfAbsent(
-        key,
-        () => _StationAggregate(
-          name: stationName,
-          fuelType: fuelType,
-          establishmentId: result.establishmentId,
+  Widget _header() => Row(
+    children: [
+      Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AppColors.blue.withValues(alpha: .09),
+          borderRadius: BorderRadius.circular(12),
         ),
-      );
-      aggregate.distance += result.distance;
-      aggregate.consumptionLiters += result.litersUsed;
-      aggregate.measurements++;
-    }
+        child: const Icon(Icons.emoji_events_outlined, color: AppColors.blue),
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              tr.reportByStation,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            Text(
+              tr.reportByStationSubtitle,
+              style: const TextStyle(color: AppColors.muted, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
 
-    // Enriquece com preço, litros e nº de abastecimentos a partir dos
-    // lançamentos individuais — só para postos que já têm ao menos um
-    // intervalo de consumo válido calculado acima.
-    for (final fueling in widget.fuelings) {
-      if (start != null && fueling.date.isBefore(start)) continue;
-      final fuel = fueling.fuelType?.trim();
-      if (fuel == null || fuel.isEmpty) continue;
-      final baseKey = _baseKeyFor(fueling);
-      if (baseKey == null) continue;
-      final aggregate = grouped['$baseKey|${fuel.toLowerCase()}'];
-      if (aggregate == null) continue;
-      aggregate.totalLiters += fueling.liters;
-      aggregate.totalSpent += fueling.totalPrice;
-      aggregate.fillUpsCount++;
-    }
-
-    final overall = _overallConsumption(start);
-    final ranking = grouped.values
-        .where((item) => item.measurements > 0)
-        .toList();
-    for (final item in ranking) {
-      item.overallConsumption = overall;
-    }
-    return ranking;
-  }
-
-  double _overallConsumption(DateTime? start) {
-    final filtered = widget.results.where(
-      (item) => start == null || !item.end.date.isBefore(start),
-    );
-    final totalDistance = filtered.fold<int>(0, (sum, r) => sum + r.distance);
-    final totalLiters = filtered.fold<double>(
-      0,
-      (sum, r) => sum + r.litersUsed,
-    );
-    return totalLiters == 0 ? 0 : totalDistance / totalLiters;
-  }
+  // Agregação movida para [_aggregateStations], reaproveitada pelo PDF.
+  List<_StationAggregate> _aggregate() => _aggregateStations(
+    widget.results,
+    widget.fuelings,
+    widget.period.startDate(),
+  );
 
   List<_StationAggregate> _sorted(List<_StationAggregate> ranking) {
     final list = [...ranking];
@@ -1243,9 +1521,11 @@ class _StationReportCardState extends State<_StationReportCard> {
   @override
   Widget build(BuildContext context) {
     final ranking = _aggregate();
-    final byCost = [...ranking]
-      ..removeWhere((item) => item.costPerKm <= 0)
-      ..sort((a, b) => a.costPerKm.compareTo(b.costPerKm));
+    final byCost = _byCostPerKm(ranking);
+
+    if (!FreePlanService.instance.stationRankingAllowed) {
+      return _buildFreeCard(byCost);
+    }
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -1257,43 +1537,7 @@ class _StationReportCardState extends State<_StationReportCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.blue.withValues(alpha: .09),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.emoji_events_outlined,
-                  color: AppColors.blue,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      tr.reportByStation,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    Text(
-                      tr.reportByStationSubtitle,
-                      style: const TextStyle(
-                        color: AppColors.muted,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          _header(),
           const SizedBox(height: 14),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -1323,10 +1567,12 @@ class _StationReportCardState extends State<_StationReportCard> {
             ),
           ] else ...[
             const SizedBox(height: 18),
-            if (byCost.isNotEmpty)
+            // Destaque: só postos definitivos; sem nenhum, o melhor
+            // preliminar (com o selo). O 2º lugar é o seguinte em custo/km.
+            if (_bestStation(byCost) case final best?)
               _StationHighlight(
-                best: byCost.first,
-                second: byCost.length > 1 ? byCost[1] : null,
+                best: best,
+                second: byCost.where((item) => item != best).firstOrNull,
               ),
             const SizedBox(height: 18),
             Wrap(
@@ -1350,7 +1596,69 @@ class _StationReportCardState extends State<_StationReportCard> {
                 maxCostPerKm: byCost.isEmpty ? 0 : byCost.last.costPerKm,
               ),
             ),
+            // Explicação do selo, uma vez só abaixo do ranking.
+            if (ranking.any((item) => item.preliminary)) ...[
+              const SizedBox(height: 4),
+              _Guidance(text: tr.stationPreliminaryNote),
+            ],
           ],
+        ],
+      ),
+    );
+  }
+
+  /// Card do ranking de postos no gratuito: mostra só o melhor posto, sem
+  /// vídeo, quando ele estiver liberado na sessão (no máximo 1 vez a cada
+  /// FreePlanService.stationUnlockDays); fora da janela, só o aviso de quando
+  /// ele volta e o botão para o Premium. O ranking completo é Premium.
+  Widget _buildFreeCard(List<_StationAggregate> byCost) {
+    // Mesma escolha do destaque do Premium: definitivo primeiro.
+    final best = _bestStation(byCost);
+    final unlocked = FreePlanService.instance.bestStationUnlocked;
+    final next =
+        FreePlanService.instance.nextBestStationUnlockAt ??
+        DateTime.now().add(
+          Duration(days: FreePlanService.instance.stationUnlockDays),
+        );
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE1E7EE)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _header(),
+          const SizedBox(height: 14),
+          _Guidance(text: tr.reportStationRule),
+          const SizedBox(height: 18),
+          if (best == null)
+            Text(
+              tr.reportStationEmpty,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.muted),
+            )
+          else if (!unlocked)
+            Text(
+              tr.stationNextUnlock(_date(next)),
+              style: const TextStyle(color: AppColors.muted),
+            )
+          else
+            // Só o melhor posto, sem o 2º lugar (que já seria ranking).
+            _StationHighlight(best: best),
+          const SizedBox(height: 10),
+          Center(
+            child: TextButton(
+              onPressed: () => openPremium(
+                context,
+                PremiumFeature.stationRanking,
+                'limit_station_ranking',
+              ),
+              child: Text(tr.stationSeeFullRanking),
+            ),
+          ),
         ],
       ),
     );
@@ -1372,16 +1680,20 @@ class _StationHighlight extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // "Amostra pequena" (4+ abastecimentos) deu lugar ao selo
+        // "Preliminar" (menos de 3 medições com tanque cheio no posto).
         Text(
-          best.reliable
-              ? tr.reportBestStation(best.name)
-              : tr.reportSmallSample(best.name),
+          tr.reportBestStation(best.name),
           style: const TextStyle(
             color: Colors.white,
             fontSize: 16,
             fontWeight: FontWeight.w800,
           ),
         ),
+        if (best.preliminary) ...[
+          const SizedBox(height: 6),
+          const _PreliminaryBadge(onDark: true),
+        ],
         const SizedBox(height: 3),
         Text(
           tr.reportBestDetail(
@@ -1391,6 +1703,17 @@ class _StationHighlight extends StatelessWidget {
           ),
           style: const TextStyle(color: Colors.white70, fontSize: 12),
         ),
+        if (best.preliminary) ...[
+          const SizedBox(height: 6),
+          Text(
+            tr.stationPreliminaryNote,
+            style: const TextStyle(color: Colors.white70, fontSize: 11),
+          ),
+        ],
+        if (best.consumptionAlert) ...[
+          const SizedBox(height: 8),
+          const _ConsumptionAlert(onDark: true),
+        ],
         if (second != null) ...[
           const Divider(color: Colors.white24, height: 20),
           Text(
@@ -1405,6 +1728,55 @@ class _StationHighlight extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// Selo "Preliminar": consumo do posto com menos de
+/// [_StationAggregate.definitiveMeasurements] medições.
+class _PreliminaryBadge extends StatelessWidget {
+  const _PreliminaryBadge({this.onDark = false});
+  final bool onDark;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+    decoration: BoxDecoration(
+      color: onDark ? AppColors.goldLight : Colors.orange.withValues(alpha: .14),
+      borderRadius: BorderRadius.circular(7),
+    ),
+    child: Text(
+      tr.stationPreliminaryBadge,
+      style: TextStyle(
+        color: onDark ? AppColors.navy : Colors.orange.shade800,
+        fontSize: 10,
+        fontWeight: FontWeight.w800,
+      ),
+    ),
+  );
+}
+
+/// Alerta de consumo muito diferente da média geral do veículo (ver
+/// [_StationAggregate.consumptionAlert]).
+class _ConsumptionAlert extends StatelessWidget {
+  const _ConsumptionAlert({this.onDark = false});
+  final bool onDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = onDark ? AppColors.goldLight : Colors.orange.shade800;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(Icons.warning_amber_rounded, color: color, size: 16),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            tr.stationConsumptionAlert,
+            style: TextStyle(color: color, fontSize: 11, height: 1.3),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _StationRankRow extends StatelessWidget {
@@ -1472,15 +1844,11 @@ class _StationRankRow extends StatelessWidget {
                         fontSize: 11,
                       ),
                     ),
-                    if (!station.reliable)
-                      Text(
-                        tr.smallSample,
-                        style: const TextStyle(
-                          color: Colors.orange,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+                    // Selo "Preliminar" no lugar do antigo "amostra pequena".
+                    if (station.preliminary) ...[
+                      const SizedBox(height: 4),
+                      const _PreliminaryBadge(),
+                    ],
                   ],
                 ),
               ),
@@ -1507,6 +1875,10 @@ class _StationRankRow extends StatelessWidget {
               ),
             ],
           ),
+          if (station.consumptionAlert) ...[
+            const SizedBox(height: 8),
+            const _ConsumptionAlert(),
+          ],
           if (barFraction > 0) ...[
             const SizedBox(height: 8),
             ClipRRect(
@@ -1530,6 +1902,102 @@ class _StationRankRow extends StatelessWidget {
     );
   }
 }
+
+/// Chave do posto de um abastecimento: o estabelecimento estruturado, se
+/// houver; senão, o nome normalizado.
+String? _stationBaseKeyFor(FuelingRecord record) {
+  final establishmentId = record.establishmentId;
+  if (establishmentId != null) return 'est:$establishmentId';
+  final text = record.station?.trim();
+  if (text == null || text.isEmpty) return null;
+  final normalized = _normalizeStation(text);
+  return normalized.isEmpty ? null : normalized;
+}
+
+/// Ranking de postos por combustível desde [start] (`null` = tudo). Extraído
+/// de _StationReportCardState para ser reaproveitado no PDF.
+List<_StationAggregate> _aggregateStations(
+  List<_ConsumptionResult> results,
+  List<FuelingRecord> fuelings,
+  DateTime? start,
+) {
+  final grouped = <String, _StationAggregate>{};
+
+  for (final result in results) {
+    if (start != null && result.end.date.isBefore(start)) continue;
+    final stationKey = result.stationKey;
+    final stationName = result.stationName;
+    final fuelType = result.fuelType;
+    if (stationKey == null || stationName == null || fuelType == null) {
+      continue;
+    }
+    final key = '$stationKey|${fuelType.toLowerCase()}';
+    final aggregate = grouped.putIfAbsent(
+      key,
+      () => _StationAggregate(
+        name: stationName,
+        fuelType: fuelType,
+        establishmentId: result.establishmentId,
+      ),
+    );
+    aggregate.distance += result.distance;
+    aggregate.consumptionLiters += result.litersUsed;
+    aggregate.measurements++;
+  }
+
+  // Enriquece com preço, litros e nº de abastecimentos a partir dos
+  // lançamentos individuais — só para postos que já têm ao menos um
+  // intervalo de consumo válido calculado acima.
+  for (final fueling in fuelings) {
+    if (start != null && fueling.date.isBefore(start)) continue;
+    final fuel = fueling.fuelType?.trim();
+    if (fuel == null || fuel.isEmpty) continue;
+    final baseKey = _stationBaseKeyFor(fueling);
+    if (baseKey == null) continue;
+    final aggregate = grouped['$baseKey|${fuel.toLowerCase()}'];
+    if (aggregate == null) continue;
+    aggregate.totalLiters += fueling.liters;
+    aggregate.totalSpent += fueling.totalPrice;
+    aggregate.fillUpsCount++;
+  }
+
+  final overall = _overallConsumption(results, start);
+  final ranking = grouped.values
+      .where((item) => item.measurements > 0)
+      .toList();
+  for (final item in ranking) {
+    item.overallConsumption = overall;
+  }
+  return ranking;
+}
+
+/// Consumo médio (km/L) dos intervalos desde [start]; 0 sem medições.
+double _overallConsumption(
+  List<_ConsumptionResult> results,
+  DateTime? start,
+) {
+  final filtered = results.where(
+    (item) => start == null || !item.end.date.isBefore(start),
+  );
+  final totalDistance = filtered.fold<int>(0, (sum, r) => sum + r.distance);
+  final totalLiters = filtered.fold<double>(
+    0,
+    (sum, r) => sum + r.litersUsed,
+  );
+  return totalLiters == 0 ? 0 : totalDistance / totalLiters;
+}
+
+/// Posto do destaque "melhor posto": o mais barato por km entre os
+/// definitivos; sem nenhum definitivo, o mais barato preliminar (exibido com
+/// o selo). [byCost] já vem ordenado por [_byCostPerKm].
+_StationAggregate? _bestStation(List<_StationAggregate> byCost) =>
+    byCost.where((item) => !item.preliminary).firstOrNull ?? byCost.firstOrNull;
+
+/// Postos com custo por km calculado, do mais barato ao mais caro.
+List<_StationAggregate> _byCostPerKm(List<_StationAggregate> ranking) =>
+    [...ranking]
+      ..removeWhere((item) => item.costPerKm <= 0)
+      ..sort((a, b) => a.costPerKm.compareTo(b.costPerKm));
 
 class _StationAggregate {
   _StationAggregate({
@@ -1556,7 +2024,23 @@ class _StationAggregate {
 
   /// Guia (Seção 1.2): só destacar como "melhor posto" com 4+ abastecimentos
   /// válidos; abaixo disso, mostrar com aviso de amostra pequena.
-  bool get reliable => fillUpsCount >= 4;
+  /// Substituído pela regra de [preliminary]: o consumo aparece desde a 1ª
+  /// medição (tanque cheio com um tanque cheio anterior) e fica definitivo
+  /// a partir de [definitiveMeasurements] medições neste posto.
+  static const definitiveMeasurements = 3;
+
+  /// Menos de [definitiveMeasurements] medições: valor com selo
+  /// "Preliminar".
+  bool get preliminary => measurements < definitiveMeasurements;
+
+  /// Consumo do posto (preliminar ou definitivo) mais de
+  /// AdsConfig.stationConsumptionAlertPercent acima ou abaixo da média geral
+  /// do veículo no período.
+  bool get consumptionAlert {
+    final variation = variationPercent;
+    return variation != null &&
+        variation.abs() > AdsConfig.instance.stationConsumptionAlertPercent;
+  }
 
   double? get variationPercent {
     if (overallConsumption <= 0 || consumption <= 0) return null;
@@ -1643,9 +2127,62 @@ int _monthsBetween(DateTime start, DateTime end) {
   return months < 1 ? 1 : months;
 }
 
+/// Totais do custo por km de um período (ver [_costPerKmSummary]).
+class _CostPerKmSummary {
+  const _CostPerKmSummary({
+    required this.distance,
+    required this.fuelTotal,
+    required this.maintenanceTotal,
+    required this.expenseTotal,
+    required this.months,
+  });
+  final int? distance;
+  final double fuelTotal;
+  final double maintenanceTotal;
+  final double expenseTotal;
+  final int months;
+
+  double get total => fuelTotal + maintenanceTotal + expenseTotal;
+  double? get costPerKm => distance == null ? null : total / distance!;
+  double get annualProjection => total / months * 12;
+}
+
+/// Custo total por km desde [periodStart] (`null` = desde o primeiro
+/// registro). Extraído de _CostPerKmCard para ser reaproveitado no PDF.
+_CostPerKmSummary _costPerKmSummary(
+  List<FuelingRecord> fuelings,
+  List<MaintenanceRecord> maintenances,
+  List<VehicleExpense> expenses,
+  DateTime? periodStart,
+) {
+  DateTime earliestDate() {
+    final dates = [
+      ...fuelings.map((item) => item.date),
+      ...maintenances.map((item) => item.date),
+    ];
+    if (dates.isEmpty) return DateTime.now();
+    return dates.reduce((a, b) => a.isBefore(b) ? a : b);
+  }
+
+  final start = periodStart ?? earliestDate();
+  final end = DateTime.now();
+  return _CostPerKmSummary(
+    distance: _distanceInPeriod(fuelings, periodStart),
+    fuelTotal: fuelings
+        .where((item) => !item.date.isBefore(start))
+        .fold<double>(0, (sum, item) => sum + item.totalPrice),
+    maintenanceTotal: maintenances
+        .where((item) => !item.date.isBefore(start))
+        .fold<double>(0, (sum, item) => sum + item.totalCost),
+    expenseTotal: _expensesInPeriod(expenses, start, end),
+    months: _monthsBetween(start, end),
+  );
+}
+
 /// Relatório "Custo total por km" + projeção anual (Seção 1.4 do guia — a
 /// própria seção 1.5 lista este como um dos três relatórios prioritários,
-/// junto com consumo por posto e evolução do consumo). 100% Premium.
+/// junto com consumo por posto e evolução do consumo). Livre no gratuito,
+/// como o relatório por oficina.
 class _CostPerKmCard extends StatelessWidget {
   const _CostPerKmCard({
     required this.fuelings,
@@ -1661,31 +2198,22 @@ class _CostPerKmCard extends StatelessWidget {
   final _StationPeriod period;
   final ValueChanged<_StationPeriod> onPeriodChanged;
 
-  DateTime _earliestDate() {
-    final dates = [
-      ...fuelings.map((item) => item.date),
-      ...maintenances.map((item) => item.date),
-    ];
-    if (dates.isEmpty) return DateTime.now();
-    return dates.reduce((a, b) => a.isBefore(b) ? a : b);
-  }
-
   @override
   Widget build(BuildContext context) {
-    final start = period.startDate() ?? _earliestDate();
-    final end = DateTime.now();
-    final distance = _distanceInPeriod(fuelings, period.startDate());
-    final fuelTotal = fuelings
-        .where((item) => !item.date.isBefore(start))
-        .fold<double>(0, (sum, item) => sum + item.totalPrice);
-    final maintenanceTotal = maintenances
-        .where((item) => !item.date.isBefore(start))
-        .fold<double>(0, (sum, item) => sum + item.totalCost);
-    final expenseTotal = _expensesInPeriod(expenses, start, end);
-    final total = fuelTotal + maintenanceTotal + expenseTotal;
-    final costPerKm = distance == null ? null : total / distance;
-    final months = _monthsBetween(start, end);
-    final annualProjection = total / months * 12;
+    // Cálculo movido para [_costPerKmSummary], reaproveitado pelo PDF.
+    final summary = _costPerKmSummary(
+      fuelings,
+      maintenances,
+      expenses,
+      period.startDate(),
+    );
+    final distance = summary.distance;
+    final fuelTotal = summary.fuelTotal;
+    final maintenanceTotal = summary.maintenanceTotal;
+    final expenseTotal = summary.expenseTotal;
+    final total = summary.total;
+    final costPerKm = summary.costPerKm;
+    final annualProjection = summary.annualProjection;
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -1798,8 +2326,9 @@ class _CostPerKmCard extends StatelessWidget {
   }
 }
 
-/// Relatório "Por oficina" (Seção 1.3 do guia). 100% Premium: não faz parte
-/// da exceção de nuvem-grátis da Regra 2 (essa vale só para postos).
+/// Relatório "Por oficina" (Seção 1.3 do guia). Livre no gratuito, como o
+/// custo total por km; só o ranking de postos (ver [_StationReportCard]) e
+/// os relatórios por período são Premium.
 class _WorkshopReportCard extends StatelessWidget {
   const _WorkshopReportCard({
     required this.maintenances,
@@ -1824,15 +2353,9 @@ class _WorkshopReportCard extends StatelessWidget {
     return normalized.isEmpty ? null : normalized;
   }
 
-  String _nameFor(MaintenanceRecord record) {
-    final establishmentId = record.establishmentId;
-    if (establishmentId != null) {
-      for (final item in establishments) {
-        if (item.id == establishmentId) return item.name;
-      }
-    }
-    return _displayStation(record.workshop?.trim() ?? tr.reportWorkshopUnknown);
-  }
+  // Movido para [_workshopName], reaproveitado pelo PDF.
+  String _nameFor(MaintenanceRecord record) =>
+      _workshopName(record, establishments);
 
   List<MaintenanceRecord> _filtered() {
     final start = period.startDate();
@@ -2055,6 +2578,21 @@ class _WorkshopReportCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Nome da oficina de uma manutenção: o estabelecimento estruturado, se
+/// houver; senão, o texto digitado (ou "oficina não informada").
+String _workshopName(
+  MaintenanceRecord record,
+  List<Establishment> establishments,
+) {
+  final establishmentId = record.establishmentId;
+  if (establishmentId != null) {
+    for (final item in establishments) {
+      if (item.id == establishmentId) return item.name;
+    }
+  }
+  return _displayStation(record.workshop?.trim() ?? tr.reportWorkshopUnknown);
 }
 
 class _WorkshopRow extends StatelessWidget {

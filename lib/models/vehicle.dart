@@ -14,6 +14,7 @@ class Vehicle {
     required this.documents,
     required this.photos,
     this.vehicleType = 'car',
+    this.tankCapacityLiters,
   });
 
   final String id;
@@ -29,6 +30,9 @@ class Vehicle {
   final List<VehiclePhoto> photos;
   final String vehicleType;
 
+  /// Capacidade total do tanque, usada no cálculo de consumo (tanque cheio).
+  final double? tankCapacityLiters;
+
   bool get isMotorcycle => vehicleType == 'motorcycle';
   String get typeLabel => isMotorcycle ? tr.vehicleMotorcycle : tr.vehicleCar;
 
@@ -43,6 +47,7 @@ class Vehicle {
     List<DocumentYear>? documents,
     List<VehiclePhoto>? photos,
     String? vehicleType,
+    double? tankCapacityLiters,
   }) => Vehicle(
     id: id,
     nickname: nickname ?? this.nickname,
@@ -56,6 +61,7 @@ class Vehicle {
     documents: documents ?? this.documents,
     photos: photos ?? this.photos,
     vehicleType: vehicleType ?? this.vehicleType,
+    tankCapacityLiters: tankCapacityLiters ?? this.tankCapacityLiters,
   );
 
   Map<String, dynamic> toJson() => {
@@ -71,6 +77,7 @@ class Vehicle {
     'documents': documents.map((item) => item.toJson()).toList(),
     'photos': photos.map((item) => item.toJson()).toList(),
     'vehicleType': vehicleType,
+    if (tankCapacityLiters != null) 'tankCapacityLiters': tankCapacityLiters,
   };
 
   factory Vehicle.fromJson(Map<String, dynamic> json) => Vehicle(
@@ -90,6 +97,7 @@ class Vehicle {
         .map((item) => VehiclePhoto.fromJson(item as Map<String, dynamic>))
         .toList(),
     vehicleType: json['vehicleType'] as String? ?? 'car',
+    tankCapacityLiters: (json['tankCapacityLiters'] as num?)?.toDouble(),
   );
 }
 

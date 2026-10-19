@@ -7,6 +7,7 @@ import '../services/premium_upsell_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/premium_upsell_banner.dart';
 import '../l10n/l10n.dart';
+import '../widgets/responsive_sheet.dart';
 
 class EstablishmentsScreen extends StatefulWidget {
   const EstablishmentsScreen({super.key});
@@ -69,7 +70,7 @@ class _EstablishmentsScreenState extends State<EstablishmentsScreen> {
   }
 
   Future<void> openEditor([Establishment? establishment]) async {
-    final saved = await showModalBottomSheet<bool>(
+    final saved = await showResponsiveSheet<bool>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -90,7 +91,7 @@ class _EstablishmentsScreenState extends State<EstablishmentsScreen> {
         _message(tr.placesNothingToOrganize);
         return;
       }
-      final applied = await showModalBottomSheet<int>(
+      final applied = await showResponsiveSheet<int>(
         context: context,
         isScrollControlled: true,
         useSafeArea: true,

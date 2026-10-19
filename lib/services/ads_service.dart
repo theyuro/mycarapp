@@ -12,7 +12,9 @@ import 'package:path_provider/path_provider.dart';
 
 import 'access_service.dart';
 import 'ads_config.dart';
+import 'analytics_service.dart';
 import 'authentication_service.dart';
+import 'fueling_storage_service.dart';
 import 'vehicle_storage_service.dart';
 
 /// Telas com banner no rodapé. Cada uma usa o próprio bloco de anúncio no
@@ -116,6 +118,10 @@ class AdsService extends ChangeNotifier {
   // Evita um anúncio de abertura logo ao voltar de outro anúncio em tela
   // cheia (a tela do anúncio também tira o app do primeiro plano).
   bool _fullScreenShowing = false;
+
+  /// Se há um anúncio em tela cheia aberto (usado pelo pedido automático de
+  /// avaliação, para não abrir por cima do anúncio).
+  bool get fullScreenShowing => _fullScreenShowing;
   final _random = math.Random();
   // O vídeo premiado segue a mesma regra de validade do intersticial.
   RewardedAd? _rewarded;
@@ -128,6 +134,15 @@ class AdsService extends ChangeNotifier {
   Future<void>? _stateLoaded;
   bool _canRequestAds = false;
   bool _privacyOptionsRequired = false;
+  // Fica verdadeiro quando a primeira consulta ao UMP termina (com sucesso,
+  // erro ou tempo esgotado); antes disso o rodapé fica vazio em vez de
+  // mostrar o anúncio próprio por alguns segundos.
+  bool _consentChecked = false;
+  bool _requestingConsent = false;
+  // Fica verdadeiro (só em memória) quando o usuário já salvou mais
+  // abastecimentos que AdsConfig.interstitialGraceRecords; daí em diante a
+  // carência não é mais consultada no disco.
+  bool _graceOver = false;
 
   /// Chamado quando o usuário fecha um intersticial; o app usa para mostrar
   /// o convite para assinar o Premium.
@@ -144,6 +159,11 @@ class AdsService extends ChangeNotifier {
           _configuredBannerId.isNotEmpty ||
           defaultTargetPlatform == TargetPlatform.android);
   bool get privacyOptionsRequired => supported && _privacyOptionsRequired;
+
+  /// O AdMob não vai entregar banner agora (sem consentimento, por exemplo
+  /// ao abrir o app sem internet pela primeira vez): o rodapé mostra o
+  /// anúncio próprio no lugar.
+  bool get adsUnavailable => supported && _consentChecked && !canRequestAds;
 
   /// Bloco de banner da [placement]. O override `ADMOB_BANNER_AD_UNIT_ID`
   /// tem prioridade; em debug é sempre o ID de teste.
@@ -253,6 +273,12 @@ class AdsService extends ChangeNotifier {
   Future<void> _prepareInterstitial() async {
     if (!_shouldShowAds) return;
     await ensureStateLoaded();
+    // Carência inicial: com poucos abastecimentos salvos, nem pré-carrega.
+    // Conta o que está sendo registrado agora (+1), como pendingActivities.
+    if (await _inGracePeriod(pendingFuelings: 1)) {
+      debugPrint('Anúncios: intersticial não pré-carregado (carência).');
+      return;
+    }
     _discardExpiredInterstitial();
     if (_interstitial != null || _loadingInterstitial) return;
     final blockedBy = _interstitialBlockedBy(pendingActivities: 1);
@@ -280,6 +306,12 @@ class AdsService extends ChangeNotifier {
   Future<void> _registerMainActivity() async {
     if (!_shouldShowAds) return;
     await ensureStateLoaded();
+    // Carência inicial: sem intersticial e sem deixar anúncio de abertura
+    // pendente; o registro também não conta para o próximo intersticial.
+    if (await _inGracePeriod()) {
+      debugPrint('Anúncios: intersticial adiado (carência).');
+      return;
+    }
     _state.activitiesSinceInterstitial++;
     unawaited(_saveState());
     final blockedBy = _interstitialBlockedBy();
@@ -371,6 +403,8 @@ class AdsService extends ChangeNotifier {
     if (!_shouldShowAds || !AdsConfig.instance.appOpenEnabled) return false;
     await ensureStateLoaded();
     if (!_state.adOwed || adFreeActive || _fullScreenShowing) return false;
+    // Carência inicial também vale para o anúncio de abertura.
+    if (await _inGracePeriod()) return false;
     // Só depois do login e do cadastro do veículo: antes disso o usuário
     // ainda está conhecendo o app.
     if (AuthenticationService.instance.currentUser == null) return false;
@@ -461,6 +495,23 @@ class AdsService extends ChangeNotifier {
       },
     );
     unawaited(ad.show());
+  }
+
+  /// Se o usuário ainda está na carência inicial: salvou até
+  /// AdsConfig.interstitialGraceRecords abastecimentos (somando
+  /// [pendingFuelings], o que está sendo registrado). Em caso de erro na
+  /// leitura, considera fora da carência para não suspender os anúncios.
+  Future<bool> _inGracePeriod({int pendingFuelings = 0}) async {
+    if (_graceOver) return false;
+    final grace = AdsConfig.instance.interstitialGraceRecords;
+    if (grace <= 0) return false;
+    try {
+      final saved = (await FuelingStorageService().loadFuelings()).length;
+      if (saved > grace) _graceOver = true;
+      return saved + pendingFuelings <= grace;
+    } on Object {
+      return false;
+    }
   }
 
   /// Retorna o motivo que impede o intersticial agora, ou nulo se ele pode
@@ -558,6 +609,79 @@ class AdsService extends ChangeNotifier {
     return completion.future;
   }
 
+  /// Mostra o vídeo premiado para liberar um recurso do plano gratuito
+  /// (ver FreePlanService), sem conceder as horas sem anúncios em tela cheia
+  /// do fluxo de [showRewarded]. Devolve `true` só quando a recompensa foi
+  /// de fato ganha (vídeo assistido até o fim).
+  ///
+  /// Se não houver vídeo disponível agora (sem rede, sem consentimento ou
+  /// sem estoque no AdMob) ou se ele falhar ao abrir, devolve `true` também:
+  /// o usuário não deve ficar travado por um anúncio que não existe.
+  ///
+  /// Cada chamada registra `rewarded_unlock` com [feature] (o recurso
+  /// liberado) e `result`: earned, not_earned, unavailable, show_failed ou
+  /// busy (outro vídeo já aberto).
+  Future<bool> unlockWithRewarded({String feature = 'unknown'}) async {
+    void logResult(String result) => AnalyticsService.event(
+      'rewarded_unlock',
+      {'feature': feature, 'result': result},
+    );
+    if (_showingRewarded) {
+      logResult('busy');
+      return false;
+    }
+    if (!rewardedReady) {
+      _rewarded?.dispose();
+      _rewarded = null;
+      loadRewarded();
+      debugPrint('Anúncios: vídeo premiado indisponível; liberando mesmo assim.');
+      logResult('unavailable');
+      return true;
+    }
+    await ensureStateLoaded();
+    final ad = _rewarded!;
+    _rewarded = null;
+    _showingRewarded = true;
+    _fullScreenShowing = true;
+    var earned = false;
+    final completion = Completer<bool>();
+    ad.fullScreenContentCallback = FullScreenContentCallback(
+      // Não concede horas sem anúncios: só libera o recurso pedido.
+      onAdDismissedFullScreenContent: (ad) {
+        ad.dispose();
+        _showingRewarded = false;
+        _fullScreenShowing = false;
+        if (!completion.isCompleted) {
+          logResult(earned ? 'earned' : 'not_earned');
+          completion.complete(earned);
+        }
+      },
+      onAdFailedToShowFullScreenContent: (ad, error) {
+        reportAdIssue(
+          'rewarded_unlock_show',
+          'code=${error.code} domain=${error.domain} ${error.message}',
+        );
+        ad.dispose();
+        _showingRewarded = false;
+        _fullScreenShowing = false;
+        // Falhou ao exibir: libera para não travar o usuário.
+        if (!completion.isCompleted) {
+          logResult('show_failed');
+          completion.complete(true);
+        }
+      },
+    );
+    unawaited(
+      ad.show(
+        onUserEarnedReward: (_, _) {
+          earned = true;
+          _logEvent('ad_rewarded_unlock_earned');
+        },
+      ),
+    );
+    return completion.future;
+  }
+
   void _grantAdFree() {
     final now = DateTime.now();
     final hours = Duration(hours: AdsConfig.instance.rewardedAdFreeHours);
@@ -606,7 +730,7 @@ class AdsService extends ChangeNotifier {
 
   void _logEvent(String name) {
     try {
-      unawaited(FirebaseAnalytics.instance.logEvent(name: name));
+      FirebaseAnalytics.instance.logEvent(name: name).ignore();
     } on Object {
       // Firebase indisponível: o evento é só estatística.
     }
@@ -720,6 +844,47 @@ class AdsService extends ChangeNotifier {
     unawaited(ensureStateLoaded().then((_) => notifyListeners()));
 
     await MobileAds.instance.initialize();
+    await _requestConsent();
+    _consentChecked = true;
+    notifyListeners();
+    if (!_canRequestAds) {
+      reportAdIssue('consent_blocked', 'canRequestAds=false após o UMP');
+    }
+    // Abertura do app: anúncio de abertura, se devido, e intersticial pronto
+    // para o registro desta sessão. Voltar do segundo plano depois de um
+    // tempo conta como nova abertura (o anúncio carregado também expira).
+    unawaited(_handleAppOpened());
+    // initialize() roda uma vez só, então o listener é registrado uma vez.
+    AppLifecycleListener(
+      onHide: () => _hiddenAt = DateTime.now(),
+      onShow: () {
+        // Abriu sem internet e o UMP falhou: tenta de novo a cada volta ao
+        // app, para os anúncios voltarem sem precisar reiniciá-lo.
+        if (!_canRequestAds) unawaited(_requestConsent());
+        final hiddenAt = _hiddenAt;
+        _hiddenAt = null;
+        if (hiddenAt == null || _fullScreenShowing) return;
+        if (DateTime.now().difference(hiddenAt) >= _appOpenMinBackground) {
+          unawaited(_handleAppOpened());
+        } else {
+          prepareInterstitial();
+        }
+      },
+    );
+  }
+
+  /// Atualiza o consentimento no UMP e mostra o formulário, se necessário.
+  Future<void> _requestConsent() async {
+    if (_requestingConsent) return;
+    _requestingConsent = true;
+    try {
+      await _requestConsentOnce();
+    } finally {
+      _requestingConsent = false;
+    }
+  }
+
+  Future<void> _requestConsentOnce() async {
     final completion = Completer<void>();
     ConsentInformation.instance.requestConsentInfoUpdate(
       ConsentRequestParameters(),
@@ -750,27 +915,6 @@ class AdsService extends ChangeNotifier {
       onTimeout: () async {
         reportAdIssue('consent_timeout', 'sem resposta do UMP em 12s');
         await _refreshConsentState();
-      },
-    );
-    if (!_canRequestAds) {
-      reportAdIssue('consent_blocked', 'canRequestAds=false após o UMP');
-    }
-    // Abertura do app: anúncio de abertura, se devido, e intersticial pronto
-    // para o registro desta sessão. Voltar do segundo plano depois de um
-    // tempo conta como nova abertura (o anúncio carregado também expira).
-    unawaited(_handleAppOpened());
-    // initialize() roda uma vez só, então o listener é registrado uma vez.
-    AppLifecycleListener(
-      onHide: () => _hiddenAt = DateTime.now(),
-      onShow: () {
-        final hiddenAt = _hiddenAt;
-        _hiddenAt = null;
-        if (hiddenAt == null || _fullScreenShowing) return;
-        if (DateTime.now().difference(hiddenAt) >= _appOpenMinBackground) {
-          unawaited(_handleAppOpened());
-        } else {
-          prepareInterstitial();
-        }
       },
     );
   }

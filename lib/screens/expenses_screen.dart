@@ -3,15 +3,23 @@ import 'package:flutter/services.dart';
 
 import '../models/vehicle.dart';
 import '../models/vehicle_expense.dart';
+import '../services/access_service.dart';
 import '../services/ads_service.dart';
 import '../services/expense_storage_service.dart';
+import '../services/analytics_service.dart';
+import '../services/free_plan_service.dart';
 import '../services/premium_upsell_service.dart';
 import '../services/vehicle_storage_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/free_user_banner_ad.dart';
 import '../widgets/native_list_ad.dart';
 import '../widgets/premium_upsell_banner.dart';
+import 'lifetime_purchase_screen.dart';
 import '../l10n/l10n.dart';
+import '../widgets/responsive_sheet.dart';
+
+/// Resposta do diálogo de limite do gratuito (vídeo premiado ou Premium).
+enum _LimitChoice { watch, premium, cancel }
 
 class ExpensesScreen extends StatefulWidget {
   const ExpensesScreen({super.key, this.initialCategory});
@@ -33,6 +41,10 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
   @override
   void initState() {
     super.initState();
+    // Gratuito: toda despesa nova pede vídeo; já deixa carregando.
+    FreePlanService.instance.preloadRewardedIf(
+      FreePlanService.instance.perUseNeedsRewarded,
+    );
     load();
   }
 
@@ -72,8 +84,11 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       message(tr.expenseNeedVehicle);
       return;
     }
-    if (expense == null) AdsService.instance.prepareInterstitial();
-    final saved = await showModalBottomSheet<VehicleExpense>(
+    if (expense == null) {
+      if (!await _checkFreeLimits(active)) return;
+      AdsService.instance.prepareInterstitial();
+    }
+    final saved = await showResponsiveSheet<VehicleExpense>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -118,6 +133,93 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     SnackBar(content: Text(text), behavior: SnackBarBehavior.floating),
   );
 
+  /// Regras do plano gratuito para uma despesa nova: o veículo precisa
+  /// aceitar lançamentos novos e, sem Premium, cada registro novo é liberado
+  /// por vídeo premiado. Devolve `true` quando pode abrir o formulário.
+  Future<bool> _checkFreeLimits(Vehicle active) async {
+    final vehicles = await vehicleStorage.loadVehicles();
+    if (!mounted) return false;
+    if (!FreePlanService.instance.canRegisterForVehicle(
+      vehicles,
+      active.id,
+    )) {
+      await _showVehicleLockedDialog();
+      return false;
+    }
+    if (AccessService.instance.premiumUnlocked) return true;
+    return _showExpenseLimitDialog();
+  }
+
+  Future<void> _showVehicleLockedDialog() async {
+    final seePremium = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(tr.freeLimitVehicleTitle),
+        content: Text(tr.freeLimitVehicleText),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(tr.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(tr.learnAboutPremium),
+          ),
+        ],
+      ),
+    );
+    if (seePremium == true && mounted) {
+      await openPremium(context, PremiumFeature.vehicles, 'limit_vehicles');
+    }
+  }
+
+  Future<bool> _showExpenseLimitDialog() async {
+    final choice = await showDialog<_LimitChoice>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(tr.freeLimitExpenseTitle),
+        content: Text(tr.freeLimitExpenseText),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, _LimitChoice.cancel),
+            child: Text(tr.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, _LimitChoice.premium),
+            child: Text(tr.learnAboutPremium),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, _LimitChoice.watch),
+            child: Text(tr.watchAndSave),
+          ),
+        ],
+      ),
+    );
+    if (choice == _LimitChoice.premium) {
+      if (mounted) {
+        await openPremium(
+          context,
+          PremiumFeature.maintenance,
+          'limit_expense',
+        );
+      }
+      return false;
+    }
+    if (choice == _LimitChoice.watch) {
+      final earned = await FreePlanService.instance.unlockExpenseWithRewarded();
+      if (mounted && !earned) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(tr.rewardedNotEarned),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return earned;
+    }
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final month = DateTime(DateTime.now().year, DateTime.now().month);
@@ -140,7 +242,12 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         child: FreeUserBannerAd(placement: BannerPlacement.expenses),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: vehicle == null ? null : openForm,
+        onPressed: vehicle == null
+            ? null
+            : () {
+                AnalyticsService.tap('new_expense', screen: 'expenses');
+                openForm();
+              },
         backgroundColor: AppColors.gold,
         foregroundColor: AppColors.navy,
         icon: const Icon(Icons.add),
@@ -157,7 +264,14 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
           ? _EmptyExpenseMessage(
               icon: Icons.account_balance_wallet_outlined,
               text: tr.expensesEmpty,
-              onAdd: openForm,
+              onAdd: () {
+                AnalyticsService.tap(
+                  'new_expense',
+                  screen: 'expenses',
+                  params: {'source': 'empty_state'},
+                );
+                openForm();
+              },
             )
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),

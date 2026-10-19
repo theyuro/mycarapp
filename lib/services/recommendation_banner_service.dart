@@ -69,6 +69,11 @@ class RecommendationBannerService {
     return _hasMinimumUsage();
   }
 
+  /// Se o tipo nunca mais deve aparecer (já agiu ou dispensou 3 vezes). Usado
+  /// pelo anúncio próprio do rodapé, que ignora as regras de frequência.
+  bool isHiddenForever(RecommendationBannerType type) =>
+      _permanentlyHidden.contains(type);
+
   void markShown(RecommendationBannerType type) {
     _shownThisSession = type;
   }

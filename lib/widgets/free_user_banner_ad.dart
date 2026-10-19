@@ -5,6 +5,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import '../services/access_service.dart';
 import '../services/ads_service.dart';
+import 'house_ad_banner.dart';
 
 // As telas só precisam deste import para escolher a posição do banner.
 export '../services/ads_service.dart' show BannerPlacement;
@@ -14,6 +15,9 @@ export '../services/ads_service.dart' show BannerPlacement;
 ///
 /// O período sem anúncios do vídeo premiado não esconde o banner: ele vale
 /// só para anúncios em tela cheia.
+///
+/// Sem banner do AdMob (offline, sem consentimento ou sem anúncio), o espaço
+/// mostra o [HouseAdBanner].
 class FreeUserBannerAd extends StatelessWidget {
   const FreeUserBannerAd({super.key, required this.placement});
 
@@ -25,10 +29,11 @@ class FreeUserBannerAd extends StatelessWidget {
     builder: (context, _) => AnimatedBuilder(
       animation: AccessService.instance,
       builder: (context, _) {
-        if (!AccessService.instance.showsAds ||
-            !AdsService.instance.canRequestAds) {
-          return const SizedBox.shrink();
+        if (!AccessService.instance.showsAds) return const SizedBox.shrink();
+        if (AdsService.instance.adsUnavailable) {
+          return HouseAdBanner(placement: placement);
         }
+        if (!AdsService.instance.canRequestAds) return const SizedBox.shrink();
         return _LoadedBannerAd(placement: placement);
       },
     ),
@@ -50,6 +55,9 @@ class _LoadedBannerAdState extends State<_LoadedBannerAd> {
   static const _retryDelay = Duration(seconds: 60);
 
   BannerAd? _banner;
+  // O último pedido falhou (sem internet ou sem anúncio): mostra o anúncio
+  // próprio até um banner carregar.
+  bool _failed = false;
   Timer? _retry;
   // O tamanho adaptativo depende da largura vinda do MediaQuery, que só está
   // disponível em didChangeDependencies; o pedido é feito uma vez só.
@@ -90,7 +98,10 @@ class _LoadedBannerAdState extends State<_LoadedBannerAd> {
             return;
           }
           final previous = _banner;
-          setState(() => _banner = ad as BannerAd);
+          setState(() {
+            _banner = ad as BannerAd;
+            _failed = false;
+          });
           previous?.dispose();
         },
         onAdFailedToLoad: (ad, error) {
@@ -101,6 +112,7 @@ class _LoadedBannerAdState extends State<_LoadedBannerAd> {
                 'code=${error.code} domain=${error.domain} ${error.message}',
           );
           if (!mounted) return;
+          if (_banner == null) setState(() => _failed = true);
           _retry?.cancel();
           _retry = Timer(_retryDelay, () {
             if (mounted) unawaited(_load());
@@ -121,7 +133,11 @@ class _LoadedBannerAdState extends State<_LoadedBannerAd> {
   @override
   Widget build(BuildContext context) {
     final banner = _banner;
-    if (banner == null) return const SizedBox.shrink();
+    if (banner == null) {
+      return _failed
+          ? HouseAdBanner(placement: widget.placement)
+          : const SizedBox.shrink();
+    }
     return ColoredBox(
       color: Theme.of(context).scaffoldBackgroundColor,
       // Margem vertical para afastar o anúncio de botões vizinhos (barra

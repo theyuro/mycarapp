@@ -41,6 +41,21 @@ function subscriptionValues(subscription, productId, now = Date.now()) {
     SUBSCRIPTION_STATE_PENDING: "pending",
   }[state] || "unknown";
 
+  const offerId = lineItem.offerDetails?.offerId || null;
+  // Teste gratuito: usa offerPhase do line item (API subscriptionsv2) quando
+  // disponível; se a API não devolver essa informação, cai no fallback por
+  // data para a oferta yearly-7daysfree (7 dias a partir do início).
+  let inFreeTrial;
+  if (lineItem.offerPhase && typeof lineItem.offerPhase === "object") {
+    inFreeTrial = Boolean(lineItem.offerPhase.freeTrial);
+  } else {
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    const startTime = subscription.startTime ?
+      new Date(subscription.startTime) : null;
+    inFreeTrial = Boolean(offerId === "yearly-7daysfree" && startTime &&
+      now - startTime.getTime() < sevenDaysMs);
+  }
+
   return {
     active: Boolean(activeStates.has(state) && expiry && expiry.getTime() > now),
     state,
@@ -50,7 +65,8 @@ function subscriptionValues(subscription, productId, now = Date.now()) {
     productId: lineItem.productId || productId,
     basePlanId: lineItem.offerDetails?.basePlanId || null,
     planId: lineItem.offerDetails?.basePlanId || null,
-    offerId: lineItem.offerDetails?.offerId || null,
+    offerId,
+    inFreeTrial,
     expiryTime: expiry,
     expiresAt: expiry,
     autoRenewing: Boolean(lineItem.autoRenewingPlan?.autoRenewEnabled),

@@ -3,12 +3,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../models/vehicle.dart';
+import '../services/free_plan_service.dart';
 import '../services/premium_upsell_service.dart';
 import '../services/vehicle_storage_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/free_user_banner_ad.dart';
 import '../widgets/premium_upsell_banner.dart';
 import '../widgets/vehicle_type_icon.dart';
+import 'lifetime_purchase_screen.dart';
 import 'vehicle_registration_screen.dart';
 import '../l10n/l10n.dart';
 import '../l10n/labels.dart';
@@ -50,9 +52,17 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
   }
 
   Future<void> openForm([Vehicle? vehicle]) async {
+    // Limite de veículos do gratuito: só para cadastro novo, nunca para
+    // editar um já existente.
+    if (vehicle == null &&
+        !FreePlanService.instance.canAddVehicle(vehicles.length)) {
+      await openPremium(context, PremiumFeature.vehicles, 'limit_vehicles');
+      return;
+    }
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => VehicleRegistrationScreen(vehicle: vehicle),
+        settings: const RouteSettings(name: 'vehicle_form'),
       ),
     );
     if (changed == true) {
@@ -150,6 +160,10 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
               return _VehicleCard(
                 vehicle: vehicle,
                 isActive: vehicle.id == activeId,
+                canRegister: FreePlanService.instance.canRegisterForVehicle(
+                  vehicles,
+                  vehicle.id,
+                ),
                 onSelect: () => selectVehicle(vehicle),
                 onEdit: () => openForm(vehicle),
                 onDelete: () => confirmDelete(vehicle),
@@ -163,6 +177,7 @@ class _VehicleCard extends StatelessWidget {
   const _VehicleCard({
     required this.vehicle,
     required this.isActive,
+    required this.canRegister,
     required this.onSelect,
     required this.onEdit,
     required this.onDelete,
@@ -170,6 +185,10 @@ class _VehicleCard extends StatelessWidget {
 
   final Vehicle vehicle;
   final bool isActive;
+
+  /// No gratuito, só o veículo cadastrado primeiro aceita lançamentos novos
+  /// quando há mais de um cadastrado; os demais ficam só para consulta.
+  final bool canRegister;
   final VoidCallback onSelect;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -230,6 +249,16 @@ class _VehicleCard extends StatelessWidget {
                       fontSize: 12,
                     ),
                   ),
+                  if (!canRegister) ...[
+                    const SizedBox(height: 8),
+                    _ViewOnlyNotice(
+                      onTap: () => openPremium(
+                        context,
+                        PremiumFeature.vehicles,
+                        'limit_vehicles',
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -260,6 +289,46 @@ class _VehicleCard extends StatelessWidget {
           ],
         ),
       ),
+    ),
+  );
+}
+
+/// Aviso de que este veículo não aceita lançamentos novos no gratuito (ver
+/// FreePlanService.canRegisterForVehicle).
+class _ViewOnlyNotice extends StatelessWidget {
+  const _ViewOnlyNotice({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+    decoration: BoxDecoration(
+      color: Colors.orange.withValues(alpha: .1),
+      borderRadius: BorderRadius.circular(10),
+    ),
+    child: Row(
+      children: [
+        const Icon(Icons.visibility_outlined, color: Colors.orange, size: 18),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            tr.vehicleViewOnlyBadge,
+            style: const TextStyle(
+              color: Colors.orange,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        TextButton(
+          onPressed: onTap,
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            minimumSize: Size.zero,
+          ),
+          child: Text(tr.learnAboutPremium, style: const TextStyle(fontSize: 11.5)),
+        ),
+      ],
     ),
   );
 }
