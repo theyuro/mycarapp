@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -132,6 +133,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             ),
+            if (kDebugMode) ...[
+              const SizedBox(height: 8),
+              TextButton.icon(
+                onPressed: signingIn ? null : () => _start(context),
+                style: TextButton.styleFrom(foregroundColor: Colors.white70),
+                icon: const Icon(Icons.bug_report_outlined, size: 18),
+                label: const Text('Entrar sem login (debug)'),
+              ),
+            ],
             const SizedBox(height: 12),
             Text(
               tr.loginHint,
