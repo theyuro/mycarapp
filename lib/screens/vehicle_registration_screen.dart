@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/vehicle.dart';
+import '../services/analytics_service.dart';
 import '../services/app_review_service.dart';
 import '../services/fueling_storage_service.dart';
 import '../services/image_pick_service.dart';
@@ -561,7 +562,11 @@ class _VehicleRegistrationScreenState extends State<VehicleRegistrationScreen> {
     try {
       await storage.saveVehicle(vehicle);
       // Veículo novo conta para o pedido automático de avaliação.
-      if (existing == null) AppReviewService.instance.registerEvent();
+      if (existing == null) {
+        AppReviewService.instance.registerEvent();
+        // Marco do funil: primeiro veículo (e demais) realmente salvo.
+        AnalyticsService.milestone('vehicle_added', source: 'form');
+      }
       if (!mounted) return;
       Navigator.of(context).pop(true);
     } on FileSystemException catch (error) {

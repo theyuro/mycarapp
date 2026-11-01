@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'account_cloud_service.dart';
+import 'analytics_service.dart';
 import '../l10n/l10n.dart';
 
 class AuthenticationService {
@@ -33,6 +34,10 @@ class AuthenticationService {
       throw StateError(tr.authAccountError);
     }
     await AccountCloudService().ensureProfile();
+    // Funil de aquisição: sign_up na conta nova, login nas demais.
+    AnalyticsService.signIn(
+      isNewUser: result.additionalUserInfo?.isNewUser ?? false,
+    );
     return user;
   }
 

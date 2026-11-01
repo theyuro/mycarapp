@@ -205,6 +205,7 @@
   "storeRestored": "Assinatura restaurada.",
   "storeValidatingRestore": "Compras consultadas. Validando com a Google Play...",
   "storeRestoreError": "Não foi possível restaurar as compras.",
+  "storeNothingToRestore": "Nenhuma compra anterior encontrada para esta conta.",
   "storePending": "Pagamento pendente na Google Play.",
   "storeNotCompleted": "A compra não foi concluída.",
   "storeCanceled": "Compra cancelada.",

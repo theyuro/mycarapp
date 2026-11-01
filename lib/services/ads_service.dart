@@ -117,11 +117,30 @@ class AdsService extends ChangeNotifier {
   DateTime? _hiddenAt;
   // Evita um anúncio de abertura logo ao voltar de outro anúncio em tela
   // cheia (a tela do anúncio também tira o app do primeiro plano).
-  bool _fullScreenShowing = false;
+  bool _fullScreenFlag = false;
+  // Quando o último anúncio em tela cheia (intersticial, abertura ou vídeo
+  // premiado) foi fechado. Alimentado pelo setter de [_fullScreenShowing], que
+  // todos os pontos que já fecham anúncios usam; assim nada mais precisa mudar.
+  DateTime? _fullScreenClosedAt;
+
+  bool get _fullScreenShowing => _fullScreenFlag;
+  set _fullScreenShowing(bool value) {
+    if (_fullScreenFlag && !value) _fullScreenClosedAt = DateTime.now();
+    _fullScreenFlag = value;
+  }
 
   /// Se há um anúncio em tela cheia aberto (usado pelo pedido automático de
   /// avaliação, para não abrir por cima do anúncio).
   bool get fullScreenShowing => _fullScreenShowing;
+
+  /// Se um anúncio em tela cheia foi fechado há menos que [window]. O pedido
+  /// automático de avaliação usa para não aparecer logo depois de um anúncio
+  /// ou de um vídeo premiado (no gratuito, manutenção e despesa passam por
+  /// vídeo antes de salvar).
+  bool fullScreenClosedWithin(Duration window) {
+    final closedAt = _fullScreenClosedAt;
+    return closedAt != null && DateTime.now().difference(closedAt) < window;
+  }
   final _random = math.Random();
   // O vídeo premiado segue a mesma regra de validade do intersticial.
   RewardedAd? _rewarded;

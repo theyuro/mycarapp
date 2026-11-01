@@ -1,5 +1,6 @@
 const {createHash} = require("node:crypto");
 const {getApps, initializeApp} = require("firebase-admin/app");
+const {getAppCheck} = require("firebase-admin/app-check");
 const {getAuth} = require("firebase-admin/auth");
 const {FieldValue, getFirestore} = require("firebase-admin/firestore");
 const {onCall, HttpsError} = require("firebase-functions/v2/https");
@@ -39,6 +40,25 @@ function requireAdmin(request) {
   requireAuth(request);
   if (!isAdmin(request)) {
     throw new HttpsError("permission-denied", "Acesso exclusivo do administrador.");
+  }
+}
+
+// Diagnóstico temporário do App Check em verifyAndroidSubscription (ver
+// comentário em enforceAppCheck lá embaixo): verifica o token manualmente só
+// para registrar no log se ele chegou válido, inválido ou ausente, sem
+// bloquear a chamada e sem logar o token em si.
+async function logAppCheckStatus(request, label) {
+  const header = request.rawRequest?.get?.("X-Firebase-AppCheck") ||
+    request.rawRequest?.headers?.["x-firebase-appcheck"];
+  if (!header) {
+    console.warn(`${label}: App Check ausente`);
+    return;
+  }
+  try {
+    await getAppCheck().verifyToken(header);
+    console.log(`${label}: App Check válido`);
+  } catch (error) {
+    console.warn(`${label}: App Check inválido: ${error.message}`);
   }
 }
 
@@ -403,6 +423,23 @@ exports.claimExitOffer = onCall(
       });
     });
 
+// As chamadas à Google Play Developer API usam Gaxios: o erro bruto inclui
+// a config da requisição inteira (com a URL .../subscriptionsv2/tokens/
+// <purchaseToken>, cabeçalhos de autenticação etc.). Nunca logar esse erro
+// direto — só os campos abaixo, com qualquer "tokens/<valor>" que sobre na
+// mensagem trocado por "tokens/<redacted>".
+function sanitizeError(error) {
+  const redactTokens = (text) =>
+    typeof text === "string" ?
+      text.replace(/tokens\/[^/\s"]+/g, "tokens/<redacted>") : text;
+  return {
+    status: error?.response?.status ?? null,
+    code: error?.code ?? null,
+    apiStatus: error?.response?.data?.error?.status ?? null,
+    message: redactTokens(String(error?.message ?? error)),
+  };
+}
+
 async function fetchGooglePlaySubscription(purchaseToken) {
   const auth = new GoogleAuth({
     scopes: ["https://www.googleapis.com/auth/androidpublisher"],
@@ -414,6 +451,24 @@ async function fetchGooglePlaySubscription(purchaseToken) {
     url: `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${encodedPackage}/purchases/subscriptionsv2/tokens/${encodedToken}`,
   });
   return response.data;
+}
+
+// Confirma (acknowledge) a compra diretamente com a Google Play. Sem isso
+// dentro de 3 dias, a Play reembolsa a assinatura automaticamente — por
+// isso o servidor confirma mesmo quando o app não chega a fazê-lo.
+async function acknowledgeAndroidSubscription(productId, purchaseToken) {
+  const auth = new GoogleAuth({
+    scopes: ["https://www.googleapis.com/auth/androidpublisher"],
+  });
+  const client = await auth.getClient();
+  const encodedPackage = encodeURIComponent(packageName);
+  const encodedProduct = encodeURIComponent(productId);
+  const encodedToken = encodeURIComponent(purchaseToken);
+  await client.request({
+    method: "POST",
+    url: `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${encodedPackage}/purchases/subscriptions/${encodedProduct}/tokens/${encodedToken}:acknowledge`,
+    data: {},
+  });
 }
 
 function subscriptionValues(subscription) {
@@ -437,6 +492,24 @@ async function persistSubscription(uid, purchaseToken, subscription) {
   const referralRef = db.collection("referrals").doc(uid);
   const tokenHash = createHash("sha256").update(purchaseToken).digest("hex");
   const tokenRef = db.collection("purchaseTokens").doc(tokenHash);
+  const unlinkedRef = db.collection("unlinkedPurchases").doc(tokenHash);
+
+  // Confirma (acknowledge) a compra na Play se ainda estiver pendente,
+  // mesmo quando é o próprio servidor que está vinculando a conta (ex.: via
+  // googlePlaySubscriptionNotification ou o script de vinculação manual),
+  // sem depender do app para isso.
+  if (subscription.acknowledgementState === "ACKNOWLEDGEMENT_STATE_PENDING") {
+    try {
+      await acknowledgeAndroidSubscription(values.productId, purchaseToken);
+    } catch (error) {
+      // Nunca o erro bruto do Gaxios (tem a URL com o purchaseToken); só a
+      // versão sanitizada, com o hash do token em vez do token.
+      console.warn("Falha ao confirmar (acknowledge) a assinatura", {
+        tokenHash,
+        ...sanitizeError(error),
+      });
+    }
+  }
 
   const externalAccountId =
     subscription.externalAccountIdentifiers?.obfuscatedExternalAccountId || null;
@@ -473,6 +546,9 @@ async function persistSubscription(uid, purchaseToken, subscription) {
     };
     if (!tokenSnapshot.exists) tokenData.createdAt = FieldValue.serverTimestamp();
     transaction.set(tokenRef, tokenData, {merge: true});
+    // A compra acabou de ser vinculada a um uid: não há mais motivo para
+    // ficar em unlinkedPurchases (apagar um doc inexistente não dá erro).
+    transaction.delete(unlinkedRef);
 
     const current = entitlementSnapshot.data() || {};
     const currentExpiry = current.expiresAt?.toDate?.() ||
@@ -529,9 +605,18 @@ async function persistSubscription(uid, purchaseToken, subscription) {
   return persistedValues;
 }
 
+// TEMPORÁRIO: enforceAppCheck desligado aqui porque a verificação do token
+// do App Check está rejeitando chamadas legítimas ("Failed to validate
+// AppCheck token: Decoding App Check token failed"), derrubando assinaturas
+// reais (ficam sem acknowledge e a Play reembolsa em 3 dias). A segurança
+// continua vindo da consulta à Google Play Developer API logo abaixo, que
+// já confirma que a compra é real antes de liberar o acesso. Reativar
+// enforceAppCheck assim que a Play Integrity estiver vinculada ao App
+// Check do projeto. A autenticação (requireAuth) continua obrigatória.
 exports.verifyAndroidSubscription = onCall(
-    {enforceAppCheck: true, timeoutSeconds: 30}, async (request) => {
+    {enforceAppCheck: false, timeoutSeconds: 30}, async (request) => {
       const uid = requireAuth(request);
+      await logAppCheckStatus(request, "verifyAndroidSubscription");
       const purchaseToken = String(request.data?.purchaseToken || "").trim();
       if (purchaseToken.length < 20) {
         throw new HttpsError("invalid-argument", "Token de compra inválido.");
@@ -541,7 +626,14 @@ exports.verifyAndroidSubscription = onCall(
         return await persistSubscription(uid, purchaseToken, subscription);
       } catch (error) {
         if (error instanceof HttpsError) throw error;
-        console.error("Subscription verification failed", error);
+        // Erro bruto (Gaxios) nunca vai pro log; só a versão sanitizada, com
+        // o hash do token em vez do token, e pro app vai uma mensagem
+        // genérica (a original do Google fica só aqui no log).
+        const tokenHash = createHash("sha256").update(purchaseToken).digest("hex");
+        console.error("Subscription verification failed", {
+          tokenHash,
+          ...sanitizeError(error),
+        });
         throw new HttpsError("internal", "Não foi possível validar a assinatura.");
       }
     });
@@ -559,11 +651,57 @@ exports.googlePlaySubscriptionNotification = onMessagePublished(
 
       const tokenHash = createHash("sha256").update(purchaseToken).digest("hex");
       const tokenSnapshot = await db.collection("purchaseTokens").doc(tokenHash).get();
-      if (!tokenSnapshot.exists) {
-        console.warn("Notification received before purchase was linked", {tokenHash});
+      if (tokenSnapshot.exists) {
+        const uid = tokenSnapshot.data().uid;
+        const subscription = await fetchGooglePlaySubscription(purchaseToken);
+        await persistSubscription(uid, purchaseToken, subscription);
+        return;
+      }
+
+      // Compra ainda sem uid vinculado (ex.: verifyAndroidSubscription falhou
+      // antes de registrar purchaseTokens). Em vez de só pedir nova
+      // tentativa, confirma a compra na Play agora (evita o reembolso
+      // automático em 3 dias) e guarda os dados em unlinkedPurchases para
+      // vincular manualmente depois com
+      // functions/scripts/link_unlinked_purchase.js.
+      try {
+        const subscription = await fetchGooglePlaySubscription(purchaseToken);
+        const values = subscriptionValues(subscription);
+        let acknowledgedAt = null;
+        if (subscription.acknowledgementState === "ACKNOWLEDGEMENT_STATE_PENDING") {
+          await acknowledgeAndroidSubscription(values.productId, purchaseToken);
+          acknowledgedAt = FieldValue.serverTimestamp();
+        }
+        await db.collection("unlinkedPurchases").doc(tokenHash).set({
+          purchaseToken,
+          productId: values.productId,
+          basePlanId: values.basePlanId,
+          latestOrderId: subscription.latestOrderId || null,
+          state: values.state,
+          expiresAt: values.expiresAt,
+          acknowledgedAt,
+          receivedAt: FieldValue.serverTimestamp(),
+        }, {merge: true});
+      } catch (error) {
+        // Erro bruto (Gaxios) nunca vai pro log; só a versão sanitizada, com
+        // o hash do token em vez do token.
+        console.warn("Notification received before purchase was linked", {
+          tokenHash,
+          ...sanitizeError(error),
+        });
         throw new Error("Purchase token has not been linked yet; retry notification");
       }
-      const uid = tokenSnapshot.data().uid;
-      const subscription = await fetchGooglePlaySubscription(purchaseToken);
-      await persistSubscription(uid, purchaseToken, subscription);
     });
+
+// Reaproveitado por functions/scripts/link_unlinked_purchase.js (rodado
+// localmente, fora do deploy). Não são Cloud Functions: o Firebase CLI só
+// publica exports criados por onCall/onRequest/onMessagePublished etc., um
+// objeto simples como este é ignorado no deploy.
+exports.internal = {
+  packageName,
+  subscriptionProductId,
+  fetchGooglePlaySubscription,
+  acknowledgeAndroidSubscription,
+  persistSubscription,
+  sanitizeError,
+};

@@ -42,7 +42,9 @@ class AdsConfig {
   /// Valores usados enquanto o Remote Config não respondeu, se ele falhar ou
   /// se o parâmetro não existir no console.
   static const defaults = <String, Object>{
-    _activitiesPerShow: 1,
+    // 3 (antes 1): um intersticial a cada 3 registros salvos, em vez de um
+    // a cada registro; reduz avaliações negativas por excesso de anúncio.
+    _activitiesPerShow: 3,
     _premiumAfterAdEnabled: true,
     _premiumAfterAdIntervalDays: 7,
     _rewardedEnabled: true,
@@ -50,11 +52,14 @@ class AdsConfig {
     _nativeEnabled: true,
     _nativeEveryNItems: 5,
     _appOpenEnabled: true,
-    // 25% (antes 50%): menos anúncios de abertura no gratuito.
-    _appOpenChancePercent: 25,
+    // 10% (antes 25%, e 50% antes disso): menos anúncios de abertura no
+    // gratuito.
+    _appOpenChancePercent: 10,
     _interstitialGraceRecords: 2,
     _freeMaxVehicles: 1,
-    _freeFuelingsPerMonth: 3,
+    // 8 (antes 3): o abastecimento é a ação central do app; travá-lo cedo
+    // demais gera avaliações negativas.
+    _freeFuelingsPerMonth: 8,
     // Melhor posto a cada 30 dias no gratuito (antes: pior posto a cada 7).
     _freeStationUnlockDays: 30,
     _stationConsumptionAlertPercent: 25,

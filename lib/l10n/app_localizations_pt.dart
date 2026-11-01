@@ -454,6 +454,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get storeRestoreError => 'Não foi possível restaurar as compras.';
 
   @override
+  String get storeNothingToRestore =>
+      'Nenhuma compra anterior encontrada para esta conta.';
+
+  @override
   String get storePending => 'Pagamento pendente na Google Play.';
 
   @override

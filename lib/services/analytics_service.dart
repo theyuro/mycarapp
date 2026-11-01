@@ -160,6 +160,30 @@ class AnalyticsService {
     }
   }
 
+  /// Login concluído. Usa os eventos recomendados do GA4: `sign_up` quando a
+  /// conta acabou de ser criada e `login` nas demais entradas. Serve para o
+  /// funil de aquisição (instalou -> criou conta -> registrou).
+  static void signIn({required bool isNewUser, String method = 'google'}) {
+    try {
+      final analytics = FirebaseAnalytics.instance;
+      // .ignore() pelo mesmo motivo de [event]: erro assíncrono não vira
+      // crash fatal.
+      (isNewUser
+              ? analytics.logSignUp(signUpMethod: method)
+              : analytics.logLogin(loginMethod: method))
+          .ignore();
+    } on Object {
+      // Firebase indisponível: o evento é só estatística.
+    }
+  }
+
+  /// Registro novo concluído (e não só o toque no botão). [name] é um dos
+  /// marcos do funil: `vehicle_added`, `fueling_added`, `maintenance_added`,
+  /// `expense_added` ou `report_exported`; [source] diz de onde veio
+  /// (ex.: 'form', 'quick_card').
+  static void milestone(String name, {String? source}) =>
+      event(name, {'source': source});
+
   /// Quantidade de veículos em faixas (0, 1, 2-3, 4+), chamada na abertura e
   /// sempre que a lista de veículos é lida ou gravada.
   void updateVehiclesCount(int count) {

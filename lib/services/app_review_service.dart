@@ -15,15 +15,25 @@ import 'ads_service.dart';
 ///   de avaliação dentro do app tem cota e a Play pode não mostrá-la sem
 ///   avisar, então ela não serve para um botão (orientação da Google).
 /// - Janela dentro do app: pedida uma única vez, automaticamente, depois do
-///   2º registro novo (veículo, abastecimento ou manutenção), via
-///   [registerEvent]. Se houver intersticial na tela, fica para o próximo
-///   registro. Se a Play decidir não mostrar, nada acontece.
+///   3º registro novo (veículo, abastecimento, manutenção ou despesa) E de
+///   pelo menos [minUsageBeforeRequest] desde o 1º registro, via
+///   [registerEvent]. Assim o pedido não sai na 1ª sessão, antes de o
+///   usuário sentir valor no app. Momentos de valor que não são um registro
+///   novo (exportar o PDF do relatório, por exemplo) chamam
+///   `registerEvent(counts: false)`: não somam ao contador, só tentam o
+///   pedido se as condições já estiverem cumpridas. Se houver intersticial na
+///   tela, fica para o próximo registro. Se a Play decidir não mostrar,
+///   nada acontece.
 class AppReviewService {
   AppReviewService._();
   static final AppReviewService instance = AppReviewService._();
 
-  /// Registros novos necessários para pedir a avaliação.
-  static const eventsBeforeRequest = 2;
+  /// Registros novos necessários para pedir a avaliação (antes 2, o que
+  /// fazia o pedido sair logo na 1ª sessão: veículo + 1º abastecimento).
+  static const eventsBeforeRequest = 3;
+
+  /// Tempo mínimo desde o 1º registro para pedir a avaliação.
+  static const minUsageBeforeRequest = Duration(days: 2);
 
   /// Espera antes de pedir, para o formulário fechar e a tela anterior
   /// aparecer primeiro.
@@ -31,6 +41,7 @@ class AppReviewService {
 
   int _events = 0;
   bool _requested = false;
+  DateTime? _firstEventAt;
   Future<void>? _loaded;
 
   /// Abre a página do app na Play. Para os botões "Avaliar".
@@ -42,17 +53,37 @@ class AppReviewService {
     }
   }
 
-  /// Conta um registro novo (veículo, abastecimento ou manutenção) e, no
-  /// [eventsBeforeRequest]º, pede a janela de avaliação da Play.
-  void registerEvent() => unawaited(_registerEvent());
+  /// Conta um registro novo (veículo, abastecimento, manutenção ou despesa)
+  /// e, a partir do [eventsBeforeRequest]º e depois de
+  /// [minUsageBeforeRequest], pede a janela de avaliação da Play.
+  ///
+  /// Com [counts] falso (momento de valor que não é um registro, como
+  /// exportar o PDF), o contador não muda: só tenta o pedido se as condições
+  /// já estiverem cumpridas.
+  void registerEvent({bool counts = true}) =>
+      unawaited(_registerEvent(counts: counts));
 
-  Future<void> _registerEvent() async {
+  Future<void> _registerEvent({required bool counts}) async {
     try {
       await (_loaded ??= _loadState());
       if (_requested) return;
-      _events++;
-      await _saveState();
+      // Estado salvo por versões anteriores não tinha a data do 1º registro:
+      // usa a de agora, para não pedir de imediato a quem já tinha registros.
+      if (_events > 0 && _firstEventAt == null) {
+        _firstEventAt = DateTime.now();
+        await _saveState();
+      }
+      if (counts) {
+        _events++;
+        _firstEventAt ??= DateTime.now();
+        await _saveState();
+      }
       if (_events < eventsBeforeRequest) return;
+      final firstEventAt = _firstEventAt;
+      if (firstEventAt == null ||
+          DateTime.now().difference(firstEventAt) < minUsageBeforeRequest) {
+        return;
+      }
       await Future<void>.delayed(_requestDelay);
       // Intersticial na tela ou app fora do primeiro plano: não abre por
       // cima de nada e tenta de novo no próximo registro.
@@ -61,10 +92,13 @@ class AppReviewService {
               AppLifecycleState.resumed) {
         return;
       }
+      // A tentativa só é marcada como feita depois de confirmar que a janela
+      // está disponível: se a Play não oferecer agora, tenta de novo depois.
+      final review = InAppReview.instance;
+      if (!await review.isAvailable()) return;
       _requested = true;
       await _saveState();
-      final review = InAppReview.instance;
-      if (await review.isAvailable()) await review.requestReview();
+      await review.requestReview();
     } on Object catch (error) {
       debugPrint('Avaliação: pedido automático falhou ($error).');
     }
@@ -87,6 +121,7 @@ class AppReviewService {
           jsonDecode(await file.readAsString()) as Map<String, dynamic>;
       _events = (json['events'] as num?)?.toInt() ?? 0;
       _requested = json['requested'] as bool? ?? false;
+      _firstEventAt = DateTime.tryParse(json['firstEventAt'] as String? ?? '');
     } on Object {
       debugPrint('Estado da avaliação corrompido; reiniciando.');
     }
@@ -95,7 +130,11 @@ class AppReviewService {
   Future<void> _saveState() async {
     final file = await _stateFile();
     await file.writeAsString(
-      jsonEncode({'events': _events, 'requested': _requested}),
+      jsonEncode({
+        'events': _events,
+        'requested': _requested,
+        'firstEventAt': _firstEventAt?.toIso8601String(),
+      }),
       flush: true,
     );
   }

@@ -872,6 +872,12 @@ abstract class AppLocalizations {
   /// **'Não foi possível restaurar as compras.'**
   String get storeRestoreError;
 
+  /// No description provided for @storeNothingToRestore.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhuma compra anterior encontrada para esta conta.'**
+  String get storeNothingToRestore;
+
   /// No description provided for @storePending.
   ///
   /// In pt, this message translates to:

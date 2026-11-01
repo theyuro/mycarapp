@@ -8,6 +8,7 @@ import '../models/vehicle.dart';
 import '../models/vehicle_expense.dart';
 import '../services/ads_config.dart';
 import '../services/analytics_service.dart';
+import '../services/app_review_service.dart';
 import '../services/establishment_storage_service.dart';
 import '../services/expense_storage_service.dart';
 import '../services/free_plan_service.dart';
@@ -239,7 +240,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
       _showSnack(tr.reportNeedVehicle);
       return;
     }
-    if (!FreePlanService.instance.pdfAllowed) {
+    // Guardado antes do diálogo: no gratuito a exportação passa pelo vídeo
+    // premiado, e esse caso não é um bom momento para pedir avaliação.
+    final needsVideo = !FreePlanService.instance.pdfAllowed;
+    if (needsVideo) {
       final choice = await showDialog<String>(
         context: context,
         builder: (context) => AlertDialog(
@@ -281,6 +285,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
           text: tr.pdfShareText,
         ),
       );
+      // Marco do funil: relatório realmente gerado e compartilhado.
+      AnalyticsService.milestone(
+        'report_exported',
+        source: needsVideo ? 'rewarded' : 'premium',
+      );
+      // Momento de valor: quem gerou o PDF sem passar por vídeo recebe, se já
+      // cumpriu as condições, o pedido de avaliação (sem somar ao contador).
+      if (!needsVideo) AppReviewService.instance.registerEvent(counts: false);
     } on Object catch (error) {
       debugPrint('Falha ao gerar o PDF do relatório: $error');
       if (mounted) _showSnack(tr.exportError);

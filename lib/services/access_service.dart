@@ -99,6 +99,13 @@ class AccessService extends ChangeNotifier {
 
   /// Prazo para considerar "nada a restaurar" quando o botão é usado.
   Timer? _restoreTimeout;
+
+  /// Trava [purchasePending] se a tela de pagamento da Google Play for
+  /// aberta e nenhum evento do `purchaseStream` chegar depois (acontece
+  /// quando o usuário fecha a tela sem comprar nem cancelar
+  /// explicitamente); sem esse prazo o botão de assinar/restaurar fica
+  /// desabilitado para sempre.
+  Timer? _purchaseTimeout;
   bool _subscriptionActive = false;
   bool _betaPremiumActive = DateTime.now().isBefore(DateTime(2026, 8, 31));
   String? _boundUid;
@@ -426,6 +433,18 @@ class AccessService extends ChangeNotifier {
       if (started) {
         // Abriu a tela de pagamento da Google Play.
         AnalyticsService.event('purchase_start', {'plan': option.basePlanId});
+        _purchaseTimeout?.cancel();
+        _purchaseTimeout = Timer(const Duration(minutes: 2), () {
+          if (!purchasePending || _purchaseOption != option) return;
+          purchasePending = false;
+          storeMessage = tr.storeNotCompleted;
+          _purchaseOption = null;
+          AnalyticsService.event('purchase_error', {
+            'plan': option.basePlanId,
+            'result': 'timeout',
+          });
+          notifyListeners();
+        });
       } else {
         purchasePending = false;
         storeMessage = tr.storePurchaseNotStarted;
@@ -485,6 +504,11 @@ class AccessService extends ChangeNotifier {
   /// Finaliza um pedido de restauração feito pelo botão: cancela o prazo de
   /// espera, zera a flag e, quando [result] não é nulo, registra o único
   /// evento `purchase_restore` exigido para esse pedido.
+  ///
+  /// Quando o prazo de 15s estoura sem nenhuma compra restaurada (chamado
+  /// pelo [Timer] de [restorePurchases]), a tela ficaria presa na mensagem
+  /// "Validando com a Google Play..." para sempre; por isso esse é o único
+  /// caso em que também atualizamos [storeMessage] e notificamos a tela.
   void _finishRequestedRestore(String? result) {
     _restoreTimeout?.cancel();
     _restoreTimeout = null;
@@ -492,11 +516,18 @@ class AccessService extends ChangeNotifier {
     if (result != null) {
       AnalyticsService.event('purchase_restore', {'result': result});
     }
+    if (result == 'not_found') {
+      storeMessage = tr.storeNothingToRestore;
+      notifyListeners();
+    }
   }
 
   Future<void> _handlePurchases(List<PurchaseDetails> purchases) async {
     for (final purchase in purchases) {
       if (purchase.productID != subscriptionProductId) continue;
+      // Chegou um evento real para a compra em andamento: não precisa mais
+      // do prazo de segurança de buySubscription().
+      _purchaseTimeout?.cancel();
       switch (purchase.status) {
         case PurchaseStatus.purchased:
         case PurchaseStatus.restored:
@@ -644,6 +675,7 @@ class AccessService extends ChangeNotifier {
     _authSubscription?.cancel();
     _entitlementSubscription?.cancel();
     _restoreTimeout?.cancel();
+    _purchaseTimeout?.cancel();
     super.dispose();
   }
 }

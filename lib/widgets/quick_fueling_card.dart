@@ -115,6 +115,8 @@ class _QuickFuelingCardState extends State<QuickFuelingCard> {
       showMessage(tr.quickFuelingAdded);
       AdsService.instance.registerMainActivity();
       AppReviewService.instance.registerEvent();
+      // Marco do funil: abastecimento rápido realmente salvo.
+      AnalyticsService.milestone('fueling_added', source: 'quick_card');
       // Volta a observar o campo para o próximo abastecimento rápido.
       litersController
         ..removeListener(_prepareInterstitial)

@@ -227,6 +227,8 @@ class _FuelingFormScreenState extends State<FuelingFormScreen> {
       if (widget.record == null) {
         AdsService.instance.registerMainActivity();
         AppReviewService.instance.registerEvent();
+        // Marco do funil: abastecimento realmente salvo.
+        AnalyticsService.milestone('fueling_added', source: 'form');
       }
       if (mounted) Navigator.of(context).pop(true);
     } catch (_) {

@@ -19,7 +19,10 @@ class _PresentationScreenState extends State<PresentationScreen> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer(const Duration(seconds: 3), _openLogin);
+    // Quem já está logado vai para a Home em 1 s (toda abertura do app passa
+    // por aqui); quem ainda vai ver o login mantém a abertura completa de 3 s.
+    final signedIn = AuthenticationService.instance.currentUser != null;
+    _timer = Timer(Duration(seconds: signedIn ? 1 : 3), _openLogin);
   }
 
   // O app exige conta: quem já entrou vai direto para a Home; os demais

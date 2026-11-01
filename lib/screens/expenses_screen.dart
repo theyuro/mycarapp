@@ -7,6 +7,7 @@ import '../services/access_service.dart';
 import '../services/ads_service.dart';
 import '../services/expense_storage_service.dart';
 import '../services/analytics_service.dart';
+import '../services/app_review_service.dart';
 import '../services/free_plan_service.dart';
 import '../services/premium_upsell_service.dart';
 import '../services/vehicle_storage_service.dart';
@@ -102,7 +103,14 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     await storage.saveExpense(saved);
     await load();
     if (mounted) message(tr.expenseSaved);
-    if (expense == null) AdsService.instance.registerMainActivity();
+    if (expense == null) {
+      AdsService.instance.registerMainActivity();
+      // Despesa nova também conta para o pedido de avaliação (antes só
+      // abastecimento, manutenção e veículo contavam).
+      AppReviewService.instance.registerEvent();
+      // Marco do funil: despesa realmente salva.
+      AnalyticsService.milestone('expense_added', source: 'form');
+    }
   }
 
   Future<void> delete(VehicleExpense expense) async {

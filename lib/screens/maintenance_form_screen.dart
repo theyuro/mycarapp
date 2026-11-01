@@ -9,6 +9,7 @@ import '../models/record_attachment.dart';
 import '../models/vehicle.dart';
 import '../services/access_service.dart';
 import '../services/ads_service.dart';
+import '../services/analytics_service.dart';
 import '../services/app_review_service.dart';
 import '../services/establishment_storage_service.dart';
 import '../services/free_plan_service.dart';
@@ -254,6 +255,8 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
     if (widget.record == null) {
       AdsService.instance.registerMainActivity();
       AppReviewService.instance.registerEvent();
+      // Marco do funil: manutenção realmente salva.
+      AnalyticsService.milestone('maintenance_added', source: 'form');
     }
     if (!mounted) return;
     if (reminderWarning) {

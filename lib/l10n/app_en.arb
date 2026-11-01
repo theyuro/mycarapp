@@ -129,6 +129,7 @@
   "storeRestored": "Subscription restored.",
   "storeValidatingRestore": "Purchases found. Validating with Google Play...",
   "storeRestoreError": "Couldn't restore purchases.",
+  "storeNothingToRestore": "No previous purchase found for this account.",
   "storePending": "Payment pending on Google Play.",
   "storeNotCompleted": "The purchase was not completed.",
   "storeCanceled": "Purchase canceled.",

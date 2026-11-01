@@ -5,7 +5,7 @@
       "parameters": {
         "interstitial_activities_per_show": {
           "defaultValue": {
-            "value": "1"
+            "value": "3"
           },
           "description": "Registros salvos necessários para liberar um intersticial (mínimo 1). Sem intervalo mínimo nem limite diário; a carência inicial é a de interstitial_grace_records.",
           "valueType": "NUMBER"
@@ -26,7 +26,7 @@
         },
         "app_open_chance_percent": {
           "defaultValue": {
-            "value": "25"
+            "value": "10"
           },
           "description": "Chance (0 a 100) de um registro salvo sem intersticial deixar um anúncio de abertura pendente.",
           "valueType": "NUMBER"
@@ -87,7 +87,7 @@
         },
         "free_fuelings_per_month": {
           "defaultValue": {
-            "value": "3"
+            "value": "8"
           },
           "description": "Abastecimentos gratuitos por mês; acima disso, cada novo abastecimento é liberado por vídeo premiado.",
           "valueType": "NUMBER"
