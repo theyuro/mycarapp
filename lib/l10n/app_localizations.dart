@@ -4526,6 +4526,48 @@ abstract class AppLocalizations {
   /// **'Não, obrigado'**
   String get exitOfferNoThanks;
 
+  /// No description provided for @blackFridayBadge.
+  ///
+  /// In pt, this message translates to:
+  /// **'BLACK FRIDAY'**
+  String get blackFridayBadge;
+
+  /// No description provided for @blackFridayTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'{percent}% de desconto no Premium anual'**
+  String blackFridayTitle(int percent);
+
+  /// No description provided for @blackFridaySubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'No 1º ano do plano anual. Oferta por tempo limitado.'**
+  String get blackFridaySubtitle;
+
+  /// No description provided for @blackFridayLastChanceSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Última chance! Acaba hoje às 23h.'**
+  String get blackFridayLastChanceSubtitle;
+
+  /// No description provided for @blackFridayEndsIn.
+  ///
+  /// In pt, this message translates to:
+  /// **'Termina em {time}'**
+  String blackFridayEndsIn(String time);
+
+  /// No description provided for @blackFridayButton.
+  ///
+  /// In pt, this message translates to:
+  /// **'APROVEITAR {percent}% OFF'**
+  String blackFridayButton(int percent);
+
+  /// No description provided for @blackFridayNotNow.
+  ///
+  /// In pt, this message translates to:
+  /// **'Agora não'**
+  String get blackFridayNotNow;
+
   /// No description provided for @offerExitPercent.
   ///
   /// In pt, this message translates to:

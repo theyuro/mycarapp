@@ -2472,6 +2472,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exitOfferNoThanks => 'No, thanks';
 
   @override
+  String get blackFridayBadge => 'BLACK FRIDAY';
+
+  @override
+  String blackFridayTitle(int percent) {
+    return '$percent% off the annual Premium plan';
+  }
+
+  @override
+  String get blackFridaySubtitle =>
+      'For the 1st year of the annual plan. Limited-time offer.';
+
+  @override
+  String get blackFridayLastChanceSubtitle =>
+      'Last chance! Ends today at 11pm.';
+
+  @override
+  String blackFridayEndsIn(String time) {
+    return 'Ends in $time';
+  }
+
+  @override
+  String blackFridayButton(int percent) {
+    return 'GET $percent% OFF';
+  }
+
+  @override
+  String get blackFridayNotNow => 'Not now';
+
+  @override
   String offerExitPercent(int percent) {
     return '$percent% off the 1st year';
   }

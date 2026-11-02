@@ -14,6 +14,7 @@ import 'services/auto_backup_service.dart';
 import 'services/firebase_bootstrap.dart';
 import 'services/update_service.dart';
 import 'theme/app_colors.dart';
+import 'widgets/black_friday_offer_sheet.dart';
 import 'widgets/force_update_gate.dart';
 import 'widgets/premium_after_ad_sheet.dart';
 
@@ -30,7 +31,15 @@ Future<void> main() async {
   unawaited(UpdateService.instance.start());
   AdsService.instance.onInterstitialDismissed = () {
     final context = _navigatorKey.currentContext;
-    if (context != null) unawaited(showPremiumAfterAdSheet(context));
+    if (context == null) return;
+    unawaited(() async {
+      // A oferta de Black Friday tem prioridade: enquanto durar, não
+      // empilha o convite comum de Premium por cima.
+      final shownBlackFriday = await showBlackFridayOfferSheet(context);
+      if (!shownBlackFriday && context.mounted) {
+        await showPremiumAfterAdSheet(context);
+      }
+    }());
   };
   // Limites dos anúncios vindos do Remote Config: busca em segundo plano e,
   // até responder (ou se falhar), valem os padrões locais.

@@ -351,9 +351,18 @@ exports.getPromotionEligibility = onCall(
       const user = userSnapshot.data() || {};
       const availableOfferTags = [];
 
+      // Black Friday (60% no 1º ano do anual): liberada para todos durante a
+      // campanha, até 30/11/2026 às 23h de Brasília (02h UTC de 01/12). Fica
+      // antes da de saída para ser a oferta preferida enquanto durar — quem
+      // vai pagar 60% off não precisa do convite de saída por cima.
+      if (Date.now() < blackFridayOfferEndsAt.getTime()) {
+        availableOfferTags.push(blackFridayOfferTag);
+      }
+
       // Oferta de saída (60% no 1º ano do anual): só durante os 10 minutos
       // concedidos por claimExitOffer e só para quem nunca pagou. Fica em
-      // primeiro para ser a oferta preferida enquanto a janela estiver aberta.
+      // primeiro (entre as demais) para ser a oferta preferida enquanto a
+      // janela estiver aberta.
       const exitOfferExpiresAt = user.exitOfferExpiresAt?.toDate?.();
       if (!user.firstPaidAt && exitOfferExpiresAt &&
           exitOfferExpiresAt.getTime() > Date.now()) {
@@ -381,6 +390,12 @@ exports.getPromotionEligibility = onCall(
         founderSpotsRemaining: 0,
       };
     });
+
+// Oferta de Black Friday: 60% no 1º ano do plano anual, tag configurada na
+// Play Console com esse mesmo offerId. Vale para todas as contas, mas só
+// dentro da campanha.
+const blackFridayOfferTag = "blackfriday26";
+const blackFridayOfferEndsAt = new Date("2026-12-01T02:00:00.000Z");
 
 // Oferta de saída do questionário ("Muito caro"): uma única vez por conta,
 // por 10 minutos, só para contas com menos de 30 dias e que nunca pagaram.

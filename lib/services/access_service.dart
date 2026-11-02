@@ -394,6 +394,17 @@ class AccessService extends ChangeNotifier {
     (option) => option.offerTags.contains(exitOfferTag),
   );
 
+  /// Tag da oferta de Black Friday (60% no 1º ano do anual) na Play. Liberada
+  /// pelo servidor só durante a campanha (ver `getPromotionEligibility`).
+  static const blackFridayOfferTag = 'blackfriday26';
+
+  /// Opção da oferta de Black Friday, quando a Play a devolveu e o servidor a
+  /// autorizou para a conta atual.
+  SubscriptionOption? get blackFridayOption => _firstWhereOrNull(
+    subscriptionOptions,
+    (option) => option.offerTags.contains(blackFridayOfferTag),
+  );
+
   /// Pede ao servidor a oferta de saída (uma única vez por conta). Devolve o
   /// fim da janela informado pelo servidor, ou `null` quando negada, sem
   /// login ou em caso de erro.

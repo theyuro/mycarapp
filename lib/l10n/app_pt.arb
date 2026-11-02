@@ -1288,6 +1288,34 @@
     }
   },
   "exitOfferNoThanks": "Não, obrigado",
+  "blackFridayBadge": "BLACK FRIDAY",
+  "blackFridayTitle": "{percent}% de desconto no Premium anual",
+  "@blackFridayTitle": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "blackFridaySubtitle": "No 1º ano do plano anual. Oferta por tempo limitado.",
+  "blackFridayLastChanceSubtitle": "Última chance! Acaba hoje às 23h.",
+  "blackFridayEndsIn": "Termina em {time}",
+  "@blackFridayEndsIn": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "blackFridayButton": "APROVEITAR {percent}% OFF",
+  "@blackFridayButton": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "blackFridayNotNow": "Agora não",
   "offerExitPercent": "{percent}% de desconto no 1º ano",
   "@offerExitPercent": {
     "placeholders": {
