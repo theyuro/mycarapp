@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Tela Desempenho (velocímetro): só em primeiro plano, nunca em
+         segundo plano (sem ACCESS_BACKGROUND_LOCATION). -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <!-- Media is selected explicitly through Android's system picker. -->
     <uses-permission
         android:name="android.permission.READ_MEDIA_IMAGES"

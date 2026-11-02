@@ -608,6 +608,24 @@ abstract class AppLocalizations {
   /// **'Seus dados acompanham você ao trocar de celular.'**
   String get featureSyncText;
 
+  /// No description provided for @featurePerformanceTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Desempenho do veículo'**
+  String get featurePerformanceTitle;
+
+  /// No description provided for @featurePerformanceText.
+  ///
+  /// In pt, this message translates to:
+  /// **'Força G e velocímetro ao vivo, mais o teste de 0 a 100 km/h, para usar em pista ou local fechado.'**
+  String get featurePerformanceText;
+
+  /// No description provided for @benefitPerformance.
+  ///
+  /// In pt, this message translates to:
+  /// **'Força G, velocímetro e teste de 0–100'**
+  String get benefitPerformance;
+
   /// No description provided for @premiumYouArePremium.
   ///
   /// In pt, this message translates to:
@@ -4537,6 +4555,276 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Consumo muito diferente da sua média. Pode ser a qualidade do combustível ou um registro incompleto, como tanque não cheio. Confira os abastecimentos deste posto.'**
   String get stationConsumptionAlert;
+
+  /// No description provided for @performanceTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Desempenho'**
+  String get performanceTitle;
+
+  /// No description provided for @performanceRecords.
+  ///
+  /// In pt, this message translates to:
+  /// **'Recordes'**
+  String get performanceRecords;
+
+  /// No description provided for @performanceBack.
+  ///
+  /// In pt, this message translates to:
+  /// **'Voltar'**
+  String get performanceBack;
+
+  /// No description provided for @performancePremiumBadge.
+  ///
+  /// In pt, this message translates to:
+  /// **'PREMIUM'**
+  String get performancePremiumBadge;
+
+  /// No description provided for @performanceSpeedometerTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Velocímetro'**
+  String get performanceSpeedometerTitle;
+
+  /// No description provided for @performanceGForceTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Força G'**
+  String get performanceGForceTitle;
+
+  /// No description provided for @performanceSessionMax.
+  ///
+  /// In pt, this message translates to:
+  /// **'Máxima da sessão'**
+  String get performanceSessionMax;
+
+  /// No description provided for @performanceLateral.
+  ///
+  /// In pt, this message translates to:
+  /// **'Lateral'**
+  String get performanceLateral;
+
+  /// No description provided for @performanceAcceleration.
+  ///
+  /// In pt, this message translates to:
+  /// **'Aceleração'**
+  String get performanceAcceleration;
+
+  /// No description provided for @performanceSessionPeak.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pico da sessão'**
+  String get performanceSessionPeak;
+
+  /// No description provided for @performanceZeroToSixty.
+  ///
+  /// In pt, this message translates to:
+  /// **'0–60 km/h'**
+  String get performanceZeroToSixty;
+
+  /// No description provided for @performanceSixtyToHundred.
+  ///
+  /// In pt, this message translates to:
+  /// **'60–100 km/h'**
+  String get performanceSixtyToHundred;
+
+  /// No description provided for @performanceGpsStatus.
+  ///
+  /// In pt, this message translates to:
+  /// **'GPS'**
+  String get performanceGpsStatus;
+
+  /// No description provided for @performanceGpsSearching.
+  ///
+  /// In pt, this message translates to:
+  /// **'Procurando sinal...'**
+  String get performanceGpsSearching;
+
+  /// No description provided for @performanceGpsReady.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pronto'**
+  String get performanceGpsReady;
+
+  /// No description provided for @performanceGpsUnavailable.
+  ///
+  /// In pt, this message translates to:
+  /// **'Indisponível'**
+  String get performanceGpsUnavailable;
+
+  /// No description provided for @performanceGpsDenied.
+  ///
+  /// In pt, this message translates to:
+  /// **'Permissão negada'**
+  String get performanceGpsDenied;
+
+  /// No description provided for @performanceSpeedUnavailable.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível coletar a velocidade'**
+  String get performanceSpeedUnavailable;
+
+  /// No description provided for @performanceByFuelTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'0–100 por combustível'**
+  String get performanceByFuelTitle;
+
+  /// No description provided for @performanceByFuelEmpty.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhum teste registrado ainda.'**
+  String get performanceByFuelEmpty;
+
+  /// No description provided for @performanceCalibrateButton.
+  ///
+  /// In pt, this message translates to:
+  /// **'CALIBRAR'**
+  String get performanceCalibrateButton;
+
+  /// No description provided for @performanceMeasureButton.
+  ///
+  /// In pt, this message translates to:
+  /// **'MEDIR 0–100'**
+  String get performanceMeasureButton;
+
+  /// No description provided for @performanceSafetyWarning.
+  ///
+  /// In pt, this message translates to:
+  /// **'Use só em pista ou local fechado, respeitando a lei. Com o carro em movimento, não mexa no celular.'**
+  String get performanceSafetyWarning;
+
+  /// No description provided for @performanceDisclaimerTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Antes de começar'**
+  String get performanceDisclaimerTitle;
+
+  /// No description provided for @performanceDisclaimerAccept.
+  ///
+  /// In pt, this message translates to:
+  /// **'ENTENDI E ACEITO'**
+  String get performanceDisclaimerAccept;
+
+  /// No description provided for @performanceCalibrateNeeded.
+  ///
+  /// In pt, this message translates to:
+  /// **'Calibre para começar'**
+  String get performanceCalibrateNeeded;
+
+  /// No description provided for @performanceCalibratingHoldStill.
+  ///
+  /// In pt, this message translates to:
+  /// **'Deixe o celular parado e fixo por 2 segundos...'**
+  String get performanceCalibratingHoldStill;
+
+  /// No description provided for @performanceCalibratingAccelerate.
+  ///
+  /// In pt, this message translates to:
+  /// **'Agora acelere levemente para a frente por 2 segundos...'**
+  String get performanceCalibratingAccelerate;
+
+  /// No description provided for @performanceCalibrationFailed.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível calibrar. Fixe o celular no suporte e tente de novo.'**
+  String get performanceCalibrationFailed;
+
+  /// No description provided for @performanceCalibrationDone.
+  ///
+  /// In pt, this message translates to:
+  /// **'Calibração concluída.'**
+  String get performanceCalibrationDone;
+
+  /// No description provided for @performanceSelectFuelTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Combustível usado neste teste'**
+  String get performanceSelectFuelTitle;
+
+  /// No description provided for @performanceArmed.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pronto! Acelere para começar a medição.'**
+  String get performanceArmed;
+
+  /// No description provided for @performanceMeasuring.
+  ///
+  /// In pt, this message translates to:
+  /// **'Medindo...'**
+  String get performanceMeasuring;
+
+  /// No description provided for @performanceCompleted.
+  ///
+  /// In pt, this message translates to:
+  /// **'Teste concluído!'**
+  String get performanceCompleted;
+
+  /// No description provided for @performanceCancelled.
+  ///
+  /// In pt, this message translates to:
+  /// **'Teste cancelado: a velocidade voltou a zero.'**
+  String get performanceCancelled;
+
+  /// No description provided for @performanceCancelButton.
+  ///
+  /// In pt, this message translates to:
+  /// **'CANCELAR TESTE'**
+  String get performanceCancelButton;
+
+  /// No description provided for @performanceLocationTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Usar localização'**
+  String get performanceLocationTitle;
+
+  /// No description provided for @performanceLocationExplain.
+  ///
+  /// In pt, this message translates to:
+  /// **'A localização é usada só enquanto esta tela está aberta, para mostrar a velocidade. Nada é enviado a servidores.'**
+  String get performanceLocationExplain;
+
+  /// No description provided for @performanceLocationContinue.
+  ///
+  /// In pt, this message translates to:
+  /// **'CONTINUAR'**
+  String get performanceLocationContinue;
+
+  /// No description provided for @performanceLocationDenied.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sem permissão de localização, o velocímetro fica indisponível. Só a Força G funciona.'**
+  String get performanceLocationDenied;
+
+  /// No description provided for @performanceRecordBest0to100.
+  ///
+  /// In pt, this message translates to:
+  /// **'Melhor 0–100'**
+  String get performanceRecordBest0to100;
+
+  /// No description provided for @performanceRecordBestLateral.
+  ///
+  /// In pt, this message translates to:
+  /// **'Maior força lateral'**
+  String get performanceRecordBestLateral;
+
+  /// No description provided for @performanceRecordBestBraking.
+  ///
+  /// In pt, this message translates to:
+  /// **'Maior frenagem'**
+  String get performanceRecordBestBraking;
+
+  /// No description provided for @performanceRecordTopSpeed.
+  ///
+  /// In pt, this message translates to:
+  /// **'Velocidade máxima'**
+  String get performanceRecordTopSpeed;
+
+  /// No description provided for @performanceRecordsEmpty.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhum recorde ainda. Faça seu primeiro teste de 0–100.'**
+  String get performanceRecordsEmpty;
 }
 
 class _AppLocalizationsDelegate

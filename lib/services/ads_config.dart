@@ -39,6 +39,10 @@ class AdsConfig {
   static const _stationConsumptionAlertPercent =
       'station_consumption_alert_percent';
 
+  // Tela Desempenho (Força G + velocímetro): liga aos poucos, sem publicar
+  // nova versão do app.
+  static const _performanceEnabled = 'performance_enabled';
+
   /// Valores usados enquanto o Remote Config não respondeu, se ele falhar ou
   /// se o parâmetro não existir no console.
   static const defaults = <String, Object>{
@@ -63,6 +67,10 @@ class AdsConfig {
     // Melhor posto a cada 30 dias no gratuito (antes: pior posto a cada 7).
     _freeStationUnlockDays: 30,
     _stationConsumptionAlertPercent: 25,
+    // TODO: voltar para false antes de publicar a versão final (ou
+    // controlar só pelo Remote Config). Deixado em true agora para o teste
+    // manual em pista.
+    _performanceEnabled: true,
   };
 
   bool _initialized = false;
@@ -174,4 +182,8 @@ class AdsConfig {
   /// abaixo) da média geral do veículo que dispara o aviso (padrão 25).
   int get stationConsumptionAlertPercent =>
       math.max(1, _int(_stationConsumptionAlertPercent));
+
+  /// Libera o atalho da tela Desempenho (Força G + velocímetro). Desligado
+  /// por padrão para permitir liberação gradual via Remote Config.
+  bool get performanceEnabled => _bool(_performanceEnabled);
 }

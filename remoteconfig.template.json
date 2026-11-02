@@ -112,6 +112,18 @@
           "valueType": "NUMBER"
         }
       }
+    },
+    "Desempenho": {
+      "description": "Tela Desempenho - Força G e velocímetro (lib/screens/performance_screen.dart, lida via lib/services/ads_config.dart). Sem valor publicado, o atalho fica escondido.",
+      "parameters": {
+        "performance_enabled": {
+          "defaultValue": {
+            "value": "false"
+          },
+          "description": "Libera o atalho da tela Desempenho (Premium). Comece com false e ligue depois que os testes manuais em pista passarem.",
+          "valueType": "BOOLEAN"
+        }
+      }
     }
   }
 }

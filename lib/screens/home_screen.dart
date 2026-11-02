@@ -37,6 +37,7 @@ import 'lifetime_purchase_screen.dart';
 import 'maintenance_form_screen.dart';
 import 'maintenance_screen.dart';
 import 'notifications_screen.dart';
+import 'performance_screen.dart';
 import 'reports_screen.dart';
 import 'support_screen.dart';
 import 'vehicles_screen.dart';
@@ -478,6 +479,12 @@ class _HomeScreenState extends State<HomeScreen> {
             title: tr.vehiclesTitle,
             onTap: () => _closeAndOpen(sheetContext, openVehicles),
           ),
+          if (AdsConfig.instance.performanceEnabled)
+            _MoreMenuTile(
+              icon: Icons.speed_rounded,
+              title: tr.performanceTitle,
+              onTap: () => _closeAndOpen(sheetContext, openPerformance),
+            ),
           _MoreMenuTile(
             icon: Icons.account_balance_wallet_outlined,
             title: tr.expensesTitle,
@@ -571,6 +578,30 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Atalho "Desempenho" (ver AdsConfig.performanceEnabled): no gratuito,
+  /// abre a tela de assinatura; no Premium, abre a tela direto.
+  Future<void> openPerformance() async {
+    final vehicle = activeVehicle;
+    if (vehicle == null) {
+      _message(tr.homeNeedVehicle);
+      return;
+    }
+    if (!AccessService.instance.premiumUnlocked) {
+      await openPremium(
+        context,
+        PremiumFeature.performance,
+        'performance_entry',
+      );
+      return;
+    }
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => PerformanceScreen(vehicle: vehicle),
+        settings: const RouteSettings(name: 'performance'),
+      ),
+    );
+  }
+
   Future<void> openAccount() async {
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
@@ -629,7 +660,30 @@ class _HomeScreenState extends State<HomeScreen> {
     body: ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
       children: [
-        _BrandHero(vehicle: activeVehicle, onVehicleTap: openVehicles),
+        LayoutBuilder(
+          builder: (context, constraints) => IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _BrandHero(
+                    vehicle: activeVehicle,
+                    onVehicleTap: openVehicles,
+                  ),
+                ),
+                if (AdsConfig.instance.performanceEnabled) ...[
+                  const SizedBox(width: 10),
+                  // No máximo 1/4 da largura disponível, ao lado do card do
+                  // veículo ativo.
+                  SizedBox(
+                    width: constraints.maxWidth / 4,
+                    child: _PerformanceShortcutCard(onTap: openPerformance),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
         const SizedBox(height: 18),
         _DashboardStats(
           fuelings: fuelings,
@@ -778,6 +832,45 @@ class _BrandHero extends StatelessWidget {
           ),
         ),
       ],
+    ),
+  );
+}
+
+/// Atalho discreto para a tela Desempenho, ao lado do card do veículo ativo
+/// (ver AdsConfig.performanceEnabled). Largura limitada pelo chamador (no
+/// máximo 1/4 da tela).
+class _PerformanceShortcutCard extends StatelessWidget {
+  const _PerformanceShortcutCard({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: AppColors.gold,
+    borderRadius: BorderRadius.circular(24),
+    child: InkWell(
+      borderRadius: BorderRadius.circular(24),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.speed_rounded, color: AppColors.navy, size: 26),
+            const SizedBox(height: 4),
+            Text(
+              tr.performanceTitle,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.navy,
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
     ),
   );
 }

@@ -298,6 +298,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get featureSyncText => 'Your data follows you when you switch phones.';
 
   @override
+  String get featurePerformanceTitle => 'Vehicle performance';
+
+  @override
+  String get featurePerformanceText =>
+      'Live G-force and speedometer, plus the 0-100 km/h test, for use on a track or closed course.';
+
+  @override
+  String get benefitPerformance => 'G-force, speedometer and 0-100 test';
+
+  @override
   String get premiumYouArePremium => 'You\'re Premium';
 
   @override
@@ -2479,4 +2489,147 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get stationConsumptionAlert =>
       'Fuel economy very different from your average. It may be the fuel quality or an incomplete entry, such as a tank that wasn\'t full. Check this station\'s fill-ups.';
+
+  @override
+  String get performanceTitle => 'Performance';
+
+  @override
+  String get performanceRecords => 'Records';
+
+  @override
+  String get performanceBack => 'Back';
+
+  @override
+  String get performancePremiumBadge => 'PREMIUM';
+
+  @override
+  String get performanceSpeedometerTitle => 'Speedometer';
+
+  @override
+  String get performanceGForceTitle => 'G-Force';
+
+  @override
+  String get performanceSessionMax => 'Session max';
+
+  @override
+  String get performanceLateral => 'Lateral';
+
+  @override
+  String get performanceAcceleration => 'Acceleration';
+
+  @override
+  String get performanceSessionPeak => 'Session peak';
+
+  @override
+  String get performanceZeroToSixty => '0-60 km/h';
+
+  @override
+  String get performanceSixtyToHundred => '60-100 km/h';
+
+  @override
+  String get performanceGpsStatus => 'GPS';
+
+  @override
+  String get performanceGpsSearching => 'Searching for signal...';
+
+  @override
+  String get performanceGpsReady => 'Ready';
+
+  @override
+  String get performanceGpsUnavailable => 'Unavailable';
+
+  @override
+  String get performanceGpsDenied => 'Permission denied';
+
+  @override
+  String get performanceSpeedUnavailable => 'Couldn\'t get the speed';
+
+  @override
+  String get performanceByFuelTitle => '0-100 by fuel';
+
+  @override
+  String get performanceByFuelEmpty => 'No test recorded yet.';
+
+  @override
+  String get performanceCalibrateButton => 'CALIBRATE';
+
+  @override
+  String get performanceMeasureButton => 'MEASURE 0-100';
+
+  @override
+  String get performanceSafetyWarning =>
+      'Use only on a track or closed course, and follow the law. Don\'t touch the phone while the car is moving.';
+
+  @override
+  String get performanceDisclaimerTitle => 'Before you start';
+
+  @override
+  String get performanceDisclaimerAccept => 'I UNDERSTAND AND ACCEPT';
+
+  @override
+  String get performanceCalibrateNeeded => 'Calibrate to start';
+
+  @override
+  String get performanceCalibratingHoldStill =>
+      'Keep the phone still and fixed for 2 seconds...';
+
+  @override
+  String get performanceCalibratingAccelerate =>
+      'Now accelerate gently forward for 2 seconds...';
+
+  @override
+  String get performanceCalibrationFailed =>
+      'Couldn\'t calibrate. Mount the phone securely and try again.';
+
+  @override
+  String get performanceCalibrationDone => 'Calibration complete.';
+
+  @override
+  String get performanceSelectFuelTitle => 'Fuel used in this test';
+
+  @override
+  String get performanceArmed => 'Ready! Accelerate to start the measurement.';
+
+  @override
+  String get performanceMeasuring => 'Measuring...';
+
+  @override
+  String get performanceCompleted => 'Test complete!';
+
+  @override
+  String get performanceCancelled =>
+      'Test canceled: the speed went back to zero.';
+
+  @override
+  String get performanceCancelButton => 'CANCEL TEST';
+
+  @override
+  String get performanceLocationTitle => 'Use location';
+
+  @override
+  String get performanceLocationExplain =>
+      'Location is used only while this screen is open, to show the speed. Nothing is sent to any server.';
+
+  @override
+  String get performanceLocationContinue => 'CONTINUE';
+
+  @override
+  String get performanceLocationDenied =>
+      'Without location permission, the speedometer is unavailable. Only G-force works.';
+
+  @override
+  String get performanceRecordBest0to100 => 'Best 0-100';
+
+  @override
+  String get performanceRecordBestLateral => 'Highest lateral force';
+
+  @override
+  String get performanceRecordBestBraking => 'Hardest braking';
+
+  @override
+  String get performanceRecordTopSpeed => 'Top speed';
+
+  @override
+  String get performanceRecordsEmpty =>
+      'No records yet. Run your first 0-100 test.';
 }

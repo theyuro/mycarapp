@@ -25,7 +25,8 @@ enum PremiumFeature {
   export(Icons.file_download_rounded),
   pdf(Icons.picture_as_pdf_rounded),
   backup(Icons.cloud_upload_outlined),
-  sync(Icons.sync_rounded);
+  sync(Icons.sync_rounded),
+  performance(Icons.speed_rounded);
 
   const PremiumFeature(this.icon);
   final IconData icon;
@@ -42,6 +43,7 @@ enum PremiumFeature {
     pdf => tr.featurePdfTitle,
     backup => tr.featureBackupTitle,
     sync => tr.featureSyncTitle,
+    performance => tr.featurePerformanceTitle,
   };
 
   String get description => switch (this) {
@@ -56,6 +58,7 @@ enum PremiumFeature {
     pdf => tr.featurePdfText,
     backup => tr.featureBackupText,
     sync => tr.featureSyncText,
+    performance => tr.featurePerformanceText,
   };
 }
 
@@ -521,6 +524,9 @@ List<_BenefitItem> _benefitItems() => [
   _BenefitItem(Icons.cloud_upload_outlined, tr.benefitBackup, {
     PremiumFeature.backup,
     PremiumFeature.sync,
+  }),
+  _BenefitItem(Icons.speed_rounded, tr.benefitPerformance, {
+    PremiumFeature.performance,
   }),
 ];
 
