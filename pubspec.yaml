@@ -54,3 +54,12 @@ flutter:
     # símbolos de moeda e espaços especiais que a Helvetica padrão não tem.
     - assets/fonts/NotoSans-Regular.ttf
     - assets/fonts/NotoSans-Bold.ttf
+  # Números grandes da tela Desempenho (velocidade, força G, tempos,
+  # recordes), para bater com a maquete (item 1 do Prompt 3). Licença OFL.
+  fonts:
+    - family: BarlowCondensed
+      fonts:
+        - asset: assets/fonts/BarlowCondensed-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/BarlowCondensed-Bold.ttf
+          weight: 700

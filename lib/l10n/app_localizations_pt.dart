@@ -2571,7 +2571,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get performanceGpsStatus => 'GPS';
 
   @override
-  String get performanceGpsSearching => 'Procurando sinal...';
+  String get performanceGpsSearching => 'Buscando GPS…';
 
   @override
   String get performanceGpsReady => 'Pronto';
@@ -2613,11 +2613,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get performanceCalibratingHoldStill =>
-      'Deixe o celular parado e fixo por 2 segundos...';
-
-  @override
-  String get performanceCalibratingAccelerate =>
-      'Agora acelere levemente para a frente por 2 segundos...';
+      'Segure o celular parado e fixo por 2 segundos...';
 
   @override
   String get performanceCalibrationFailed =>
@@ -2625,6 +2621,66 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get performanceCalibrationDone => 'Calibração concluída.';
+
+  @override
+  String get performanceNoAccelerometer =>
+      'Este aparelho não está entregando leituras do acelerômetro.';
+
+  @override
+  String get performancePositionMismatch =>
+      'A posição do celular não combina com a opção escolhida. Ajuste o suporte ou troque a opção.';
+
+  @override
+  String get performancePositionUpright => 'Em pé no suporte';
+
+  @override
+  String get performancePositionLyingFlat => 'Deitado';
+
+  @override
+  String get performanceGpsWeak => 'Sinal fraco';
+
+  @override
+  String get performanceGpsOk => 'Sinal forte';
+
+  @override
+  String get performanceCalibrateNow => 'Calibrar agora';
+
+  @override
+  String get performanceDirectionRight => 'direita';
+
+  @override
+  String get performanceDirectionLeft => 'esquerda';
+
+  @override
+  String get performanceLegendForward => 'à frente';
+
+  @override
+  String get performanceGForceResultant => 'força resultante';
+
+  @override
+  String get performanceCalibratingShort => 'Calibrando…';
+
+  @override
+  String get performanceAccelShort => 'ACEL.';
+
+  @override
+  String get performanceBrakeShort => 'FREIA';
+
+  @override
+  String get performanceDiagnosticsSensorLinear => 'Sensor: linear';
+
+  @override
+  String get performanceDiagnosticsSensorRaw =>
+      'Sensor: bruto (gravidade estimada)';
+
+  @override
+  String get performanceDiagnosticsCalibrated => 'Calibrado';
+
+  @override
+  String get performanceDiagnosticsNotCalibrated => 'Não calibrado';
+
+  @override
+  String get performanceDiagnosticsNoGpsFix => 'Sem posição ainda';
 
   @override
   String get performanceSelectFuelTitle => 'Combustível usado neste teste';

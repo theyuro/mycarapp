@@ -52,31 +52,61 @@ class _Vec3 {
   );
 }
 
-/// Eixos de calibração de um veículo: o longitudinal (frente/trás) e o
-/// lateral (esquerda/direita), ambos no referencial do acelerômetro do
-/// celular montado no suporte.
-class _CalibrationAxes {
-  const _CalibrationAxes({required this.longitudinal, required this.lateral});
+/// Uma amostra do acelerômetro bruto com o instante em que foi lida, usada
+/// só durante a calibração, para medir a estabilidade numa janela de tempo.
+class _TimedSample {
+  const _TimedSample(this.time, this.value);
+  final DateTime time;
+  final _Vec3 value;
+}
 
-  final _Vec3 longitudinal;
-  final _Vec3 lateral;
+/// Onde o celular está montado no carro. Define o eixo "para frente" a
+/// partir do vetor de gravidade (up) medido na calibração — ver
+/// [PerformanceService.calibrate].
+enum PhonePosition { uprightInHolder, lyingFlat }
+
+extension on PhonePosition {
+  /// Vetor de referência "para frente" no referencial do Android (x para a
+  /// direita da tela, y para o topo da tela, z saindo da tela), antes de
+  /// ser projetado no plano horizontal do carro.
+  _Vec3 get forwardReference => switch (this) {
+    // Tela voltada para o motorista: a frente do carro é a parte de trás do
+    // celular, ou seja, o eixo -z.
+    PhonePosition.uprightInHolder => const _Vec3(0, 0, -1),
+    // Tela para cima, topo do celular apontando para a frente do carro:
+    // eixo +y.
+    PhonePosition.lyingFlat => const _Vec3(0, 1, 0),
+  };
+}
+
+/// Eixos derivados da calibração: "para frente" e "para a direita" do
+/// carro, no referencial do acelerômetro do celular.
+class _CalibrationAxes {
+  const _CalibrationAxes({required this.forward, required this.right});
+
+  final _Vec3 forward;
+  final _Vec3 right;
 
   Map<String, dynamic> toJson() => {
-    'longitudinal': longitudinal.toJson(),
-    'lateral': lateral.toJson(),
+    'forward': forward.toJson(),
+    'right': right.toJson(),
   };
 
   static _CalibrationAxes fromJson(Map<String, dynamic> json) =>
       _CalibrationAxes(
-        longitudinal: _Vec3.fromJson(
-          json['longitudinal'] as Map<String, dynamic>,
-        ),
-        lateral: _Vec3.fromJson(json['lateral'] as Map<String, dynamic>),
+        forward: _Vec3.fromJson(json['forward'] as Map<String, dynamic>),
+        right: _Vec3.fromJson(json['right'] as Map<String, dynamic>),
       );
 }
 
 /// Passo atual da calibração, para a tela mostrar a instrução certa.
-enum CalibrationStep { idle, holdStill, accelerate, failed }
+enum CalibrationStep { idle, waiting, failed }
+
+/// Por que a calibração falhou (ou [none] quando não falhou).
+enum CalibrationFailureReason { none, noSensorData, unstable, positionMismatch }
+
+/// Qualidade do sinal de GPS, para o cartão "GPS" da tela.
+enum GpsSignal { searching, weak, ok }
 
 /// Estado do teste de 0–100 km/h.
 enum ZeroToHundredState { idle, armed, measuring, completed, cancelled }
@@ -101,13 +131,38 @@ class PerformanceService extends ChangeNotifier {
   final String vehicleId;
 
   StreamSubscription<UserAccelerometerEvent>? _userAccelSubscription;
+  StreamSubscription<AccelerometerEvent>? _rawAccelFallbackSubscription;
   StreamSubscription<Position>? _positionSubscription;
+  Timer? _userAccelWatchdog;
+  Timer? _positionFallbackTimer;
 
   _CalibrationAxes? _axes;
   _Vec3 _filteredAccel = _Vec3.zero();
   static const _lowPassAlpha = 0.25;
 
+  /// Vetor de gravidade estimado quando o acelerômetro linear nativo não
+  /// está disponível (ver [_fallbackToRawAccel]).
+  _Vec3 _gravityEstimate = _Vec3.zero();
+
   bool get calibrated => _axes != null;
+
+  // ---------------------------------------------------------------------
+  // Diagnóstico (toque longo no título da tela)
+  // ---------------------------------------------------------------------
+
+  /// `true` quando a leitura vem de userAccelerometerEventStream (sensor
+  /// linear nativo); `false` quando caiu para o modo bruto com gravidade
+  /// estimada (ver item B5 do Prompt 2).
+  bool usingLinearAccelSensor = true;
+
+  /// Taxa de leituras do acelerômetro por segundo, medida numa janela de 1 s.
+  double accelHz = 0;
+  int _accelSampleCount = 0;
+  DateTime _accelRateWindowStart = DateTime.now();
+
+  DateTime? lastPositionAt;
+  double? lastPositionAccuracy;
+  double? lastSpeedAccuracy;
 
   // ---------------------------------------------------------------------
   // Velocímetro
@@ -119,19 +174,24 @@ class PerformanceService extends ChangeNotifier {
   /// `null` enquanto não souber se a permissão foi concedida.
   bool? gpsAvailable;
 
+  GpsSignal gpsSignal = GpsSignal.searching;
+
   // ---------------------------------------------------------------------
   // Força G
   // ---------------------------------------------------------------------
 
-  /// Positivo = aceleração para a frente; negativo = frenagem.
+  /// Módulo da aceleração linear filtrada, em g. Funciona mesmo sem
+  /// calibração (item B6 do Prompt 2): o radar não fica "morto" enquanto o
+  /// usuário calibra.
+  double resultantG = 0;
+
+  /// Positivo = aceleração para a frente; negativo = frenagem. Só é
+  /// diferente de zero com calibração válida.
   double longitudinalG = 0;
 
-  /// Positivo/negativo = direita/esquerda (só usado para o sinal exibido).
+  /// Positivo/negativo = direita/esquerda. Só é diferente de zero com
+  /// calibração válida.
   double lateralG = 0;
-
-  double get resultantG => math.sqrt(
-    longitudinalG * longitudinalG + lateralG * lateralG,
-  );
 
   double peakResultantG = 0;
   double peakLateralG = 0;
@@ -142,64 +202,139 @@ class PerformanceService extends ChangeNotifier {
   // ---------------------------------------------------------------------
 
   CalibrationStep calibrationStep = CalibrationStep.idle;
+  CalibrationFailureReason calibrationFailure = CalibrationFailureReason.none;
 
-  /// Executa a calibração: 2 s com o celular parado (gravidade) e 2 s
-  /// acelerando levemente para a frente (eixo longitudinal). Devolve se deu
-  /// certo; quando falha, [calibrationStep] fica em [CalibrationStep.failed].
-  Future<bool> calibrate() async {
-    calibrationStep = CalibrationStep.holdStill;
-    notifyListeners();
-    final gravitySamples = <_Vec3>[];
-    final gravitySubscription = accelerometerEventStream(
-      samplingPeriod: SensorInterval.gameInterval,
-    ).listen((event) => gravitySamples.add(_Vec3(event.x, event.y, event.z)));
-    await Future<void>.delayed(const Duration(seconds: 2));
-    await gravitySubscription.cancel();
-    if (gravitySamples.isEmpty) {
-      calibrationStep = CalibrationStep.failed;
-      notifyListeners();
-      return false;
-    }
-    final gravity = gravitySamples
-        .fold<_Vec3>(_Vec3.zero(), (sum, item) => sum + item)
-        .normalized;
+  /// Posição do celular no carro, escolhida pelo usuário e salva por
+  /// veículo; o padrão é "em pé no suporte".
+  PhonePosition phonePosition = PhonePosition.uprightInHolder;
 
-    calibrationStep = CalibrationStep.accelerate;
+  StreamSubscription<AccelerometerEvent>? _calibrationSubscription;
+  Timer? _calibrationNoDataTimer;
+  Timer? _calibrationGiveUpTimer;
+  int _calibrationGeneration = 0;
+
+  /// Troca a posição do celular, salva a escolha por veículo e recalibra
+  /// (zera pico e rastro ao ter sucesso).
+  Future<void> setPhonePosition(PhonePosition position) async {
+    if (phonePosition == position) return;
+    phonePosition = position;
     notifyListeners();
-    final forwardSamples = <_Vec3>[];
-    final forwardSubscription = userAccelerometerEventStream(
-      samplingPeriod: SensorInterval.gameInterval,
-    ).listen((event) => forwardSamples.add(_Vec3(event.x, event.y, event.z)));
-    await Future<void>.delayed(const Duration(seconds: 2));
-    await forwardSubscription.cancel();
-    if (forwardSamples.isEmpty) {
-      calibrationStep = CalibrationStep.failed;
-      notifyListeners();
-      return false;
-    }
-    final forwardAverage = forwardSamples.fold<_Vec3>(
-      _Vec3.zero(),
-      (sum, item) => sum + item,
-    ) * (1 / forwardSamples.length);
-    // Remove a componente na vertical, para o eixo longitudinal ficar no
-    // plano horizontal do carro.
-    final longitudinal =
-        (forwardAverage - gravity * forwardAverage.dot(gravity)).normalized;
-    if (longitudinal.length < 0.5) {
-      // Aceleração longitudinal fraca demais para definir o eixo com
-      // confiança (celular quieto, ou movimento só vertical/lateral).
-      calibrationStep = CalibrationStep.failed;
-      notifyListeners();
-      return false;
-    }
-    final lateral = gravity.cross(longitudinal).normalized;
-    _axes = _CalibrationAxes(longitudinal: longitudinal, lateral: lateral);
-    _filteredAccel = _Vec3.zero();
-    resetSessionPeaks();
-    calibrationStep = CalibrationStep.idle;
+    // Guarda já a posição escolhida, mesmo que a calibração a seguir falhe.
     await _saveCalibration();
+    await calibrate();
+  }
+
+  /// Calibra em um único passo (sem a etapa de "acelerar para a frente" do
+  /// Prompt 1, que exigia o carro já em movimento e falhava parado ou em
+  /// casa): espera o celular ficar parado e fixo, usando o acelerômetro
+  /// bruto (com gravidade), e deriva os eixos "para frente" e "direita" a
+  /// partir da posição escolhida ([phonePosition]).
+  ///
+  /// Mensagens de falha específicas (ver [calibrationFailure]):
+  /// - [CalibrationFailureReason.noSensorData]: nenhuma leitura do
+  ///   acelerômetro em 2 s, ou erro no stream.
+  /// - [CalibrationFailureReason.unstable]: o celular não ficou parado por
+  ///   1,5 s dentro do limite de 10 s.
+  /// - [CalibrationFailureReason.positionMismatch]: com o celular parado, o
+  ///   eixo "para frente" calculado ficou fraco demais para a posição
+  ///   escolhida (provavelmente a posição marcada está errada).
+  Future<bool> calibrate() async {
+    await _cancelCalibration();
+    final generation = ++_calibrationGeneration;
+    calibrationStep = CalibrationStep.waiting;
+    calibrationFailure = CalibrationFailureReason.none;
     notifyListeners();
-    return true;
+
+    final samples = <_TimedSample>[];
+    var sawAnyEvent = false;
+    final completer = Completer<bool>();
+
+    void finish(bool success, [CalibrationFailureReason reason = CalibrationFailureReason.none]) {
+      if (completer.isCompleted) return;
+      _calibrationNoDataTimer?.cancel();
+      _calibrationGiveUpTimer?.cancel();
+      unawaited(_calibrationSubscription?.cancel());
+      _calibrationSubscription = null;
+      if (!success) calibrationFailure = reason;
+      completer.complete(success);
+    }
+
+    // Sem nenhuma leitura em 2 s: aparelho sem acelerômetro funcional.
+    _calibrationNoDataTimer = Timer(const Duration(seconds: 2), () {
+      if (!sawAnyEvent) finish(false, CalibrationFailureReason.noSensorData);
+    });
+    // Celular mexendo demais: espera a estabilidade em vez de falhar na
+    // hora, mas desiste depois de 10 s.
+    _calibrationGiveUpTimer = Timer(const Duration(seconds: 10), () {
+      finish(false, CalibrationFailureReason.unstable);
+    });
+
+    _calibrationSubscription = accelerometerEventStream(
+      samplingPeriod: SensorInterval.gameInterval,
+    ).listen(
+      (event) {
+        sawAnyEvent = true;
+        _calibrationNoDataTimer?.cancel();
+        final now = DateTime.now();
+        samples.add(_TimedSample(now, _Vec3(event.x, event.y, event.z)));
+        samples.removeWhere(
+          (item) => now.difference(item.time) > const Duration(milliseconds: 1500),
+        );
+        // Poucas amostras ainda: espera a janela de 1,5 s se formar.
+        if (samples.length < 8) return;
+
+        final meanVector = samples.fold<_Vec3>(
+          _Vec3.zero(),
+          (sum, item) => sum + item.value,
+        ) * (1 / samples.length);
+        final magnitudes = samples.map((item) => item.value.length).toList();
+        final meanMagnitude = magnitudes.reduce((a, b) => a + b) / magnitudes.length;
+        final variance = magnitudes.fold<double>(
+          0,
+          (sum, m) => sum + (m - meanMagnitude) * (m - meanMagnitude),
+        ) / magnitudes.length;
+        final stdDev = math.sqrt(variance);
+        final stable = stdDev < 0.15 && meanMagnitude >= 8.5 && meanMagnitude <= 11.0;
+        if (!stable) return;
+
+        final up = meanVector.normalized;
+        final f0 = phonePosition.forwardReference;
+        final forwardRaw = f0 - up * f0.dot(up);
+        if (forwardRaw.length < 0.3) {
+          // Posição incompatível com a opção escolhida: a projeção do eixo
+          // de referência no plano horizontal ficou fraca demais.
+          finish(false, CalibrationFailureReason.positionMismatch);
+          return;
+        }
+        final forward = forwardRaw.normalized;
+        final right = forward.cross(up).normalized;
+        _axes = _CalibrationAxes(forward: forward, right: right);
+        finish(true);
+      },
+      onError: (_) => finish(false, CalibrationFailureReason.noSensorData),
+    );
+
+    final success = await completer.future;
+    // Uma calibração mais nova já começou (ex.: usuário trocou a posição de
+    // novo): descarta este resultado.
+    if (generation != _calibrationGeneration) return false;
+    if (success) {
+      _filteredAccel = _Vec3.zero();
+      resetSessionPeaks();
+      calibrationStep = CalibrationStep.idle;
+      await _saveCalibration();
+    } else {
+      calibrationStep = CalibrationStep.failed;
+    }
+    notifyListeners();
+    return success;
+  }
+
+  Future<void> _cancelCalibration() async {
+    _calibrationNoDataTimer?.cancel();
+    _calibrationGiveUpTimer?.cancel();
+    await _calibrationSubscription?.cancel();
+    _calibrationSubscription = null;
   }
 
   /// Zera os picos da sessão (chamado ao calibrar e ao abrir a tela).
@@ -337,30 +472,16 @@ class PerformanceService extends ChangeNotifier {
   Future<void> start() async {
     await _loadCalibration();
     resetSessionPeaks();
-    await _userAccelSubscription?.cancel();
-    _userAccelSubscription = userAccelerometerEventStream(
-      samplingPeriod: SensorInterval.gameInterval,
-    ).listen(_onUserAccel);
+    _startAccelSensors();
+    // Autocalibração: assim que o celular ficar estável, calibra sozinho
+    // com a última posição salva, sem precisar que o usuário aperte nada
+    // (item B4 do Prompt 2). Se o carro já estiver em movimento, a
+    // calibração simplesmente vai falhar após o tempo limite e o usuário
+    // pode tentar de novo parado, pelo botão "Calibrar".
+    unawaited(calibrate());
     gpsAvailable = await _ensureLocationPermission();
     if (gpsAvailable == true) {
-      _positionSubscription = Geolocator.getPositionStream(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.best,
-          distanceFilter: 0,
-        ),
-      ).listen(
-        (position) {
-          final kmh = (position.speed * 3.6).clamp(0, 400).toDouble();
-          speedKmh = speedKmh + (kmh - speedKmh) * 0.4;
-          if (speedKmh > maxSpeedKmh) maxSpeedKmh = speedKmh;
-          _onSpeedSample(speedKmh);
-          notifyListeners();
-        },
-        onError: (_) {
-          gpsAvailable = false;
-          notifyListeners();
-        },
-      );
+      _startPositionStream(forceLocationManager: true);
     }
     notifyListeners();
   }
@@ -379,29 +500,184 @@ class PerformanceService extends ChangeNotifier {
     }
   }
 
-  void _onUserAccel(UserAccelerometerEvent event) {
-    final raw = _Vec3(event.x, event.y, event.z);
-    _filteredAccel = _filteredAccel + (raw - _filteredAccel) * _lowPassAlpha;
+  // ---------------------------------------------------------------------
+  // Velocímetro: configurações de GPS por plataforma.
+  // ---------------------------------------------------------------------
+
+  LocationSettings _buildLocationSettings({required bool forceLocationManager}) {
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      // Sem intervalDuration o Android usa um intervalo padrão bem maior
+      // que 1 s, e o provedor "fundido" (fused) pode misturar GPS com rede
+      // (bem mais lenta e imprecisa para velocidade). forceLocationManager
+      // usa o GPS puro: a velocidade vem direto do efeito Doppler do sinal
+      // do satélite, que é a leitura mais fresca disponível.
+      return AndroidSettings(
+        accuracy: LocationAccuracy.bestForNavigation,
+        distanceFilter: 0,
+        intervalDuration: const Duration(milliseconds: 500),
+        forceLocationManager: forceLocationManager,
+      );
+    }
+    return AppleSettings(
+      accuracy: LocationAccuracy.bestForNavigation,
+      activityType: ActivityType.automotiveNavigation,
+      distanceFilter: 0,
+      pauseLocationUpdatesAutomatically: false,
+    );
+  }
+
+  void _startPositionStream({required bool forceLocationManager}) {
+    unawaited(_positionSubscription?.cancel());
+    _positionFallbackTimer?.cancel();
+    var gotFirstFix = false;
+    final settings = _buildLocationSettings(forceLocationManager: forceLocationManager);
+    _positionSubscription = Geolocator.getPositionStream(
+      locationSettings: settings,
+    ).listen(
+      (position) {
+        gotFirstFix = true;
+        _handlePosition(position);
+      },
+      onError: (_) {
+        gpsAvailable = false;
+        notifyListeners();
+      },
+    );
+    if (defaultTargetPlatform == TargetPlatform.android && forceLocationManager) {
+      // Se o GPS puro (LocationManager) não responder em 12 s — alguns
+      // aparelhos demoram muito ou não têm um chip GNSS dedicado acessível
+      // assim — tenta de novo com o provedor fundido padrão do Android,
+      // melhor que ficar sem nada.
+      _positionFallbackTimer = Timer(const Duration(seconds: 12), () {
+        if (!gotFirstFix) _startPositionStream(forceLocationManager: false);
+      });
+    }
+  }
+
+  void _handlePosition(Position position) {
+    // Descarta amostras velhas (ex.: cache do provedor), para não atrasar
+    // visualmente o velocímetro com uma leitura que já não é atual.
+    final age = DateTime.now().difference(position.timestamp);
+    if (age > const Duration(seconds: 3)) return;
+
+    lastPositionAt = DateTime.now();
+    lastPositionAccuracy = position.accuracy;
+    lastSpeedAccuracy = position.speedAccuracy;
+
+    final rawKmh = (position.speed * 3.6).clamp(0, 400).toDouble();
+    if (rawKmh < 1) {
+      // Abaixo de 1 km/h, mostra 0 direto, sem arrastar o filtro.
+      speedKmh = 0;
+    } else {
+      final delta = (rawKmh - speedKmh).abs();
+      // Filtro exponencial leve, sem janela: alfa maior quando a variação é
+      // grande (resposta rápida), menor quando está estável (sem tremer).
+      final alpha = delta > 3 ? 0.65 : 0.4;
+      speedKmh = speedKmh + (rawKmh - speedKmh) * alpha;
+    }
+    if (speedKmh > maxSpeedKmh) maxSpeedKmh = speedKmh;
+
+    // speedAccuracy == 0 significa "desconhecido" em alguns aparelhos, não
+    // "perfeito"; só conta como sinal fraco quando for um valor real alto.
+    final weakSpeedAccuracy = position.speedAccuracy != 0 && position.speedAccuracy > 3;
+    final weakPositionAccuracy = position.accuracy > 30;
+    gpsSignal = (weakSpeedAccuracy || weakPositionAccuracy) ? GpsSignal.weak : GpsSignal.ok;
+
+    _onSpeedSample(speedKmh);
+    notifyListeners();
+  }
+
+  // ---------------------------------------------------------------------
+  // Força G: acelerômetro linear, com fallback para o bruto.
+  // ---------------------------------------------------------------------
+
+  void _startAccelSensors() {
+    unawaited(_userAccelSubscription?.cancel());
+    unawaited(_rawAccelFallbackSubscription?.cancel());
+    _userAccelWatchdog?.cancel();
+    usingLinearAccelSensor = true;
+    var sawLinearEvent = false;
+    _userAccelSubscription = userAccelerometerEventStream(
+      samplingPeriod: SensorInterval.gameInterval,
+    ).listen(
+      (event) {
+        sawLinearEvent = true;
+        _userAccelWatchdog?.cancel();
+        _onLinearAccel(_Vec3(event.x, event.y, event.z));
+      },
+      onError: (_) => _fallbackToRawAccel(),
+    );
+    // Sem nenhum evento do sensor linear em 2 s: cai para o bruto.
+    _userAccelWatchdog = Timer(const Duration(seconds: 2), () {
+      if (!sawLinearEvent) _fallbackToRawAccel();
+    });
+  }
+
+  void _fallbackToRawAccel() {
+    if (!usingLinearAccelSensor) return; // já caiu para o modo bruto
+    usingLinearAccelSensor = false;
+    _gravityEstimate = _Vec3.zero();
+    unawaited(_userAccelSubscription?.cancel());
+    _userAccelSubscription = null;
+    _rawAccelFallbackSubscription = accelerometerEventStream(
+      samplingPeriod: SensorInterval.gameInterval,
+    ).listen((event) {
+      final raw = _Vec3(event.x, event.y, event.z);
+      // Sem acelerômetro linear nativo: estima a gravidade com um filtro
+      // passa-baixa forte (alfa 0,9 de peso para o valor antigo, bem mais
+      // lento que o da Força G) e subtrai do valor bruto para chegar numa
+      // aceleração linear aproximada.
+      _gravityEstimate = _gravityEstimate * 0.9 + raw * 0.1;
+      _onLinearAccel(raw - _gravityEstimate);
+    });
+    notifyListeners();
+  }
+
+  void _onLinearAccel(_Vec3 linear) {
+    _filteredAccel = _filteredAccel + (linear - _filteredAccel) * _lowPassAlpha;
+    resultantG = _filteredAccel.length / _gravityMs2;
+    _trackAccelRate();
+
     final axes = _axes;
-    if (axes == null) {
+    if (axes != null) {
+      longitudinalG = _filteredAccel.dot(axes.forward) / _gravityMs2;
+      lateralG = _filteredAccel.dot(axes.right) / _gravityMs2;
+      if (resultantG > peakResultantG) peakResultantG = resultantG;
+      if (lateralG.abs() > peakLateralG) peakLateralG = lateralG.abs();
+      if (-longitudinalG > peakBrakingG) peakBrakingG = -longitudinalG;
+    } else {
+      // Sem calibração válida ainda: mantém a bolinha centralizada (sem
+      // direção), mas o módulo (resultantG) continua atualizando, para o
+      // radar não parecer "morto" enquanto calibra.
       longitudinalG = 0;
       lateralG = 0;
-      notifyListeners();
-      return;
     }
-    longitudinalG = _filteredAccel.dot(axes.longitudinal) / _gravityMs2;
-    lateralG = _filteredAccel.dot(axes.lateral) / _gravityMs2;
-    if (resultantG > peakResultantG) peakResultantG = resultantG;
-    if (lateralG.abs() > peakLateralG) peakLateralG = lateralG.abs();
-    if (-longitudinalG > peakBrakingG) peakBrakingG = -longitudinalG;
     notifyListeners();
+  }
+
+  void _trackAccelRate() {
+    _accelSampleCount++;
+    final now = DateTime.now();
+    final elapsed = now.difference(_accelRateWindowStart);
+    if (elapsed.inMilliseconds >= 1000) {
+      accelHz = _accelSampleCount * 1000 / elapsed.inMilliseconds;
+      _accelSampleCount = 0;
+      _accelRateWindowStart = now;
+    }
   }
 
   /// Desliga sensores e GPS. Chamar ao sair da tela ou quando o app for
   /// para segundo plano.
   Future<void> stop() async {
+    await _cancelCalibration();
+    _userAccelWatchdog?.cancel();
+    _userAccelWatchdog = null;
+    _positionFallbackTimer?.cancel();
+    _positionFallbackTimer = null;
     await _userAccelSubscription?.cancel();
     _userAccelSubscription = null;
+    await _rawAccelFallbackSubscription?.cancel();
+    _rawAccelFallbackSubscription = null;
     await _positionSubscription?.cancel();
     _positionSubscription = null;
   }
@@ -446,21 +722,32 @@ class PerformanceService extends ChangeNotifier {
       if (!await file.exists()) return;
       final json = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
       final entry = json[vehicleId] as Map<String, dynamic>?;
-      if (entry != null) _axes = _CalibrationAxes.fromJson(entry);
+      if (entry == null) return;
+      final positionName = entry['position'] as String?;
+      if (positionName != null) {
+        phonePosition = PhonePosition.values.firstWhere(
+          (item) => item.name == positionName,
+          orElse: () => PhonePosition.uprightInHolder,
+        );
+      }
+      final axesJson = entry['axes'] as Map<String, dynamic>?;
+      if (axesJson != null) _axes = _CalibrationAxes.fromJson(axesJson);
     } on Object catch (error) {
       debugPrint('Calibração de desempenho corrompida; ignorando: $error');
     }
   }
 
   Future<void> _saveCalibration() async {
-    final axes = _axes;
-    if (axes == null) return;
     try {
       final file = await _calibrationFile();
       final current = await file.exists()
           ? jsonDecode(await file.readAsString()) as Map<String, dynamic>
           : <String, dynamic>{};
-      current[vehicleId] = axes.toJson();
+      final axes = _axes;
+      current[vehicleId] = {
+        'position': phonePosition.name,
+        if (axes != null) 'axes': axes.toJson(),
+      };
       final temporary = File('${file.path}.tmp');
       await temporary.writeAsString(jsonEncode(current), flush: true);
       await temporary.rename(file.path);

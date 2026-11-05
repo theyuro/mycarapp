@@ -4679,7 +4679,7 @@ abstract class AppLocalizations {
   /// No description provided for @performanceGpsSearching.
   ///
   /// In pt, this message translates to:
-  /// **'Procurando sinal...'**
+  /// **'Buscando GPS…'**
   String get performanceGpsSearching;
 
   /// No description provided for @performanceGpsReady.
@@ -4757,14 +4757,8 @@ abstract class AppLocalizations {
   /// No description provided for @performanceCalibratingHoldStill.
   ///
   /// In pt, this message translates to:
-  /// **'Deixe o celular parado e fixo por 2 segundos...'**
+  /// **'Segure o celular parado e fixo por 2 segundos...'**
   String get performanceCalibratingHoldStill;
-
-  /// No description provided for @performanceCalibratingAccelerate.
-  ///
-  /// In pt, this message translates to:
-  /// **'Agora acelere levemente para a frente por 2 segundos...'**
-  String get performanceCalibratingAccelerate;
 
   /// No description provided for @performanceCalibrationFailed.
   ///
@@ -4777,6 +4771,120 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Calibração concluída.'**
   String get performanceCalibrationDone;
+
+  /// No description provided for @performanceNoAccelerometer.
+  ///
+  /// In pt, this message translates to:
+  /// **'Este aparelho não está entregando leituras do acelerômetro.'**
+  String get performanceNoAccelerometer;
+
+  /// No description provided for @performancePositionMismatch.
+  ///
+  /// In pt, this message translates to:
+  /// **'A posição do celular não combina com a opção escolhida. Ajuste o suporte ou troque a opção.'**
+  String get performancePositionMismatch;
+
+  /// No description provided for @performancePositionUpright.
+  ///
+  /// In pt, this message translates to:
+  /// **'Em pé no suporte'**
+  String get performancePositionUpright;
+
+  /// No description provided for @performancePositionLyingFlat.
+  ///
+  /// In pt, this message translates to:
+  /// **'Deitado'**
+  String get performancePositionLyingFlat;
+
+  /// No description provided for @performanceGpsWeak.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sinal fraco'**
+  String get performanceGpsWeak;
+
+  /// No description provided for @performanceGpsOk.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sinal forte'**
+  String get performanceGpsOk;
+
+  /// No description provided for @performanceCalibrateNow.
+  ///
+  /// In pt, this message translates to:
+  /// **'Calibrar agora'**
+  String get performanceCalibrateNow;
+
+  /// No description provided for @performanceDirectionRight.
+  ///
+  /// In pt, this message translates to:
+  /// **'direita'**
+  String get performanceDirectionRight;
+
+  /// No description provided for @performanceDirectionLeft.
+  ///
+  /// In pt, this message translates to:
+  /// **'esquerda'**
+  String get performanceDirectionLeft;
+
+  /// No description provided for @performanceLegendForward.
+  ///
+  /// In pt, this message translates to:
+  /// **'à frente'**
+  String get performanceLegendForward;
+
+  /// No description provided for @performanceGForceResultant.
+  ///
+  /// In pt, this message translates to:
+  /// **'força resultante'**
+  String get performanceGForceResultant;
+
+  /// No description provided for @performanceCalibratingShort.
+  ///
+  /// In pt, this message translates to:
+  /// **'Calibrando…'**
+  String get performanceCalibratingShort;
+
+  /// No description provided for @performanceAccelShort.
+  ///
+  /// In pt, this message translates to:
+  /// **'ACEL.'**
+  String get performanceAccelShort;
+
+  /// No description provided for @performanceBrakeShort.
+  ///
+  /// In pt, this message translates to:
+  /// **'FREIA'**
+  String get performanceBrakeShort;
+
+  /// No description provided for @performanceDiagnosticsSensorLinear.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sensor: linear'**
+  String get performanceDiagnosticsSensorLinear;
+
+  /// No description provided for @performanceDiagnosticsSensorRaw.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sensor: bruto (gravidade estimada)'**
+  String get performanceDiagnosticsSensorRaw;
+
+  /// No description provided for @performanceDiagnosticsCalibrated.
+  ///
+  /// In pt, this message translates to:
+  /// **'Calibrado'**
+  String get performanceDiagnosticsCalibrated;
+
+  /// No description provided for @performanceDiagnosticsNotCalibrated.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não calibrado'**
+  String get performanceDiagnosticsNotCalibrated;
+
+  /// No description provided for @performanceDiagnosticsNoGpsFix.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sem posição ainda'**
+  String get performanceDiagnosticsNoGpsFix;
 
   /// No description provided for @performanceSelectFuelTitle.
   ///

@@ -2559,7 +2559,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get performanceGpsStatus => 'GPS';
 
   @override
-  String get performanceGpsSearching => 'Searching for signal...';
+  String get performanceGpsSearching => 'Searching for GPS…';
 
   @override
   String get performanceGpsReady => 'Ready';
@@ -2600,11 +2600,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get performanceCalibratingHoldStill =>
-      'Keep the phone still and fixed for 2 seconds...';
-
-  @override
-  String get performanceCalibratingAccelerate =>
-      'Now accelerate gently forward for 2 seconds...';
+      'Hold the phone still and fixed for 2 seconds...';
 
   @override
   String get performanceCalibrationFailed =>
@@ -2612,6 +2608,66 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get performanceCalibrationDone => 'Calibration complete.';
+
+  @override
+  String get performanceNoAccelerometer =>
+      'This device isn\'t providing accelerometer readings.';
+
+  @override
+  String get performancePositionMismatch =>
+      'The phone\'s position doesn\'t match the selected option. Adjust the mount or change the option.';
+
+  @override
+  String get performancePositionUpright => 'Upright in holder';
+
+  @override
+  String get performancePositionLyingFlat => 'Lying flat';
+
+  @override
+  String get performanceGpsWeak => 'Weak signal';
+
+  @override
+  String get performanceGpsOk => 'Strong signal';
+
+  @override
+  String get performanceCalibrateNow => 'Calibrate now';
+
+  @override
+  String get performanceDirectionRight => 'right';
+
+  @override
+  String get performanceDirectionLeft => 'left';
+
+  @override
+  String get performanceLegendForward => 'forward';
+
+  @override
+  String get performanceGForceResultant => 'resultant force';
+
+  @override
+  String get performanceCalibratingShort => 'Calibrating…';
+
+  @override
+  String get performanceAccelShort => 'ACCEL.';
+
+  @override
+  String get performanceBrakeShort => 'BRAKE';
+
+  @override
+  String get performanceDiagnosticsSensorLinear => 'Sensor: linear';
+
+  @override
+  String get performanceDiagnosticsSensorRaw =>
+      'Sensor: raw (estimated gravity)';
+
+  @override
+  String get performanceDiagnosticsCalibrated => 'Calibrated';
+
+  @override
+  String get performanceDiagnosticsNotCalibrated => 'Not calibrated';
+
+  @override
+  String get performanceDiagnosticsNoGpsFix => 'No fix yet';
 
   @override
   String get performanceSelectFuelTitle => 'Fuel used in this test';
