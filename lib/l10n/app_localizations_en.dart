@@ -2611,7 +2611,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get performanceNoAccelerometer =>
-      'This device isn\'t providing accelerometer readings.';
+      'This device isn\'t compatible with this feature because it has no accelerometer.';
 
   @override
   String get performancePositionMismatch =>

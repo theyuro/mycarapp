@@ -2624,7 +2624,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get performanceNoAccelerometer =>
-      'Este aparelho não está entregando leituras do acelerômetro.';
+      'Este aparelho não é compatível com esta função por não possuir acelerômetro.';
 
   @override
   String get performancePositionMismatch =>

@@ -778,7 +778,7 @@
   "performanceCalibratingHoldStill": "Hold the phone still and fixed for 2 seconds...",
   "performanceCalibrationFailed": "Couldn't calibrate. Mount the phone securely and try again.",
   "performanceCalibrationDone": "Calibration complete.",
-  "performanceNoAccelerometer": "This device isn't providing accelerometer readings.",
+  "performanceNoAccelerometer": "This device isn't compatible with this feature because it has no accelerometer.",
   "performancePositionMismatch": "The phone's position doesn't match the selected option. Adjust the mount or change the option.",
   "performancePositionUpright": "Upright in holder",
   "performancePositionLyingFlat": "Lying flat",

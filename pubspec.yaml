@@ -1,8 +1,8 @@
 name: my_car_app
 description: Aplicativo de gestao veicular da Giles Desenvolvimento de Softwares.
 publish_to: "none"
-# 1.4.0: lançamento do Premium (novidade news140).
-version: 1.4.0+14
+# 1.4.1: tela Desempenho (força G, velocímetro, 0-100).
+version: 1.4.1+15
 environment:
   sdk: ">=3.9.0 <4.0.0"
 dependencies:

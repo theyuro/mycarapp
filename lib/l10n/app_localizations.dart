@@ -4775,7 +4775,7 @@ abstract class AppLocalizations {
   /// No description provided for @performanceNoAccelerometer.
   ///
   /// In pt, this message translates to:
-  /// **'Este aparelho não está entregando leituras do acelerômetro.'**
+  /// **'Este aparelho não é compatível com esta função por não possuir acelerômetro.'**
   String get performanceNoAccelerometer;
 
   /// No description provided for @performancePositionMismatch.

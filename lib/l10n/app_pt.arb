@@ -1357,7 +1357,7 @@
   "performanceCalibratingHoldStill": "Segure o celular parado e fixo por 2 segundos...",
   "performanceCalibrationFailed": "Não foi possível calibrar. Fixe o celular no suporte e tente de novo.",
   "performanceCalibrationDone": "Calibração concluída.",
-  "performanceNoAccelerometer": "Este aparelho não está entregando leituras do acelerômetro.",
+  "performanceNoAccelerometer": "Este aparelho não é compatível com esta função por não possuir acelerômetro.",
   "performancePositionMismatch": "A posição do celular não combina com a opção escolhida. Ajuste o suporte ou troque a opção.",
   "performancePositionUpright": "Em pé no suporte",
   "performancePositionLyingFlat": "Deitado",
