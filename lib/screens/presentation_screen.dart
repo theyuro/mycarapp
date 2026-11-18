@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../services/analytics_service.dart';
 import '../services/authentication_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_logo.dart';
@@ -18,7 +19,10 @@ class _PresentationScreenState extends State<PresentationScreen> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer(const Duration(seconds: 3), _openLogin);
+    // Quem já está logado vai para a Home em 1 s (toda abertura do app passa
+    // por aqui); quem ainda vai ver o login mantém a abertura completa de 3 s.
+    final signedIn = AuthenticationService.instance.currentUser != null;
+    _timer = Timer(Duration(seconds: signedIn ? 1 : 3), _openLogin);
   }
 
   // O app exige conta: quem já entrou vai direto para a Home; os demais
@@ -32,11 +36,16 @@ class _PresentationScreenState extends State<PresentationScreen> {
     final signedIn = AuthenticationService.instance.currentUser != null;
     final Widget next = signedIn ? const HomeScreen() : const LoginScreen();
     if (!mounted) return;
+    // Registra manualmente para evitar o screen_view duplicado que o
+    // observador geraria a partir do RouteSettings.name abaixo.
+    AnalyticsService.screen(signedIn ? 'home' : 'login');
     Navigator.of(context).pushReplacement(
       PageRouteBuilder<void>(
         pageBuilder: (_, animation, _) =>
             FadeTransition(opacity: animation, child: next),
         transitionDuration: const Duration(milliseconds: 650),
+        // Nome da rota para o screen_view do Analytics.
+        settings: RouteSettings(name: signedIn ? 'home' : 'login'),
       ),
     );
   }

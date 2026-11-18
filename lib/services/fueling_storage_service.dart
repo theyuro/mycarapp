@@ -41,6 +41,22 @@ class FuelingStorageService {
     }
   }
 
+  /// Capacidade informada no abastecimento mais recente do veículo. Usada
+  /// para veículos cadastrados antes de a capacidade ir para o cadastro.
+  Future<double?> lastTankCapacity(String vehicleId) async {
+    final records =
+        (await loadFuelings())
+            .where(
+              (item) =>
+                  item.vehicleId == vehicleId &&
+                  item.tankCapacityLiters != null &&
+                  item.tankCapacityLiters! > 0,
+            )
+            .toList()
+          ..sort((a, b) => b.date.compareTo(a.date));
+    return records.isEmpty ? null : records.first.tankCapacityLiters;
+  }
+
   Future<void> addFueling(FuelingRecord record) {
     return saveFueling(record);
   }

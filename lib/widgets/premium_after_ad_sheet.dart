@@ -7,6 +7,7 @@ import '../services/ads_service.dart';
 import '../theme/app_colors.dart';
 import '../l10n/l10n.dart';
 import 'rewarded_ad_free.dart';
+import 'responsive_sheet.dart';
 
 bool _showing = false;
 
@@ -31,14 +32,14 @@ Future<void> showPremiumAfterAdSheet(BuildContext context) async {
     // O convite oferece o vídeo premiado: carrega só agora, enquanto o
     // usuário lê, em vez de deixar um vídeo carregado desde a abertura.
     if (rewardedOfferAvailable) AdsService.instance.loadRewarded();
-    final choice = await showModalBottomSheet<_AfterAdChoice>(
+    final choice = await showResponsiveSheet<_AfterAdChoice>(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (_) => const _PremiumAfterAdSheet(),
     );
     if (!context.mounted) return;
     if (choice == _AfterAdChoice.subscribe) {
-      await openPremium(context);
+      await openPremium(context, null, 'after_ad_sheet');
     } else if (choice == _AfterAdChoice.rewarded) {
       await watchRewardedForAdFree(context);
     }
@@ -62,7 +63,10 @@ class _PremiumAfterAdSheet extends StatelessWidget {
     ),
     child: SafeArea(
       top: false,
-      child: Padding(
+      // Rolável: em tablet na horizontal (diálogo) e em celular deitado, a
+      // altura disponível é menor que o conteúdo e o fim do convite
+      // estourava (bottom overflowed).
+      child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(22, 12, 22, 16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -118,12 +122,19 @@ class _PremiumAfterAdSheet extends StatelessWidget {
                 ),
               ),
             const SizedBox(height: 12),
-            Text(
-              tr.premiumPrices,
-              style: const TextStyle(
-                color: AppColors.goldLight,
-                fontWeight: FontWeight.w800,
-              ),
+            Builder(
+              builder: (context) {
+                final price = monthlyEquivalentPrice(AccessService.instance);
+                return Text(
+                  price == null
+                      ? tr.subscriptionPlansAvailable
+                      : tr.afterAdPriceFrom(price),
+                  style: const TextStyle(
+                    color: AppColors.goldLight,
+                    fontWeight: FontWeight.w800,
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 14),
             SizedBox(

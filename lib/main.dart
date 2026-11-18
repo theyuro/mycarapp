@@ -9,10 +9,12 @@ import 'screens/presentation_screen.dart';
 import 'services/access_service.dart';
 import 'services/ads_config.dart';
 import 'services/ads_service.dart';
+import 'services/analytics_service.dart';
 import 'services/auto_backup_service.dart';
 import 'services/firebase_bootstrap.dart';
 import 'services/update_service.dart';
 import 'theme/app_colors.dart';
+import 'widgets/black_friday_offer_sheet.dart';
 import 'widgets/force_update_gate.dart';
 import 'widgets/premium_after_ad_sheet.dart';
 
@@ -23,11 +25,21 @@ Future<void> main() async {
   await FirebaseBootstrap.initialize();
   await initializeDateFormatting();
   await AccessService.instance.initialize();
+  // Propriedades do usuário no Analytics (plano, veículos, dias de uso).
+  unawaited(AnalyticsService.instance.initialize());
   AutoBackupService.instance.start();
   unawaited(UpdateService.instance.start());
   AdsService.instance.onInterstitialDismissed = () {
     final context = _navigatorKey.currentContext;
-    if (context != null) unawaited(showPremiumAfterAdSheet(context));
+    if (context == null) return;
+    unawaited(() async {
+      // A oferta de Black Friday tem prioridade: enquanto durar, não
+      // empilha o convite comum de Premium por cima.
+      final shownBlackFriday = await showBlackFridayOfferSheet(context);
+      if (!shownBlackFriday && context.mounted) {
+        await showPremiumAfterAdSheet(context);
+      }
+    }());
   };
   // Limites dos anúncios vindos do Remote Config: busca em segundo plano e,
   // até responder (ou se falhar), valem os padrões locais.
@@ -42,6 +54,8 @@ class MyCarApp extends StatelessWidget {
   Widget build(BuildContext context) => MaterialApp(
     title: 'MyCarApp',
     navigatorKey: _navigatorKey,
+    // Registra o screen_view de cada rota nomeada (RouteSettings.name).
+    navigatorObservers: [AnalyticsService.observer()],
     supportedLocales: supportedAppLocales,
     localizationsDelegates: const [
       AppLocalizations.delegate,

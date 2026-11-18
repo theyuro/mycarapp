@@ -10,13 +10,18 @@ const {closedTesterEmailHashes} = require("./closed_testers");
 const productId = "mycarapp_subscription";
 const now = new Date("2026-09-03T12:00:00Z").getTime();
 
-function purchase(state, expiryTime) {
+function purchase(state, expiryTime, extra = {}) {
   return {
     subscriptionState: state,
+    startTime: extra.startTime,
     lineItems: [{
       productId,
       expiryTime,
-      offerDetails: {basePlanId: "premium_monthly"},
+      offerDetails: {
+        basePlanId: "premium_monthly",
+        offerId: extra.offerId,
+      },
+      offerPhase: extra.offerPhase,
       autoRenewingPlan: {autoRenewEnabled: state === "SUBSCRIPTION_STATE_ACTIVE"},
     }],
   };
@@ -50,6 +55,66 @@ test("purchase for another product is rejected", () => {
       ),
       {code: "wrong-product"},
   );
+});
+
+test("inFreeTrial true when offerPhase indicates free trial", () => {
+  const values = subscriptionValues(
+      purchase("SUBSCRIPTION_STATE_ACTIVE", "2026-09-10T12:00:00Z", {
+        offerPhase: {freeTrial: {}},
+      }),
+      productId,
+      now,
+  );
+  assert.equal(values.inFreeTrial, true);
+});
+
+test("inFreeTrial false when offerPhase indicates a paid phase", () => {
+  const values = subscriptionValues(
+      purchase("SUBSCRIPTION_STATE_ACTIVE", "2026-09-10T12:00:00Z", {
+        offerId: "yearly-7daysfree",
+        offerPhase: {basePrice: {}},
+        startTime: "2026-09-01T12:00:00Z",
+      }),
+      productId,
+      now,
+  );
+  assert.equal(values.inFreeTrial, false);
+});
+
+test("inFreeTrial falls back to date when offerPhase is missing", () => {
+  const values = subscriptionValues(
+      purchase("SUBSCRIPTION_STATE_ACTIVE", "2026-09-10T12:00:00Z", {
+        offerId: "yearly-7daysfree",
+        startTime: "2026-09-01T12:00:00Z",
+      }),
+      productId,
+      now,
+  );
+  assert.equal(values.inFreeTrial, true);
+});
+
+test("inFreeTrial fallback expires after 7 days without offerPhase", () => {
+  const values = subscriptionValues(
+      purchase("SUBSCRIPTION_STATE_ACTIVE", "2026-09-20T12:00:00Z", {
+        offerId: "yearly-7daysfree",
+        startTime: "2026-08-01T12:00:00Z",
+      }),
+      productId,
+      now,
+  );
+  assert.equal(values.inFreeTrial, false);
+});
+
+test("inFreeTrial fallback ignores other offers without offerPhase", () => {
+  const values = subscriptionValues(
+      purchase("SUBSCRIPTION_STATE_ACTIVE", "2026-09-10T12:00:00Z", {
+        offerId: "referral-yr-30",
+        startTime: "2026-09-01T12:00:00Z",
+      }),
+      productId,
+      now,
+  );
+  assert.equal(values.inFreeTrial, false);
 });
 
 test("closed tester emails are normalized before hashing", () => {

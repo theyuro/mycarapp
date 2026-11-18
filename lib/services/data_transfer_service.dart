@@ -106,6 +106,7 @@ class DataTransferService {
       documents: originalVehicle.documents,
       photos: const [],
       vehicleType: originalVehicle.vehicleType,
+      tankCapacityLiters: originalVehicle.tankCapacityLiters,
     );
     await vehicleStorage.saveVehicle(importedVehicle);
     var fuelCount = 0;

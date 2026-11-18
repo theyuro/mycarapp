@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:in_app_review/in_app_review.dart';
 
 import '../screens/account_screen.dart';
 import '../services/access_service.dart';
+import '../services/app_review_service.dart';
 import '../services/recommendation_banner_service.dart';
 import '../theme/app_colors.dart';
 import '../l10n/l10n.dart';
@@ -55,20 +55,15 @@ class _RecommendationBannerState extends State<RecommendationBanner> {
     try {
       switch (type) {
         case RecommendationBannerType.rating:
-          try {
-            final review = InAppReview.instance;
-            if (await review.isAvailable()) {
-              await review.requestReview();
-            } else {
-              await review.openStoreListing();
-            }
-          } on Object {
-            // API da loja indisponível: não bloquear o usuário por isso.
-          }
+          // Botão: abre direto a página da Play (ver AppReviewService).
+          await AppReviewService.instance.openStoreListing();
         case RecommendationBannerType.referral:
           if (mounted) {
             await Navigator.of(context).push<void>(
-              MaterialPageRoute<void>(builder: (_) => const AccountScreen()),
+              MaterialPageRoute<void>(
+                builder: (_) => const AccountScreen(),
+                settings: const RouteSettings(name: 'account'),
+              ),
             );
           }
       }

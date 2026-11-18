@@ -146,7 +146,8 @@ class _BackupScreenState extends State<BackupScreen> {
                     )
                   else
                     _PremiumBackupCard(
-                      onTap: () => openPremium(context, PremiumFeature.backup),
+                      onTap: () =>
+                          openPremium(context, PremiumFeature.backup, 'backup'),
                     ),
                   if (cloudItems > 0) ...[
                     const SizedBox(height: 12),

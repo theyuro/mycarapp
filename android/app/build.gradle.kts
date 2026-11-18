@@ -54,6 +54,15 @@ android {
             // O Flutter Gradle Plugin já ativa o R8 no release; explícito aqui para
             // deixar claro que as regras abaixo são aplicadas.
             isMinifyEnabled = true
+            // Remove recursos não usados do pacote (reduz o tamanho de
+            // download na Play); só vale com o R8 ativo, como acima.
+            isShrinkResources = true
+            // Inclui a tabela de símbolos nativos no bundle: a Play deixa de
+            // avisar sobre símbolos ausentes e os crashes nativos (ex.: ML Kit)
+            // ficam legíveis no Android vitals.
+            ndk {
+                debugSymbolLevel = "SYMBOL_TABLE"
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",

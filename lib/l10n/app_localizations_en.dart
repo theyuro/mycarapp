@@ -75,24 +75,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'Automatic cloud backup, including photos and documents.';
 
   @override
-  String get upsellReportsTitle => 'New reports';
-
-  @override
-  String get upsellReportsText =>
-      'Premium subscribers get the new reports in the app.';
-
-  @override
-  String get upsellUpdatesTitle => 'Exclusive updates';
-
-  @override
-  String get upsellUpdatesText => 'New features released to Premium first.';
-
-  @override
-  String get upsellVehiclesTitle => 'Keep your vehicle photos and data safe';
+  String get upsellVehiclesTitle => 'Unlimited vehicles';
 
   @override
   String get upsellVehiclesText =>
-      'With Premium, everything goes to the cloud automatically.';
+      'Premium subscribers can add as many vehicles as they want.';
+
+  @override
+  String get upsellReceiptTitle => 'Automatic receipt scanning';
+
+  @override
+  String get upsellReceiptText =>
+      'Photograph the receipt and let Premium fill in the fill-up for you.';
 
   @override
   String get upsellAdsTitle => 'Go ad-free';
@@ -101,24 +95,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get upsellAdsText => 'Go Premium and remove the ads.';
 
   @override
-  String get upsellFuelingTitle => 'Don\'t lose your fill-ups';
+  String get upsellFuelingTitle => 'Fill-ups without ads';
 
   @override
-  String get upsellFuelingText => 'Automatic cloud backup, receipts included.';
+  String get upsellFuelingText =>
+      'Premium subscribers record every fill-up in the month without watching videos.';
 
   @override
-  String get upsellMaintenanceTitle => 'Keep your maintenance history';
+  String get upsellMaintenanceTitle => 'Maintenance and expenses without ads';
 
   @override
   String get upsellMaintenanceText =>
-      'With automatic backup, it\'s safe even if your phone breaks.';
+      'Premium subscribers record them without watching videos.';
 
   @override
-  String get upsellExpensesTitle => 'New reports with Premium';
+  String get upsellExpensesTitle => 'Reports by custom period';
 
   @override
   String get upsellExpensesText =>
-      'Subscribe to get new reports and exclusive updates.';
+      'Subscribe and compare your spending over any period, not just the app\'s defaults.';
 
   @override
   String get afterAdTitle => 'Tired of ads?';
@@ -127,7 +122,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get afterAdSubtitle => 'Get MyCarApp Premium';
 
   @override
-  String get premiumPrices => 'Monthly or yearly plans';
+  String afterAdPriceFrom(Object price) {
+    return 'from $price/month';
+  }
+
+  @override
+  String get subscriptionPlansAvailable => 'Monthly and yearly plans';
 
   @override
   String get afterAdSubscribe => 'GET PREMIUM';
@@ -148,6 +148,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recoRefer => 'REFER';
+
+  @override
+  String get houseAdAuctionText =>
+      'Real estate and vehicle auctions in ES, all in one place.';
+
+  @override
+  String get houseAdAuctionCta => 'SEE AUCTIONS';
 
   @override
   String get attachmentNotFound => 'Attachment not found.';
@@ -229,17 +236,76 @@ class AppLocalizationsEn extends AppLocalizations {
       'Everything is saved to your account automatically, including photos and documents. Switch phones without losing anything.';
 
   @override
-  String get featureReportsTitle => 'New reports';
+  String get featureVehiclesTitle => 'More vehicles';
 
   @override
-  String get featureReportsText => 'Subscribers get the new MyCarApp reports.';
+  String get featureVehiclesText =>
+      'Premium subscribers can add as many vehicles as they want.';
 
   @override
-  String get featureUpdatesTitle => 'Exclusive updates';
+  String get featureFuelingsTitle => 'Unlimited fill-ups';
 
   @override
-  String get featureUpdatesText =>
-      'New features released first, or only, to Premium subscribers.';
+  String get featureFuelingsText =>
+      'Record every fill-up in the month without watching videos.';
+
+  @override
+  String get featureMaintenanceTitle => 'Unlimited maintenance and expenses';
+
+  @override
+  String get featureMaintenanceText =>
+      'Record maintenance, expenses and alerts without watching videos.';
+
+  @override
+  String get featureReceiptScanTitle => 'Receipt scanning';
+
+  @override
+  String get featureReceiptScanText =>
+      'Photograph the receipt and let MyCarApp fill in the fill-up for you.';
+
+  @override
+  String get featureStationRankingTitle => 'Full gas station ranking';
+
+  @override
+  String get featureStationRankingText =>
+      'See the full ranking of the stations where your car goes the furthest.';
+
+  @override
+  String get featurePeriodReportsTitle => 'Reports by custom period';
+
+  @override
+  String get featurePeriodReportsText =>
+      'Compare spending and fuel economy over any period, not just the app\'s defaults.';
+
+  @override
+  String get featureExportTitle => 'CSV and Excel export';
+
+  @override
+  String get featureExportText =>
+      'Export your data as CSV or Excel whenever you want.';
+
+  @override
+  String get featurePdfTitle => 'PDF export';
+
+  @override
+  String get featurePdfText =>
+      'Generate the report PDF without watching a video.';
+
+  @override
+  String get featureSyncTitle => 'Sync across devices';
+
+  @override
+  String get featureSyncText => 'Your data follows you when you switch phones.';
+
+  @override
+  String get featurePerformanceTitle => 'Vehicle performance';
+
+  @override
+  String get featurePerformanceText =>
+      'Live G-force and speedometer, plus the 0-100 km/h test, for use on a track or closed course.';
+
+  @override
+  String get benefitPerformance => 'G-force, speedometer and 0-100 test';
 
   @override
   String get premiumYouArePremium => 'You\'re Premium';
@@ -284,6 +350,53 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get benefitBackup =>
       'Automatic cloud backup, with photos and documents';
+
+  @override
+  String get benefitVehicles => 'Unlimited vehicles';
+
+  @override
+  String get benefitMaintenanceNoVideo =>
+      'Maintenance and expenses without ads';
+
+  @override
+  String get benefitReceiptScan => 'Automatic receipt scanning';
+
+  @override
+  String get benefitStationRanking => 'Full gas station ranking';
+
+  @override
+  String get benefitExport => 'CSV, Excel and PDF export';
+
+  @override
+  String get subscriptionRestore => 'Restore purchase';
+
+  @override
+  String get subscriptionFreeTrialBadge => '7-DAY FREE TRIAL';
+
+  @override
+  String subscriptionSaveBadge(Object percent) {
+    return 'SAVE $percent%';
+  }
+
+  @override
+  String get subscriptionBilledMonthly => 'billed every month';
+
+  @override
+  String get subscriptionStartFreeTrial => 'START 7-DAY FREE TRIAL';
+
+  @override
+  String subscriptionSubscribeMonthly(Object price) {
+    return 'SUBSCRIBE FOR $price/MONTH';
+  }
+
+  @override
+  String subscriptionBillingTrial(Object price) {
+    return 'Free for 7 days, then $price per year.';
+  }
+
+  @override
+  String get subscriptionBillingAuto =>
+      'Automatically renews. Cancel anytime in the Play Store.';
 
   @override
   String get planAnnual => 'Yearly plan';
@@ -349,6 +462,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get storeRestoreError => 'Couldn\'t restore purchases.';
+
+  @override
+  String get storeNothingToRestore =>
+      'No previous purchase found for this account.';
 
   @override
   String get storePending => 'Payment pending on Google Play.';
@@ -612,7 +729,53 @@ class AppLocalizationsEn extends AppLocalizations {
   String get offerReferralOld => '50% off for 3 months';
 
   @override
+  String get offerYearlyTrial => '7-day free trial on the yearly plan';
+
+  @override
   String get offerSpecial => 'Special MyCarApp offer';
+
+  @override
+  String get watchAndSave => 'WATCH VIDEO AND SAVE';
+
+  @override
+  String get freeLimitVehicleTitle => 'This vehicle is view-only';
+
+  @override
+  String get freeLimitVehicleText =>
+      'On the free plan, only the first vehicle you added accepts new entries. Subscribe to Premium to add entries to every vehicle.';
+
+  @override
+  String get freeLimitFuelingTitle => 'Monthly fill-up limit';
+
+  @override
+  String freeLimitFuelingText(Object count) {
+    return 'You\'ve already logged $count free fill-up(s) this month. Watch a video to save one more, or subscribe to Premium for unlimited fill-ups.';
+  }
+
+  @override
+  String get freeLimitMaintenanceTitle => 'Unlocked by video';
+
+  @override
+  String get freeLimitMaintenanceText =>
+      'On the free plan, each new maintenance entry is unlocked by watching a video. Subscribe to Premium to log entries without videos.';
+
+  @override
+  String get freeLimitExpenseTitle => 'Unlocked by video';
+
+  @override
+  String get freeLimitExpenseText =>
+      'On the free plan, each new expense is unlocked by watching a video. Subscribe to Premium to log entries without videos.';
+
+  @override
+  String get vehicleViewOnlyBadge => 'View-only on the free plan';
+
+  @override
+  String stationNextUnlock(String date) {
+    return 'Your best station will show up here again on $date. Subscribe to Premium to see the full ranking anytime.';
+  }
+
+  @override
+  String get stationSeeFullRanking => 'SEE FULL RANKING (PREMIUM)';
 
   @override
   String get notSet => 'not set';
@@ -1428,10 +1591,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tankCapacity => 'Total tank capacity';
 
   @override
-  String get tankCapacityHint => 'Check the vehicle\'s manual';
+  String get tankCapacityVehicleHint =>
+      'Check the vehicle\'s manual. Used to calculate full-tank fuel economy';
 
   @override
-  String get tankCapacityRequired => 'Enter the tank capacity';
+  String get tankCapacityMissing =>
+      'Add the tank capacity to the vehicle details to calculate fuel economy.';
 
   @override
   String get fuelingGaugeFull => 'Did the gauge show a full tank?';
@@ -1823,11 +1988,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String reportSmallSample(Object name) {
-    return '$name (small sample)';
-  }
-
-  @override
   String reportBestDetail(Object cost, Object consumption, Object count) {
     return '$cost/km • $consumption km/L • based on $count fill-up(s)';
   }
@@ -1841,9 +2001,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String reportVsAverage(Object value) {
     return '$value% vs. average';
   }
-
-  @override
-  String get smallSample => 'Small sample';
 
   @override
   String get reportTotalCostPerKm => 'Total cost per km';
@@ -2120,4 +2277,444 @@ class AppLocalizationsEn extends AppLocalizations {
   String rewardedEarned(Object hours) {
     return 'Done! No full-screen ads for ${hours}h. Banners still show.';
   }
+
+  @override
+  String get pdfExport => 'Export PDF';
+
+  @override
+  String get pdfFreeTitle => 'PDF report';
+
+  @override
+  String get pdfFreeText =>
+      'On the free plan, each PDF report is unlocked by watching a video. Subscribe to Premium to generate it without videos.';
+
+  @override
+  String get pdfWatchAndGenerate => 'WATCH VIDEO AND GENERATE';
+
+  @override
+  String get pdfVideoNotEarned =>
+      'Watch the video to the end to generate the PDF.';
+
+  @override
+  String get pdfShareSubject => 'MyCarApp report';
+
+  @override
+  String get pdfShareText => 'Vehicle report generated by MyCarApp.';
+
+  @override
+  String get pdfTitle => 'Vehicle report';
+
+  @override
+  String pdfPeriod(String period) {
+    return 'Period: $period';
+  }
+
+  @override
+  String pdfFooter(String date) {
+    return 'Generated by MyCarApp on $date';
+  }
+
+  @override
+  String get pdfVehicleSection => 'Vehicle';
+
+  @override
+  String get pdfSpendingSection => 'Spending';
+
+  @override
+  String get pdfLiters => 'Liters filled';
+
+  @override
+  String get pdfTotalAll => 'Total (fuel + maintenance)';
+
+  @override
+  String get pdfMonthCol => 'Month';
+
+  @override
+  String get pdfDistance => 'Distance in the period';
+
+  @override
+  String get pdfExpenses => 'Other expenses';
+
+  @override
+  String get pdfBestStation => 'Best station';
+
+  @override
+  String get pdfStationCol => 'Station';
+
+  @override
+  String get pdfFuelCol => 'Fuel';
+
+  @override
+  String get pdfFillUpsCol => 'Fill-ups';
+
+  @override
+  String get pdfMaintenanceList => 'Maintenance in the period';
+
+  @override
+  String get pdfDateCol => 'Date';
+
+  @override
+  String get pdfServiceCol => 'Service';
+
+  @override
+  String get pdfWorkshopCol => 'Shop';
+
+  @override
+  String get pdfCostCol => 'Cost';
+
+  @override
+  String get news140Title => 'MyCarApp Premium is here';
+
+  @override
+  String get news140Text =>
+      'MyCarApp Premium is here: no ads, unlimited vehicles, maintenance and expenses without videos, receipt scanning, the full gas station ranking, reports by period, export and automatic backup. The free plan still tracks your fuel consumption, and all your records remain available.';
+
+  @override
+  String get surveyTitle => 'Before you go…';
+
+  @override
+  String get surveyText =>
+      'What stopped you from subscribing now? It takes 5 seconds and helps improve MyCarApp.';
+
+  @override
+  String get surveyTooExpensive => 'Too expensive';
+
+  @override
+  String get surveyTooExpensiveHint =>
+      'The price doesn\'t fit my budget right now';
+
+  @override
+  String get surveyStillExploring => 'I\'m still getting to know the app';
+
+  @override
+  String get surveyStillExploringHint =>
+      'I want to use it more before deciding';
+
+  @override
+  String get surveyDontNeed => 'I don\'t need these features';
+
+  @override
+  String get surveyDontNeedHint => 'The free plan is enough for me';
+
+  @override
+  String get surveyPreferOneTime => 'I\'d rather pay once';
+
+  @override
+  String get surveyPreferOneTimeHint => 'I don\'t like subscriptions';
+
+  @override
+  String get surveyOther => 'Other reason';
+
+  @override
+  String get surveyOtherHint => 'None of the options above';
+
+  @override
+  String get surveySend => 'SEND ANSWER';
+
+  @override
+  String get surveyChooseOption => 'CHOOSE AN OPTION';
+
+  @override
+  String get surveySkip => 'Skip';
+
+  @override
+  String get surveyThanks =>
+      'Thanks for your answer! You\'re still on the free plan, with all your records available.';
+
+  @override
+  String get exitOfferBadge => 'A ONE-TIME OFFER FOR YOU';
+
+  @override
+  String exitOfferTitle(int percent) {
+    return 'We get it. How about $percent% off annual Premium?';
+  }
+
+  @override
+  String get exitOfferTitleGeneric =>
+      'We get it. How about a special discount on annual Premium?';
+
+  @override
+  String get exitOfferSubtitle =>
+      'Valid only now and only once for this account.';
+
+  @override
+  String exitOfferExpiresIn(String time) {
+    return 'Expires in $time';
+  }
+
+  @override
+  String get exitOfferPlan => 'Annual Premium';
+
+  @override
+  String exitOfferFrom(String price) {
+    return 'From $price to';
+  }
+
+  @override
+  String get exitOfferFirstYear => 'for the 1st year';
+
+  @override
+  String exitOfferPerMonth(String price) {
+    return 'That\'s $price per month';
+  }
+
+  @override
+  String exitOfferButton(String price) {
+    return 'GET IT FOR $price THE 1ST YEAR';
+  }
+
+  @override
+  String exitOfferRenewal(String price) {
+    return 'After the 1st year, it renews at $price per year. Cancel anytime on the Play Store.';
+  }
+
+  @override
+  String get exitOfferNoThanks => 'No, thanks';
+
+  @override
+  String get blackFridayBadge => 'BLACK FRIDAY';
+
+  @override
+  String blackFridayTitle(int percent) {
+    return '$percent% off the annual Premium plan';
+  }
+
+  @override
+  String get blackFridaySubtitle =>
+      'For the 1st year of the annual plan. Limited-time offer.';
+
+  @override
+  String get blackFridayLastChanceSubtitle =>
+      'Last chance! Ends today at 11pm.';
+
+  @override
+  String blackFridayEndsIn(String time) {
+    return 'Ends in $time';
+  }
+
+  @override
+  String blackFridayButton(int percent) {
+    return 'GET $percent% OFF';
+  }
+
+  @override
+  String get blackFridayNotNow => 'Not now';
+
+  @override
+  String offerExitPercent(int percent) {
+    return '$percent% off the 1st year';
+  }
+
+  @override
+  String get offerExitGeneric => 'Special discount on the 1st year';
+
+  @override
+  String get stationPreliminaryBadge => 'Preliminary';
+
+  @override
+  String get stationPreliminaryNote =>
+      'Preliminary value: it becomes final after 3 full-tank fill-ups at this station.';
+
+  @override
+  String get stationConsumptionAlert =>
+      'Fuel economy very different from your average. It may be the fuel quality or an incomplete entry, such as a tank that wasn\'t full. Check this station\'s fill-ups.';
+
+  @override
+  String get performanceTitle => 'Performance';
+
+  @override
+  String get performanceRecords => 'Records';
+
+  @override
+  String get performanceBack => 'Back';
+
+  @override
+  String get performancePremiumBadge => 'PREMIUM';
+
+  @override
+  String get performanceSpeedometerTitle => 'Speedometer';
+
+  @override
+  String get performanceGForceTitle => 'G-Force';
+
+  @override
+  String get performanceSessionMax => 'Session max';
+
+  @override
+  String get performanceLateral => 'Lateral';
+
+  @override
+  String get performanceAcceleration => 'Acceleration';
+
+  @override
+  String get performanceSessionPeak => 'Session peak';
+
+  @override
+  String get performanceZeroToSixty => '0-60 km/h';
+
+  @override
+  String get performanceSixtyToHundred => '60-100 km/h';
+
+  @override
+  String get performanceGpsStatus => 'GPS';
+
+  @override
+  String get performanceGpsSearching => 'Searching for GPS…';
+
+  @override
+  String get performanceGpsReady => 'Ready';
+
+  @override
+  String get performanceGpsUnavailable => 'Unavailable';
+
+  @override
+  String get performanceGpsDenied => 'Permission denied';
+
+  @override
+  String get performanceSpeedUnavailable => 'Couldn\'t get the speed';
+
+  @override
+  String get performanceByFuelTitle => '0-100 by fuel';
+
+  @override
+  String get performanceByFuelEmpty => 'No test recorded yet.';
+
+  @override
+  String get performanceCalibrateButton => 'CALIBRATE';
+
+  @override
+  String get performanceMeasureButton => 'MEASURE 0-100';
+
+  @override
+  String get performanceSafetyWarning =>
+      'Use only on a track or closed course, and follow the law. Don\'t touch the phone while the car is moving.';
+
+  @override
+  String get performanceDisclaimerTitle => 'Before you start';
+
+  @override
+  String get performanceDisclaimerAccept => 'I UNDERSTAND AND ACCEPT';
+
+  @override
+  String get performanceCalibrateNeeded => 'Calibrate to start';
+
+  @override
+  String get performanceCalibratingHoldStill =>
+      'Hold the phone still and fixed for 2 seconds...';
+
+  @override
+  String get performanceCalibrationFailed =>
+      'Couldn\'t calibrate. Mount the phone securely and try again.';
+
+  @override
+  String get performanceCalibrationDone => 'Calibration complete.';
+
+  @override
+  String get performanceNoAccelerometer =>
+      'This device isn\'t compatible with this feature because it has no accelerometer.';
+
+  @override
+  String get performancePositionMismatch =>
+      'The phone\'s position doesn\'t match the selected option. Adjust the mount or change the option.';
+
+  @override
+  String get performancePositionUpright => 'Upright in holder';
+
+  @override
+  String get performancePositionLyingFlat => 'Lying flat';
+
+  @override
+  String get performanceGpsWeak => 'Weak signal';
+
+  @override
+  String get performanceGpsOk => 'Strong signal';
+
+  @override
+  String get performanceCalibrateNow => 'Calibrate now';
+
+  @override
+  String get performanceDirectionRight => 'right';
+
+  @override
+  String get performanceDirectionLeft => 'left';
+
+  @override
+  String get performanceLegendForward => 'forward';
+
+  @override
+  String get performanceGForceResultant => 'resultant force';
+
+  @override
+  String get performanceCalibratingShort => 'Calibrating…';
+
+  @override
+  String get performanceAccelShort => 'ACCEL.';
+
+  @override
+  String get performanceBrakeShort => 'BRAKE';
+
+  @override
+  String get performanceDiagnosticsSensorLinear => 'Sensor: linear';
+
+  @override
+  String get performanceDiagnosticsSensorRaw =>
+      'Sensor: raw (estimated gravity)';
+
+  @override
+  String get performanceDiagnosticsCalibrated => 'Calibrated';
+
+  @override
+  String get performanceDiagnosticsNotCalibrated => 'Not calibrated';
+
+  @override
+  String get performanceDiagnosticsNoGpsFix => 'No fix yet';
+
+  @override
+  String get performanceSelectFuelTitle => 'Fuel used in this test';
+
+  @override
+  String get performanceArmed => 'Ready! Accelerate to start the measurement.';
+
+  @override
+  String get performanceMeasuring => 'Measuring...';
+
+  @override
+  String get performanceCompleted => 'Test complete!';
+
+  @override
+  String get performanceCancelled =>
+      'Test canceled: the speed went back to zero.';
+
+  @override
+  String get performanceCancelButton => 'CANCEL TEST';
+
+  @override
+  String get performanceLocationTitle => 'Use location';
+
+  @override
+  String get performanceLocationExplain =>
+      'Location is used only while this screen is open, to show the speed. Nothing is sent to any server.';
+
+  @override
+  String get performanceLocationContinue => 'CONTINUE';
+
+  @override
+  String get performanceLocationDenied =>
+      'Without location permission, the speedometer is unavailable. Only G-force works.';
+
+  @override
+  String get performanceRecordBest0to100 => 'Best 0-100';
+
+  @override
+  String get performanceRecordBestLateral => 'Highest lateral force';
+
+  @override
+  String get performanceRecordBestBraking => 'Hardest braking';
+
+  @override
+  String get performanceRecordTopSpeed => 'Top speed';
+
+  @override
+  String get performanceRecordsEmpty =>
+      'No records yet. Run your first 0-100 test.';
 }

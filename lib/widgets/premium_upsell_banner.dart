@@ -64,7 +64,7 @@ class _PremiumUpsellBannerState extends State<PremiumUpsellBanner> {
           type: MaterialType.transparency,
           child: InkWell(
             borderRadius: BorderRadius.circular(16),
-            onTap: () => openPremium(context, message.feature),
+            onTap: () => openPremium(context, message.feature, 'upsell_banner'),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(14, 10, 4, 10),
               child: Row(
@@ -141,14 +141,14 @@ List<_UpsellMessage> get _homeRotation => [
     tr.upsellBackupText,
   ),
   _UpsellMessage(
-    PremiumFeature.reports,
-    tr.upsellReportsTitle,
-    tr.upsellReportsText,
+    PremiumFeature.vehicles,
+    tr.upsellVehiclesTitle,
+    tr.upsellVehiclesText,
   ),
   _UpsellMessage(
-    PremiumFeature.updates,
-    tr.upsellUpdatesTitle,
-    tr.upsellUpdatesText,
+    PremiumFeature.receiptScan,
+    tr.upsellReceiptTitle,
+    tr.upsellReceiptText,
   ),
 ];
 
@@ -157,7 +157,7 @@ _UpsellMessage _messageFor(UpsellPlacement placement) => switch (placement) {
     _homeRotation[DateTime.now().difference(DateTime(2026)).inDays %
         _homeRotation.length],
   UpsellPlacement.vehicles => _UpsellMessage(
-    PremiumFeature.backup,
+    PremiumFeature.vehicles,
     tr.upsellVehiclesTitle,
     tr.upsellVehiclesText,
   ),
@@ -167,17 +167,17 @@ _UpsellMessage _messageFor(UpsellPlacement placement) => switch (placement) {
     tr.upsellAdsText,
   ),
   UpsellPlacement.fuelingHistory => _UpsellMessage(
-    PremiumFeature.backup,
+    PremiumFeature.fuelings,
     tr.upsellFuelingTitle,
     tr.upsellFuelingText,
   ),
   UpsellPlacement.maintenance => _UpsellMessage(
-    PremiumFeature.backup,
+    PremiumFeature.maintenance,
     tr.upsellMaintenanceTitle,
     tr.upsellMaintenanceText,
   ),
   UpsellPlacement.expenses => _UpsellMessage(
-    PremiumFeature.reports,
+    PremiumFeature.periodReports,
     tr.upsellExpensesTitle,
     tr.upsellExpensesText,
   ),

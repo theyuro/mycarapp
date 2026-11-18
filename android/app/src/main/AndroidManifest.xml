@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Tela Desempenho (velocímetro): só em primeiro plano, nunca em
+         segundo plano (sem ACCESS_BACKGROUND_LOCATION). -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <!-- Media is selected explicitly through Android's system picker. -->
     <uses-permission
         android:name="android.permission.READ_MEDIA_IMAGES"
@@ -8,8 +11,14 @@
     <uses-permission
         android:name="android.permission.READ_MEDIA_VIDEO"
         tools:node="remove" />
+    <!-- Acelerômetro (tela Desempenho): opcional, para não excluir da Play
+         Store os aparelhos sem esse sensor (ex.: alguns tablets e TVs). O
+         app detecta a ausência em tempo de execução e avisa o usuário. -->
+    <uses-feature
+        android:name="android.hardware.sensor.accelerometer"
+        android:required="false" />
     <application
-        android:label="MyCarApp"
+        android:label="@string/app_name"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:enableOnBackInvokedCallback="true">
